@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Alquiler-Vehiculos.Back/Alquiler-Vehiculos.Back.csproj" />
+  <Project Path="Alquiler-Vehiculos.Tests/Alquiler-Vehiculos.Tests.csproj" />
+</Solution>

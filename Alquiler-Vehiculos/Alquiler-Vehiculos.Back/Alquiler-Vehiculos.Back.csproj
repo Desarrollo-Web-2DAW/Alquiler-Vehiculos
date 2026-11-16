@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <RootNamespace>Alquiler_Vehiculos</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Controllers\Cliente\" />
+      <Folder Include="Controllers\Pago\" />
+      <Folder Include="Controllers\Reserva\" />
+      <Folder Include="Controllers\Trabajador\" />
+      <Folder Include="Controllers\Vehiculo\" />
+      <Folder Include="Dto\" />
+      <Folder Include="Errors\Cliente\" />
+      <Folder Include="Errors\Pago\" />
+      <Folder Include="Errors\Reserva\" />
+      <Folder Include="Errors\Trabajador\" />
+      <Folder Include="Errors\Vehiculo\" />
+      <Folder Include="Exceptions\Cliente\" />
+      <Folder Include="Exceptions\Pago\" />
+      <Folder Include="Exceptions\Reserva\" />
+      <Folder Include="Exceptions\Trabajador\" />
+      <Folder Include="Exceptions\Vehiculo\" />
+      <Folder Include="Infrastructure\" />
+      <Folder Include="Mappers\" />
+      <Folder Include="Middleware\" />
+      <Folder Include="Models\Cliente\" />
+      <Folder Include="Models\Pago\" />
+      <Folder Include="Models\Reserva\" />
+      <Folder Include="Models\Trabajador\" />
+      <Folder Include="Models\Vehiculo\" />
+      <Folder Include="Repositories\Cliente\" />
+      <Folder Include="Repositories\Reserva\" />
+      <Folder Include="Repositories\Vehiculo\" />
+      <Folder Include="Services\Cliente\" />
+      <Folder Include="Services\Pago\" />
+      <Folder Include="Services\Reserva\" />
+      <Folder Include="Services\Trabajador\" />
+      <Folder Include="Services\Vehiculo\" />
+      <Folder Include="Validators\" />
+    </ItemGroup>
+
+</Project>
