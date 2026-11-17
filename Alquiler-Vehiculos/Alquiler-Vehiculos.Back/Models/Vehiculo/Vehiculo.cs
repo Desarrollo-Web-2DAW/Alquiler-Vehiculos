@@ -5,6 +5,7 @@ namespace Alquiler_Vehiculos.Models.Vehiculo;
 public class Vehiculo
 {
     public string Id { get; init; } = null!;
+    public string  Matrícula { get; init; } = null!;
     public string Marca { get; init; } = string.Empty;
     public string Modelo { get; init; } = string.Empty;
     public string Acriss { get; init; } = string.Empty;
