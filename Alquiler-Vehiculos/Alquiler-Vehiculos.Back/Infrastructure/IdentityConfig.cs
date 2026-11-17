@@ -1,5 +1,6 @@
 using System.Text;
 using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Models.Usuario;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -40,7 +41,7 @@ public static class IdentityConfig {
         //y se añade además: los roles, el servicio propio para registrarse (Sing in)
         //conecta el sistema de Identity con tu base de datos utilizando Entity Framework Core
         //registra los proveedores estándar encargados de generar tokens de un solo uso (OTP)
-        services.AddIdentityCore<AppUser>(options =>
+        services.AddIdentityCore<User>(options =>
             {
                 // Password
                 options.Password.RequiredLength = 8;
@@ -58,7 +59,7 @@ public static class IdentityConfig {
             })
             .AddRoles<IdentityRole<long>>()
             .AddSignInManager()
-            .AddEntityFrameworkStores<AppDbContext>();
+            .AddEntityFrameworkStores<AppDbContextUsuarios>();
 
         // ── JWT Authentication ───────────────────────────────────────────────
         //Se fuerza todos los esquemas a Bearer para que Identity sepa que es una API de manera que,
