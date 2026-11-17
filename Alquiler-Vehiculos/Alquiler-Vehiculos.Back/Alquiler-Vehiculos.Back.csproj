@@ -35,7 +35,6 @@
       <Folder Include="Models\Pago\" />
       <Folder Include="Models\Reserva\" />
       <Folder Include="Models\Trabajador\" />
-      <Folder Include="Models\Vehiculo\" />
       <Folder Include="Repositories\Cliente\" />
       <Folder Include="Repositories\Reserva\" />
       <Folder Include="Repositories\Vehiculo\" />
