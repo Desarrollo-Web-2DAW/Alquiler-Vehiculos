@@ -1,6 +1,6 @@
 using System.Text;
+using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Models.Usuario;
-using FunkoApi.Back.Config;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;

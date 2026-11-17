@@ -1,4 +1,4 @@
-namespace FunkoApi.Back.Config;
+namespace Alquiler_Vehiculos.Config;
 
 /// <summary>
 /// Representa la configuración para la autenticación y emisión de JSON Web Tokens (JWT).
