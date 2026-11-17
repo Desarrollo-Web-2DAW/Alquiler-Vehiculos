@@ -1,8 +1,13 @@
+using Alquiler_Vehiculos.Cache;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Caché LRU con TTL sobre Redis (carpeta Cache/)
+builder.Services.AddCache(builder.Configuration);
 
 var app = builder.Build();
 
