@@ -1,6 +1,6 @@
-﻿using Alquiler_Vehiculos.Models.Cliente;
-using Alquiler_Vehiculos.Models.Trabajador;
-using Alquiler_Vehiculos.Models.Usuario;
+﻿using Alquiler_Vehiculos.Models.Usuarios.Clientes;
+using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
+using Alquiler_Vehiculos.Models.Usuarios;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
