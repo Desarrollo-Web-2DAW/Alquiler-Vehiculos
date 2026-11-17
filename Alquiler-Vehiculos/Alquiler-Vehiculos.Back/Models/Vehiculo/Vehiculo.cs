@@ -13,9 +13,9 @@ public class Vehiculo
     public TipoTransmision Transmision { get; init; }
     public EstadoVehiculo Estado { get; init; } = EstadoVehiculo.Disponible;
     public TipoColor Color { get; init; }
-    public decimal PrecioBaseDia { get; init; }
+    public double PrecioBaseDia { get; init; }
     public int Plazas { get; init; }
-    public decimal MaleteroLitros { get; init; }
+    public int MaleteroLitros { get; init; }
     public int AutonomiaKm { get; init; }
     public int Kilometraje { get; init; }
     public DateTime FechaUltimaRevision { get; init; }
