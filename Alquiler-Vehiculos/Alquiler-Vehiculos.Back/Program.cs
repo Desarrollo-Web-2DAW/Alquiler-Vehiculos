@@ -1,42 +1,106 @@
 using FluentValidation;
+using System.Text;
+using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Infrastructure;
+using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Events;
+
+Console.OutputEncoding = Encoding.UTF8;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        "logs/api-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Logging.AddSerilog(Log.Logger);
+builder.Host.UseSerilog(Log.Logger);
 
-// Registra los validadores del proyecto en el contenedor de dependencias.
-// Su ejecución se conectará al implementar los endpoints del catálogo.
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+try {
+    Log.Information("Iniciando la aplicación...");
 
-var app = builder.Build();
+    // ── CONFIGURACIÓN TIPADA ─────────────────────────────────────────────────
+    builder.Services.Configure<ApiSettings>(
+        builder.Configuration.GetSection("Api"));
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()) {
-    app.MapOpenApi();
+    // ── IDENTITY + JWT ─────────────────────────────────────────────────────
+    builder.Services.AddIdentityConfiguration(builder.Configuration, builder.Environment);
+
+    // ── SERVICIOS ─────────────────────────────────────────────────────────────
+    builder.Services.AddControllers();
+    // Registra los validadores del proyecto en el contenedor de dependencias.
+    // Su ejecución se conectará al implementar los endpoints del catálogo.
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+    // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
+    var app = builder.Build();
+
+    app.UseSerilogRequestLogging();
+
+    //app.UseGlobalExceptionHandler();
+
+    app.UseAuthentication();
+    app.UseAuthorization();
+
+    if (app.Environment.IsDevelopment()) {
+       // app.UseSwagger();
+       // app.UseSwaggerUI();
+    }
+
+    app.MapControllers();
+
+    // ── CONFIGURACIÓN TIPADA: se lee y se muestra al arrancar ────────────────
+    var apiConfig = app.Services.GetRequiredService<IOptions<ApiSettings>>().Value;
+
+    Log.Information("API {Nombre}: {Mensaje}", apiConfig.Nombre, apiConfig.Mensaje);
+
+    var port = builder.Configuration["ASPNETCORE_URLS"]?.Split(':').LastOrDefault() ?? "5000";
+    Console.WriteLine("========================================");
+    Console.WriteLine($"  {apiConfig.Nombre}");
+    Console.WriteLine($"  {apiConfig.Mensaje}");
+    Console.WriteLine($"  http://localhost:{port}");
+    if (app.Environment.IsDevelopment()) {
+        Console.WriteLine($"  Swagger: http://localhost:{port}/swagger");
+        Console.WriteLine($"  GraphQL: http://localhost:{port}/graphql");
+    }
+    Console.WriteLine($"  Entorno: {app.Environment.EnvironmentName}");
+    Console.WriteLine("========================================");
+
+    app.UseHttpsRedirection();
+
+    var summaries = new[] {
+        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
+    };
+
+    app.MapGet("/weatherforecast", () => {
+            var forecast = Enumerable.Range(1, 5).Select(index =>
+                    new WeatherForecast
+                    (
+                        DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
+                        Random.Shared.Next(-20, 55),
+                        summaries[Random.Shared.Next(summaries.Length)]
+                    ))
+                .ToArray();
+            return forecast;
+        })
+        .WithName("GetWeatherForecast");
+
+    await app.RunAsync();
+} catch (Exception ex) {
+    Log.Fatal(ex, "La aplicación terminó de forma inesperada");
+} finally {
+    await Log.CloseAndFlushAsync();
 }
-
-app.UseHttpsRedirection();
-
-var summaries = new[] {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () => {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
-
-app.Run();
 
 record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) {
     public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
