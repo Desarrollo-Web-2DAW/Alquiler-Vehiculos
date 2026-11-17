@@ -5,14 +5,8 @@ namespace Alquiler_Vehiculos.Models.Vehiculo.Enums;
 /// </summary>
 public enum TipoCombustible
 {
-    SinEspecificar,
+    Gasolina,
     Diesel,
     Hibrido,
-    HibridoEnchufable,
-    Electrico,
-    Glp,
-    Hidrogeno,
-    Multicomustible,
-    Etanol,
-    Gasolina
+    Electrico
 }
