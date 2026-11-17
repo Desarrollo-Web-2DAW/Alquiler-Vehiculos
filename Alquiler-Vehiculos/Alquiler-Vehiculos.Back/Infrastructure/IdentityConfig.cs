@@ -40,25 +40,25 @@ public static class IdentityConfig {
         //y se añade además: los roles, el servicio propio para registrarse (Sing in)
         //conecta el sistema de Identity con tu base de datos utilizando Entity Framework Core
         //registra los proveedores estándar encargados de generar tokens de un solo uso (OTP)
-        services.AddIdentityCore<AppUser>(options => {
-            // Password
-            options.Password.RequiredLength = 8;
-            options.Password.RequireDigit = true;
-            options.Password.RequireLowercase = true;
-            options.Password.RequireUppercase = true;
-            options.Password.RequireNonAlphanumeric = true;
+        services.AddIdentityCore<AppUser>(options =>
+            {
+                // Password
+                options.Password.RequiredLength = 8;
+                options.Password.RequireDigit = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
 
-            // Lockout
-            options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
-            options.Lockout.MaxFailedAccessAttempts = 5;
+                // Lockout
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
+                options.Lockout.MaxFailedAccessAttempts = 5;
 
-            // User
-            options.User.RequireUniqueEmail = true;
-        })
-        .AddRoles<IdentityRole<long>>()
-        .AddSignInManager()
-        .AddEntityFrameworkStores<AppDbContext>()
-        .AddDefaultTokenProviders();
+                // User
+                options.User.RequireUniqueEmail = true;
+            })
+            .AddRoles<IdentityRole<long>>()
+            .AddSignInManager()
+            .AddEntityFrameworkStores<AppDbContext>();
 
         // ── JWT Authentication ───────────────────────────────────────────────
         //Se fuerza todos los esquemas a Bearer para que Identity sepa que es una API de manera que,
@@ -81,18 +81,6 @@ public static class IdentityConfig {
                     Encoding.UTF8.GetBytes(jwtSettings.Key)),
                 ClockSkew = TimeSpan.Zero
             };
-            options.Events = new JwtBearerEvents {
-                OnMessageReceived = context => {
-                    var accessToken = context.Request.Query["access_token"];
-                    var path = context.HttpContext.Request.Path;
-
-                    if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs/funkos")) {
-                        context.Token = accessToken;
-                    }
-
-                    return Task.CompletedTask;
-                }
-            };
         });
 
         // ── Authorization Policies ───────────────────────────────────────────
@@ -102,9 +90,13 @@ public static class IdentityConfig {
             .AddPolicy("RequiereTrabajador", policy => policy.RequireRole(
                 nameof(RolUsuario.Trabajador),
                 nameof(RolUsuario.Mecanico),
-                nameof(RolUsuario.Responsable)))
-            .AddPolicy("RequireMecanico", policy => policy.RequireRole(nameof(RolUsuario.Mecanico), nameof(RolUsuario.Responsable)))
-            .AddPolicy("RequireResponsable", policy => policy.RequireRole(nameof(RolUsuario.Responsable)));
+                nameof(RolUsuario.Responsable),
+                nameof(RolUsuario.Admin)))
+            .AddPolicy("RequireMecanico", policy => policy.RequireRole(
+                nameof(RolUsuario.Mecanico),
+                nameof(RolUsuario.Responsable),
+                nameof(RolUsuario.Admin)))
+            .AddPolicy("RequireResponsable", policy => policy.RequireRole(nameof(RolUsuario.Responsable), nameof(RolUsuario.Admin)));
 
         Log.Information("Identity y JWT configurados correctamente.");
         return services;
