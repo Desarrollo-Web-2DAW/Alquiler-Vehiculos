@@ -37,6 +37,7 @@ BenchmarkDotNet.Artifacts/
 
 # Informe de cobertura generado
 coveragereport/
+[Cc]overage/
 
 # Archivos específicos de Visual Studio
 *.csproj.user

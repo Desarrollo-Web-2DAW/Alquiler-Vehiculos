@@ -17,7 +17,6 @@
       <Folder Include="Controllers\Reserva\" />
       <Folder Include="Controllers\Trabajador\" />
       <Folder Include="Controllers\Vehiculo\" />
-      <Folder Include="Dto\" />
       <Folder Include="Errors\Cliente\" />
       <Folder Include="Errors\Pago\" />
       <Folder Include="Errors\Reserva\" />
