@@ -1,7 +1,8 @@
 using System.Text;
 using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Entities;
-using Alquiler_Vehiculos.Models.Usuario;
+using Alquiler_Vehiculos.Enums.Usuarios;
+using Alquiler_Vehiculos.Models.Usuarios;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -10,14 +11,14 @@ using Serilog;
 namespace Alquiler_Vehiculos.Infrastructure;
 
 /// <summary>
-/// Configuracion de Identity + JWT + Authorization.
+/// Configuración de Identity, JWT y autorización.
 /// </summary>
 public static class IdentityConfig {
     /// <summary>
     /// Registra Identity, JWT Bearer y políticas de autorización.
     /// </summary>
     /// <param name="services">Colección de servicios.</param>
-    /// <param name="configuration">Configuración de la app.</param>
+    /// <param name="configuration">Configuración de la aplicación.</param>
     /// <param name="environment">Entorno de la aplicación.</param>
     /// <returns>IServiceCollection para encadenar.</returns>
     public static IServiceCollection AddIdentityConfiguration(
@@ -26,7 +27,7 @@ public static class IdentityConfig {
         IWebHostEnvironment environment) {
         Log.Information("Configurando Identity y JWT...");
 
-        // ── JWT Settings ─────────────────────────────────────────────────────
+        // ── JWT Settings ────────────────────────────────────────────────────
         services.Configure<JwtSettings>(
             configuration.GetSection(JwtSettings.SectionName));
 
@@ -34,15 +35,11 @@ public static class IdentityConfig {
             .GetSection(JwtSettings.SectionName)
             .Get<JwtSettings>() ?? new JwtSettings();
 
-        // ── Identity ─────────────────────────────────────────────────────────
-        // configuración manual de identity para AppUser especificando:
-        //contraseñas válidas, intentos hasta bloquea la cuenta, tiempo de bloqueo
-        //especifica que el email debe ser único
-        //y se añade además: los roles, el servicio propio para registrarse (Sing in)
-        //conecta el sistema de Identity con tu base de datos utilizando Entity Framework Core
-        //registra los proveedores estándar encargados de generar tokens de un solo uso (OTP)
-        services.AddIdentityCore<User>(options =>
-            {
+        // ── Identity ────────────────────────────────────────────────────────
+        // Configuración manual de Identity:
+        // - contraseñas, bloqueo por intentos fallidos y email único
+        // - roles, SignInManager y almacenamiento con EF Core
+        services.AddIdentityCore<User>(options => {
                 // Password
                 options.Password.RequiredLength = 8;
                 options.Password.RequireDigit = true;
@@ -57,47 +54,43 @@ public static class IdentityConfig {
                 // User
                 options.User.RequireUniqueEmail = true;
             })
-            .AddRoles<IdentityRole<long>>()
+            .AddRoles<IdentityRole<Guid>>()
             .AddSignInManager()
             .AddEntityFrameworkStores<AppDbContextUsuarios>();
 
-        // ── JWT Authentication ───────────────────────────────────────────────
-        //Se fuerza todos los esquemas a Bearer para que Identity sepa que es una API de manera que,
-        //en vez de redigir mande el código de response adecuado (401 o 403) mediante un json
+        // ── JWT Authentication ──────────────────────────────────────────────
+        // Se fuerza el esquema Bearer para que, en vez de redirigir a un login,
+        // la API responda 401 o 403 en JSON.
         services.AddAuthentication(options => {
-            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-            options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
-        })
-        .AddJwtBearer(options => {
-            options.TokenValidationParameters = new TokenValidationParameters {
-                ValidateIssuer = true,
-                ValidateAudience = true,
-                ValidateLifetime = true,
-                ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings.Issuer,
-                ValidAudience = jwtSettings.Audience,
-                IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(jwtSettings.Key)),
-                ClockSkew = TimeSpan.Zero
-            };
-        });
+                options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultForbidScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options => {
+                options.TokenValidationParameters = new TokenValidationParameters {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSettings.Issuer,
+                    ValidAudience = jwtSettings.Audience,
+                    IssuerSigningKey = new SymmetricSecurityKey(
+                        Encoding.UTF8.GetBytes(jwtSettings.Key)),
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
 
-        // ── Authorization Policies ───────────────────────────────────────────
+        // ── Authorization Policies ──────────────────────────────────────────
         services.AddAuthorizationBuilder()
-            .AddPolicy("RequireAdmin", policy => policy.RequireRole(nameof(RolUsuario.Admin)))
-            .AddPolicy("RequireCliente", policy => policy.RequireRole(nameof(RolUsuario.Cliente)))
-            .AddPolicy("RequiereTrabajador", policy => policy.RequireRole(
-                nameof(RolUsuario.Trabajador),
-                nameof(RolUsuario.Mecanico),
-                nameof(RolUsuario.Responsable),
+            .AddPolicy(PolicyNames.Admin, policy => policy.RequireRole(
                 nameof(RolUsuario.Admin)))
-            .AddPolicy("RequireMecanico", policy => policy.RequireRole(
-                nameof(RolUsuario.Mecanico),
-                nameof(RolUsuario.Responsable),
-                nameof(RolUsuario.Admin)))
-            .AddPolicy("RequireResponsable", policy => policy.RequireRole(nameof(RolUsuario.Responsable), nameof(RolUsuario.Admin)));
+            .AddPolicy(PolicyNames.Cliente, policy => policy.RequireRole(
+                nameof(RolUsuario.Cliente), nameof(RolUsuario.Admin)))
+            .AddPolicy(PolicyNames.Trabajador, policy => policy.RequireRole(
+                nameof(RolUsuario.Trabajador), nameof(RolUsuario.Responsable), nameof(RolUsuario.Admin)))
+            .AddPolicy(PolicyNames.Responsable, policy => policy.RequireRole(
+                nameof(RolUsuario.Responsable), nameof(RolUsuario.Admin)));
 
         Log.Information("Identity y JWT configurados correctamente.");
         return services;
