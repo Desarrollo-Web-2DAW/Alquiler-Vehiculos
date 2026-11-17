@@ -17,8 +17,6 @@ public record VehiculoDto {
     /// <summary>Color del vehículo.</summary>
     public string Color { get; set; } = string.Empty;
     /// <summary>Estado del vehículo.</summary>
-    public string Estado { get; set; } = string.Empty;
-    /// <summary>Tipo de combustible del vehículo.</summary>
     public string Combustible { get; set; } = string.Empty;
     /// <summary>Tipo de transmisión del vehículo.</summary>
     public string Transmision { get; set; } = string.Empty;
@@ -29,12 +27,6 @@ public record VehiculoDto {
     /// <summary>Autonomía del vehículo expresada en kilómetros.</summary>
     public int AutonomiaKm { get; set; }
     /// <summary>Kilómetros recorridos por el vehículo.</summary>
-    public int Kilometraje { get; set; }
-    /// <summary>Fecha de la última revisión representada como texto.</summary>
-    public string FechaUltimaRevision { get; set; } = string.Empty;
-    /// <summary>Identificador del concesionario asociado al vehículo.</summary>
-    public int ConcesionarioId { get; set; }
-    /// <summary>Nombre de la marca del vehículo.</summary>
     public string Marca { get; set; } = string.Empty; 
     /// <summary>Nombre del modelo del vehículo.</summary>
     public string Modelo { get; set; } = string.Empty;

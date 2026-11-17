@@ -12,7 +12,7 @@ public record CreateRequestVehiculoDto {
     /// <summary>Categoría del vehículo.</summary>
     public string Categoria { get; set; } = string.Empty;
     /// <summary>Precio base de alquiler por día.</summary>
-    public decimal PrecioBaseDia { get; set; }
+    public double PrecioBaseDia { get; set; }
     /// <summary>Color del vehículo.</summary>
     public string Color { get; set; } = string.Empty;
     /// <summary>Estado del vehículo.</summary>
