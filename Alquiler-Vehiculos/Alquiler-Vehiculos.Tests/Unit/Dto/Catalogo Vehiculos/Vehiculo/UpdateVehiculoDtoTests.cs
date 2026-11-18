@@ -35,9 +35,6 @@ public class UpdateVehiculoDtoTests {
         dto.Marca = "Toyota";
         dto.Modelo = "Corolla";
         dto.Acriss = "ILAH";
-        dto.Categoria = "Sedan";
-        dto.Combustible = "Hibrido";
-        dto.Transmision = "Automatica";
         dto.Estado = "Disponible";
         dto.Color = "Azul";
         dto.PrecioBaseDia = 45.50m;

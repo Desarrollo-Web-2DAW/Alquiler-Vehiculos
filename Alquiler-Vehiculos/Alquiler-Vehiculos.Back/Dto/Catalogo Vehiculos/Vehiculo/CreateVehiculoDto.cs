@@ -16,12 +16,6 @@ public record CreateVehiculoDto {
     /// <summary>Código ACRISS que clasifica el vehículo.</summary>
     public string Acriss { get; set; } = string.Empty;
     /// <summary>Categoría del vehículo.</summary>
-    public string Categoria { get; set; } = string.Empty;
-    /// <summary>Tipo de combustible del vehículo.</summary>
-    public string Combustible { get; set; } = string.Empty;
-    /// <summary>Tipo de transmisión del vehículo.</summary>
-    public string Transmision { get; set; } = string.Empty;
-    /// <summary>Estado del vehículo.</summary>
     public string Estado { get; set; } = string.Empty;
     /// <summary>Color del vehículo.</summary>
     public string Color { get; set; } = string.Empty;
