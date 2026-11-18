@@ -56,11 +56,10 @@ public class CreateVehiculoValidator : AbstractValidator<CreateVehiculoDto>
             .GreaterThan(0).WithMessage("El precio base por día debe ser mayor que cero.");
 
         RuleFor(v => v.Plazas)
-            .GreaterThan(0).WithMessage("El vehículo debe tener al menos una plaza.")
-            .LessThanOrEqualTo(100).WithMessage("El número de plazas no es realista.");
+            .InclusiveBetween(2, 9).WithMessage("El número de plazas debe estar entre 2 y 9.");
 
         RuleFor(v => v.MaleteroLitros)
-            .GreaterThanOrEqualTo(0).WithMessage("La capacidad del maletero no puede ser negativa.");
+            .InclusiveBetween(0, 6000).WithMessage("La capacidad del maletero debe estar entre 0 y 6.000 litros.");
 
         RuleFor(v => v.AutonomiaKm)
             .GreaterThan(0).WithMessage("La autonomía en kilómetros debe ser mayor que cero.");
