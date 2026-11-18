@@ -1,8 +1,13 @@
+using Alquiler_Vehiculos.Infrastructure;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Notificaciones por correo (RF-34 a RF-36): cola de envío con reintentos en segundo plano
+builder.Services.AddEmailNotifications(builder.Configuration);
 
 var app = builder.Build();
 

@@ -8,7 +8,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1"/>
+        <PackageReference Include="MailKit" Version="4.18.2"/>
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Plantillas de correo: se copian a la salida para poder renderizarlas en tiempo de ejecución -->
+      <Content Update="Templates\Email\**" CopyToOutputDirectory="PreserveNewest"/>
     </ItemGroup>
 
     <ItemGroup>
