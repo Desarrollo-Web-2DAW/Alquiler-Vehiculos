@@ -25,4 +25,7 @@ public class Vehiculo
     public DateTime FechaUltimaRevision { get; init; }
     public long ConesionarioFk { get; init; }
     public bool Activo { get; init; } = true;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? UpdatedAt { get; set; }
+    public DateTime? DeletedAt { get; set; }
 }
