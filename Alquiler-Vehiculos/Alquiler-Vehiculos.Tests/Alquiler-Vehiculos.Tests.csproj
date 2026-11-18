@@ -33,8 +33,4 @@
         <ProjectReference Include="..\Alquiler-Vehiculos.Back\Alquiler-Vehiculos.Back.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Unit\Models\" />
-    </ItemGroup>
-
 </Project>

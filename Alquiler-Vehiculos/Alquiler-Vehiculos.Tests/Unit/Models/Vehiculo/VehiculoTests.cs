@@ -1,5 +1,4 @@
-using System.Reflection;
-using System.Runtime.CompilerServices;
+using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using FluentAssertions;
@@ -9,7 +8,7 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 /// <summary>
 /// Tests unitarios de la entidad <see cref="Vehiculo"/>.
 /// Cubre valores por defecto, asignación completa, igualdad por referencia
-/// e inmutabilidad de las propiedades declaradas con <c>init</c>.
+/// y auditoría.
 /// </summary>
 public class VehiculoTests
 {
@@ -70,13 +69,56 @@ public class VehiculoTests
             Combustible = TipoCombustible.Gasolina,
             Transmision = TipoTransmision.Manual,
             Color = TipoColor.Rojo,
-            PrecioBaseDia = 0,
+            PrecioBaseDia = 0d,
             Plazas = 0,
             MaleteroLitros = 0,
             AutonomiaKm = 0,
             Kilometraje = 0,
             FechaUltimaRevision = default(DateTime)
         });
+    }
+
+    [Test]
+    public void Constructor_PorDefecto_InicializaFotoMatriculaConcesionarioYAuditoria()
+    {
+        // Arrange
+        var antes = DateTime.UtcNow;
+
+        // Act
+        var vehiculo = new Vehiculo();
+
+        // Assert
+        vehiculo.FotoFk.Should().BeEmpty();
+        vehiculo.Foto.Should().BeNull();
+        vehiculo.Matrícula.Should().BeEmpty();
+        vehiculo.ConesionarioFk.Should().Be(0L);
+        vehiculo.CreatedAt.Should().BeOnOrAfter(antes).And.BeOnOrBefore(DateTime.UtcNow);
+        vehiculo.UpdatedAt.Should().BeNull();
+        vehiculo.DeletedAt.Should().BeNull();
+    }
+
+    [Test]
+    public void Constructor_ConFotoMatriculaConcesionarioYAuditoria_ConservaValores()
+    {
+        // Arrange
+        var fecha = new DateTime(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+        var foto = new Foto { Nombre = "coche.png", Ruta = "/uploads/vehiculos/coche.png" };
+
+        // Act
+        var vehiculo = new Vehiculo
+        {
+            FotoFk = "foto-001", Foto = foto, Matrícula = "1234BCD", ConesionarioFk = 10,
+            CreatedAt = fecha, UpdatedAt = fecha.AddDays(1), DeletedAt = fecha.AddDays(2)
+        };
+
+        // Assert
+        vehiculo.FotoFk.Should().Be("foto-001");
+        vehiculo.Foto.Should().BeSameAs(foto);
+        vehiculo.Matrícula.Should().Be("1234BCD");
+        vehiculo.ConesionarioFk.Should().Be(10L);
+        vehiculo.CreatedAt.Should().Be(fecha);
+        vehiculo.UpdatedAt.Should().Be(fecha.AddDays(1));
+        vehiculo.DeletedAt.Should().Be(fecha.AddDays(2));
     }
 
     [Test]

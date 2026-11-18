@@ -1,3 +1,5 @@
+using Alquiler_Vehiculos.Errors.Common;
+
 namespace Alquiler_Vehiculos.Errors.Storage;
 
 /// <summary>

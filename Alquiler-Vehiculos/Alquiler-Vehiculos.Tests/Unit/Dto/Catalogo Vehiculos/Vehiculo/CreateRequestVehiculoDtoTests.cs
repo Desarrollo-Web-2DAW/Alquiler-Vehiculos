@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
+using FluentAssertions;
 
 namespace Alquiler_Vehiculos.Tests.Dto.Catalogo_Vehiculos.Vehiculo;
 
@@ -38,7 +39,7 @@ public class CreateRequestVehiculoDtoTests {
         dto.Matricula = "1234BCD";
         dto.Acriss = "CDMR";
         dto.Categoria = "Compacto";
-        dto.PrecioBaseDia = 45.50m;
+        dto.PrecioBaseDia = 45.50;
         dto.Color = "Azul";
         dto.Estado = "Disponible";
         dto.Combustible = "Gasolina";
@@ -55,7 +56,7 @@ public class CreateRequestVehiculoDtoTests {
             Assert.That(dto.Matricula, Is.EqualTo("1234BCD"));
             Assert.That(dto.Acriss, Is.EqualTo("CDMR"));
             Assert.That(dto.Categoria, Is.EqualTo("Compacto"));
-            Assert.That(dto.PrecioBaseDia, Is.EqualTo(45.50m));
+            dto.PrecioBaseDia.Should().Be(45.50d);
             Assert.That(dto.Color, Is.EqualTo("Azul"));
             Assert.That(dto.Estado, Is.EqualTo("Disponible"));
             Assert.That(dto.Combustible, Is.EqualTo("Gasolina"));
@@ -67,5 +68,20 @@ public class CreateRequestVehiculoDtoTests {
             Assert.That(dto.FechaUltimaRevision, Is.EqualTo("2026-11-01"));
             Assert.That(dto.IsActivo, Is.EqualTo(isActivo));
         }
+    }
+
+    [Test]
+    public void With_CambiarPrecio_NoModificaElOriginal() {
+        // Arrange
+        var original = new CreateRequestVehiculoDto { Matricula = "1234BCD", PrecioBaseDia = 45.50d };
+
+        // Act
+        var modificado = original with { PrecioBaseDia = 60d };
+
+        // Assert
+        original.PrecioBaseDia.Should().Be(45.50d);
+        modificado.PrecioBaseDia.Should().Be(60d);
+        modificado.Matricula.Should().Be(original.Matricula);
+        modificado.Should().NotBeSameAs(original);
     }
 }

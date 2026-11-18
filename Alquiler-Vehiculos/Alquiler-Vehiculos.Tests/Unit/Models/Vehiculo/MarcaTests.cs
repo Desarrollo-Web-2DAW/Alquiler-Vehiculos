@@ -10,7 +10,8 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 /// </summary>
 public class MarcaTests
 {
-    private static Marca CrearMarca() => new(1, "Toyota", "Japón", "https://www.toyota.es");
+    private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static Marca CrearMarca() => new(1, "Toyota", "Japón", "https://www.toyota.es", false, Fecha, null, null);
 
     [Test]
     public void Constructor_ConTodosLosValores_AsignaCadaPropiedad()
@@ -32,7 +33,7 @@ public class MarcaTests
     public void Constructor_ConCadenasVacias_ConservaLasCadenasVacias()
     {
         // Arrange & Act
-        var marca = new Marca(0, string.Empty, string.Empty, string.Empty);
+        var marca = new Marca(0, string.Empty, string.Empty, string.Empty, false, Fecha, null, null);
 
         // Assert
         marca.Should().BeEquivalentTo(new
@@ -42,6 +43,19 @@ public class MarcaTests
             Pais = string.Empty,
             Web = string.Empty
         });
+    }
+
+    [Test]
+    public void Constructor_ConAuditoria_ConservaLosValores()
+    {
+        // Arrange & Act
+        var marca = new Marca(1, "Toyota", "Japón", "https://www.toyota.es", true, Fecha, Fecha.AddDays(1), Fecha.AddDays(2));
+
+        // Assert
+        marca.IsDeleted.Should().BeTrue();
+        marca.CreatedAt.Should().Be(Fecha);
+        marca.UpdatedAt.Should().Be(Fecha.AddDays(1));
+        marca.DeletedAt.Should().Be(Fecha.AddDays(2));
     }
 
     [Test]

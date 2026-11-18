@@ -5,13 +5,14 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 
 /// <summary>
 /// Tests unitarios del record <see cref="Concesionario"/>.
-/// Verifica la construcción, la igualdad estructural de sus cinco miembros
+    /// Verifica la construcción, la igualdad estructural y la auditoría
 /// y el resto del contrato generado por el compilador (<c>with</c>, deconstrucción, <c>ToString</c>).
 /// </summary>
 public class ConcesionarioTests
 {
+    private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
     private static Concesionario CrearConcesionario() =>
-        new(10, "Motor Norte", "Santander", "+34 942 000 111", "contacto@motornorte.es");
+        new(10, "Motor Norte", "Santander", "+34 942 000 111", "contacto@motornorte.es", false, Fecha, null, null);
     
 
     [Test]
@@ -35,7 +36,7 @@ public class ConcesionarioTests
     public void Constructor_ConCadenasVacias_ConservaLasCadenasVacias()
     {
         // Arrange & Act
-        var concesionario = new Concesionario(0, string.Empty, string.Empty, string.Empty, string.Empty);
+        var concesionario = new Concesionario(0, string.Empty, string.Empty, string.Empty, string.Empty, false, Fecha, null, null);
 
         // Assert
         concesionario.Should().BeEquivalentTo(new
@@ -195,16 +196,15 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
 
         // Act
-        var (id, nombre, ciudad, telefono, email) = concesionario;
+        var (id, nombre, ciudad, telefono, email, isDeleted, createdAt, updatedAt, deletedAt) = concesionario;
         var descompuesto = (Id: id, Nombre: nombre, Ciudad: ciudad, Telefono: telefono, Email: email);
 
         // Assert
-        descompuesto.Should().Be((
-            Id: 10L,
-            Nombre: "Motor Norte",
-            Ciudad: "Santander",
-            Telefono: "+34 942 000 111",
-            Email: "contacto@motornorte.es"));
+        isDeleted.Should().BeFalse();
+        createdAt.Should().Be(Fecha);
+        updatedAt.Should().BeNull();
+        deletedAt.Should().BeNull();
+        descompuesto.Should().Be((10L, "Motor Norte", "Santander", "+34 942 000 111", "contacto@motornorte.es"));
     }
 
     [Test]

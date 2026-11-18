@@ -1,4 +1,4 @@
-namespace Alquiler_Vehiculos.Errors;
+namespace Alquiler_Vehiculos.Errors.Common;
 
 /// <summary>
 /// Clase base para errores del dominio.
@@ -11,7 +11,7 @@ public abstract record DomainError(string Message) {
 }
 
 /// <summary>
-///     Recurso no encontrado (HTTP 404).
+/// Recurso no encontrado (HTTP 404).
 /// </summary>
 public sealed record NotFoundError(string Message) : DomainError(Message) {
     /// <summary>Crea error "no encontrado" con formato estándar.</summary>
@@ -66,7 +66,7 @@ public sealed record BusinessRuleError(string Message) : DomainError(Message)
 }
 
 /// <summary>
-///     No autenticado (HTTP 401).
+/// No autenticado (HTTP 401).
 /// </summary>
 public sealed record UnauthorizedError(string Message) : DomainError(Message) {
     /// <summary>Crea error para credenciales incorrectas.</summary>

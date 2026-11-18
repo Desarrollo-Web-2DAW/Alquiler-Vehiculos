@@ -44,7 +44,9 @@
       <Folder Include="Services\Reserva\" />
       <Folder Include="Services\Trabajador\" />
       <Folder Include="Services\Vehiculo\" />
-      <Folder Include="Validators\" />
+      <Folder Include="Validators\Catalogo Vehiculos\Concesionario\" />
+      <Folder Include="Validators\Catalogo Vehiculos\Marca\" />
+      <Folder Include="Validators\Catalogo Vehiculos\Vehiculo\" />
     </ItemGroup>
 
 </Project>
