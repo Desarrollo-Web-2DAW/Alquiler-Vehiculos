@@ -10,7 +10,7 @@ namespace Alquiler_Vehiculos.Services.Storage;
 /// Comprueba los archivos recibidos antes de guardarlos y devuelve los fallos mediante Result.
 /// </summary>
 ///
-public class StorageService
+public class StorageService : IStorageService
 {
     private readonly string _rootPath;
     private readonly string _uploadPath;
