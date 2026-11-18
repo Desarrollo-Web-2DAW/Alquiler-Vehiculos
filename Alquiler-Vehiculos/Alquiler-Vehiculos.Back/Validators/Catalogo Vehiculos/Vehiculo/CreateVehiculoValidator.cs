@@ -5,6 +5,9 @@ using FluentValidation;
 
 namespace Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 
+/// <summary>
+/// Valida los datos de entrada para crear un vehiculo.
+/// </summary>
 public class CreateVehiculoValidator : AbstractValidator<CreateVehiculoDto>
 {
     // Patrón estándar para matrículas españolas modernas (4 números y 3 letras, sin consonantes disonantes)
