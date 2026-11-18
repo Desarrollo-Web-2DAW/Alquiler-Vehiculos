@@ -18,7 +18,7 @@ public class StorageService : IStorageService
     private readonly string[] _allowedExtensions;
     private readonly string[] _allowedContentTypes;
     private readonly ILogger<StorageService> _logger;
-    private IFotoRepository _fotoRepository;
+    //private IFotoRepository _fotoRepository;
 
     /// <summary>
     /// Lee los límites y tipos admitidos, calcula la ubicación del almacenamiento
@@ -28,7 +28,9 @@ public class StorageService : IStorageService
     /// <param name="logger">Registrador de los mensajes y errores de este servicio.</param>
     /// <param name="env">Entorno del que se obtiene la raíz web o, si es nula, la raíz del proyecto.</param>
     public StorageService(IConfiguration configuration, ILogger<StorageService> logger,
-        IWebHostEnvironment env, IFotoRepository fotoRepository)
+        IWebHostEnvironment env
+        //IFotoRepository fotoRepository
+        )
     {
         _logger = logger;
 
@@ -44,7 +46,7 @@ public class StorageService : IStorageService
 
         if (!Directory.Exists(_rootPath)) Directory.CreateDirectory(_rootPath);
 
-        _fotoRepository = fotoRepository;
+        //_fotoRepository = fotoRepository;
 
         _logger.LogInformation("Storage service inicializado en: {Path}", _rootPath);
     }
@@ -73,8 +75,8 @@ public class StorageService : IStorageService
                 Activo = true,             
                 CreatedAt = DateTime.UtcNow
             };
-            var result = _fotoRepository.Save(fotoModel);
-            if (result.IsFailure) Result.Failure<Foto, DomainError>(result.Error);
+            //var result = _fotoRepository.Save(fotoModel);
+            //if (result.IsFailure) Result.Failure<Foto, DomainError>(result.Error);
             
             using var stream = new FileStream(filePath, FileMode.Create);
             file.CopyToAsync(stream);
@@ -101,7 +103,7 @@ public class StorageService : IStorageService
             if (File.Exists(fullPath))
             {
                 //Comprobación de la lógica de negocio necesaria en el repositorio
-                var result = _fotoRepository.Delete(filename);
+                //var result = _fotoRepository.Delete(filename);
                 File.Delete(fullPath);
                 _logger.LogInformation("Archivo eliminado: {Filename}", filename);
             }
