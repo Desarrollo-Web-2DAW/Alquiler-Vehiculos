@@ -145,3 +145,110 @@ Estado de las pruebas (`dotnet test`): **Total: 27 · OK: 22 · KO: 0 · Omitida
 - Añadir el servicio Redis al `docker compose` (RNF-05) cuando se monte; en desarrollo `Redis:ConnectionString` apunta a `localhost:6379`.
 - Decide el grupo si se incorporan FluentAssertions y Moq (D12) y la ubicación definitiva de `CacheConfig.cs` (aquí, dentro de `Cache/`).
 - Aviso heredado de la plantilla: NuGet reporta vulnerabilidad alta en `Microsoft.OpenApi` 2.0.0 (dependencia de `Microsoft.AspNetCore.OpenApi` 10.0.1). Conviene actualizar el paquete cuando el grupo toque la API.
+
+---
+
+## Tarea: notificaciones por correo electrónico
+
+> **Fecha de registro:** 18/11/2026 · **Rama:** `feature/notifications/Mail` · **Estado:** módulo implementado y documentado, pendiente de pruebas e integración con los servicios del grupo.
+
+### Alcance y requisitos que cubre
+
+| Requisito | Relación con el correo |
+|---|---|
+| **RF-34** | Correos en los pasos importantes de la reserva: los 8 eventos de la tabla del enunciado (alta, pago, caducidad, cancelación, recogida, devolución, reembolso y arreglo de taller) |
+| **RF-35** | El envío **nunca bloquea ni rompe la reserva**: el correo se encola y, si el servidor falla, el error queda registrado para reintentarlo |
+| **RF-36** | En desarrollo se ve el correo sin salir de la máquina (Mailpit); en producción apunta a un servidor real con credenciales en configuración |
+| **CU-17 (ampliación)** | Correo caído durante una racha de pagos: cada cliente recibe **exactamente un** aviso (ni cero ni dos) |
+| **CU-12, CU-23, CU-24 (acuerdos de equipo)** | Avisos al cliente por avería durante el alquiler, vehículo no listo y devolución tardía |
+| **RNF-09** | Registros con `ILogger` sin datos sensibles: solo tipo de evento y código de referencia, nunca el correo del destinatario |
+
+---
+
+## 1. Investigación: envío de correos en la API
+
+- **Proyecto de referencia** (FunkoApiProyecto, rama `feature/email`): `IEmailService` + `MailKitEmailService` (MailKit/MimeKit, con `ISmtpClient` inyectable para pruebas), `MemoryEmailService` (mock con `SentEmails`), `EmailQueueService` (`ConcurrentQueue` + `SemaphoreSlim`) y `EmailBackgroundWorker` (`BackgroundService` que dequeúa y envía). `SmtpSettings` tipado en la sección `Email`.
+- **Versión del profe** (TiendaDawApi-NetCore): mismo esqueleto, pero con `Channel<T>` en vez de cola manual, plantillas HTML generadas desde C# (`EmailTemplates.cs`), pipeline **Polly** (retry + circuit breaker + timeout) y `EmailConfig` para el registro por entornos.
+- **Carencias comunes** que nuestro diseño resuelve: la cola vive solo en memoria (se pierde al reiniciar la app), un fallo de envío se traga el mensaje sin reintentos, no hay control de duplicados (ni cero ni dos no está garantizado) y en desarrollo solo se loguea el correo en vez de poder *verlo*.
+
+## 2. Decisiones tomadas
+
+Cada decisión con su justificación y la alternativa descartada (versión completa con diagramas en `doc/Notificaciones-Email-Memoria.md`).
+
+**D1 — Patrón *outbox*: el correo se encola y lo envía un worker en segundo plano.**
+- *Justificación:* RF-35 exige que el correo nunca bloquee la reserva y que el error quede registrado para reintentarlo. El outbox deja constancia del mensaje y su estado (`Pendiente`, `Enviado`, `Fallido`).
+- *Alternativas descartadas:* envío directo desde el servicio de negocio (un SMTP caído retrasa o rompe la petición) y cola solo en memoria tipo `Channel`/`ConcurrentQueue` (los mensajes se pierden al reiniciar).
+
+**D2 — Clave de idempotencia por evento (`{Tipo}:{CodigoReferencia}`).**
+- *Justificación:* CU-17 pide "ni cero ni dos"; ante reinicios o dobles llamadas, el segundo encolado con la misma clave se descarta.
+- *Alternativa descartada:* confiar en que cada evento se notifica una sola vez.
+
+**D3 — Reintentos con backoff exponencial (30 s · 60 s · 120 s…, máx. 5) en el worker.**
+- *Justificación:* cumple RF-35 sin saturar un servidor caído; al agotar intentos el mensaje queda `Fallido` y auditable.
+- *Alternativa descartada:* Polly con *circuit breaker* (la solución del profe), válida como ampliación pero añade dependencia para lo que el worker resuelve con pocas líneas.
+
+**D4 — Mailpit como correo en desarrollo (contenedor en `compose.yaml`).**
+- *Justificación:* RF-36 pide *ver* el correo en desarrollo: Mailpit da SMTP real (1025) y bandeja web (8025) con los HTML renderizados.
+- *Alternativas descartadas:* `MemoryEmailService` que solo loguea (referencia y profe), MailHog (abandonado) y cuenta real (credenciales y red).
+
+**D5 — Plantillas HTML como ficheros con marcadores `{{Propiedad}}` y bloques `{{#each}}`.**
+- *Justificación:* el equipo pidió plantillas en HTML, CSS, JavaScript y Bootstrap; como ficheros se editan y previsualizan sin recompilar.
+- *Alternativas descartadas:* HTML embebido en strings de C# (profe) y motores tipo Razor/Scriban (dependencia extra para condicionales que no necesitamos).
+
+**D6 — MailKit para SMTP.**
+- *Alternativa descartada:* `System.Net.Mail.SmtpClient` (obsoleto) y proveedores externos tipo SendGrid (atan el proyecto a un servicio de pago).
+
+**D7 — `IEmailOutboxStore` con implementación en memoria, lista para EF Core.**
+- *Justificación:* la BBDD transaccional no está decidida; al fijar EF Core solo se añade una implementación nueva (tabla con índice único sobre `ClaveIdempotencia`) sin tocar el resto.
+- *Alternativa descartada:* EF Core desde el día uno, que depende de una decisión que no es nuestra.
+
+**D8 — Configuración tipada `EmailSettings` (sección `Email`) con secretos fuera del repositorio.**
+- *Justificación:* RNF-03; en desarrollo apunta a Mailpit sin credenciales y en producción `Email__Password` llega por variable de entorno. `Email:UseSmtp=false` conmuta al servicio simulado para pruebas.
+- *Alternativa descartada:* cadenas sueltas y credenciales en el código.
+
+## 3. Diseño del flujo (boceto)
+
+Evento de negocio → DTO de notificación (`Dto/Email`) → plantilla renderizada → mensaje en la cola (outbox, con clave de idempotencia) → `EmailBackgroundWorker` (cada 10 s toma los pendientes cuyo reintento vence) → `MailKitEmailService` → Mailpit/SMTP. Los tres diagramas de secuencia (flujo normal, reintento y CU-17) están en `doc/Notificaciones-Email-Memoria.md`, validados con un parser real de Mermaid.
+
+## 4. Estructura en el proyecto (implementada)
+
+```
+Alquiler-Vehiculos.Back/
+  Models/Email/        TipoNotificacion, EstadoEmailOutbox, EmailOutboxMessage, TiposEventos
+  Dto/Email/           NotificacionEmailBase + un DTO por evento + LineaEmailDto
+  Services/Email/      IEmailNotifier/EmailNotifier (nunca lanza excepción),
+                       IEmailTemplateRenderer/EmailTemplateRenderer,
+                       IEmailOutboxStore/InMemoryEmailOutboxStore,
+                       EmailBackgroundWorker,
+                       IEmailService/MailKitEmailService/MemoryEmailService
+  Infrastructure/      EmailSettings (config tipada) + EmailConfig (registro DI)
+  Templates/Email/     11 plantillas HTML (una por evento) + assets/email.css
+compose.yaml           Mailpit: SMTP 1025 y bandeja web 8025
+doc/Notificaciones-Email-Memoria.md   documentación para la memoria
+```
+
+## 5. Plan de trabajo
+
+1. ~~Investigar el repo de referencia y el del profe y compararlos~~ (hecho).
+2. ~~Contratos y DTOs de los 11 eventos~~ (hecho).
+3. ~~Renderizador de plantillas y plantillas HTML con Bootstrap~~ (hecho).
+4. ~~Cola outbox con idempotencia + worker con reintentos~~ (hecho).
+5. ~~Configuración por entornos, Mailpit y registro en DI~~ (hecho).
+6. ~~Documentación para la memoria (diagramas y decisiones)~~ (hecho).
+7. Pruebas: unitarias de render/notifier/worker e integración con Mailpit (pendiente).
+8. Integración con los servicios de reserva, pago, taller y tareas programadas cuando existan (pendiente, depende del grupo).
+
+## 6. Registro de implementación (18/11/2026)
+
+- Paquete **MailKit 4.18.2**: se descartó la 4.13.0 que trae el proyecto de referencia porque NuGet reporta vulnerabilidades conocidas en MailKit/MimeKit de esa línea.
+- Resuelto el aviso heredado que quedaba en el apartado 7 de la tarea de caché: `Microsoft.AspNetCore.OpenApi` actualizado a 10.0.15, que elimina la vulnerabilidad de `Microsoft.OpenApi` 2.0.0. La solución compila con **0 errores y 0 advertencias**.
+- Diagramas Mermaid de la memoria revisados con un parser real: se corrigieron dos fallos (paréntesis en etiqueta de flecha del diagrama de arquitectura y una declaración de `participant` sin la palabra clave en el diagrama de secuencia).
+- Merge de `origin/dev` (módulo de caché) en esta rama: conflictos resueltos combinando ambos módulos en `Program.cs` (registros `AddCache` y `AddEmailNotifications`), `appsettings*.json` (secciones `Email`, `Cache` y `Redis`) y `.csproj` (paquetes MailKit, StackExchange.Redis y OpenApi).
+
+## 7. Pendientes
+
+- Pruebas del módulo (la estrategia está tabulada en `doc/Notificaciones-Email-Memoria.md`, apartado 7).
+- Pasar `IEmailOutboxStore` a EF Core cuando el grupo fije la BBDD transaccional.
+- Acordar con el grupo los puntos de llamada: **evento → método de `IEmailNotifier`** (una línea por evento; tabla en la memoria).
+- Decisión a documentar: los clientes de correo reales (Outlook, Gmail) no soportan Bootstrap ni JavaScript; si se exige envío a buzones reales, generar variante con estilos *inline*.
+- Añadir los servicios de Mailpit y Redis al `docker compose` definitivo (RNF-05): hoy hay `compose.yaml` solo con Mailpit.
