@@ -28,10 +28,9 @@
       <Folder Include="Controllers\Trabajador\" />
       <Folder Include="Controllers\Vehiculo\" />
       <Folder Include="Dto\" />
-      <Folder Include="Errors\Cliente\" />
       <Folder Include="Errors\Pago\" />
       <Folder Include="Errors\Reserva\" />
-      <Folder Include="Errors\Trabajador\" />
+      <Folder Include="Errors\Usuario\" />
       <Folder Include="Errors\Vehiculo\" />
       <Folder Include="Exceptions\Cliente\" />
       <Folder Include="Exceptions\Pago\" />
@@ -47,11 +46,8 @@
       <Folder Include="Repositories\Cliente\" />
       <Folder Include="Repositories\Reserva\" />
       <Folder Include="Repositories\Vehiculo\" />
-      <Folder Include="Services\Cliente\" />
       <Folder Include="Services\Pago\" />
       <Folder Include="Services\Reserva\" />
-      <Folder Include="Services\Trabajador\" />
-      <Folder Include="Services\Usuario\" />
       <Folder Include="Services\Vehiculo\" />
       <Folder Include="Validators\" />
     </ItemGroup>
