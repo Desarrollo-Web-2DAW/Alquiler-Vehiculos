@@ -21,6 +21,11 @@ public sealed record NotFoundError(string Message) : DomainError(Message) {
     public static NotFoundError FromId(long id, string resourceType = "Unknown") {
         return new NotFoundError($"{resourceType} con ID {id} no encontrado");
     }
+    
+    /// <summary>Crea error "no encontrado" para entidades con Id Guid.</summary>
+    public static NotFoundError FromId(Guid id, string resourceType = "Unknown") {
+        return new NotFoundError($"{resourceType} con ID {id} no encontrado");
+    }
 
     /// <summary>Crea error "no encontrado" con formato estándar.</summary>
     /// <param name="name">Nombre del recurso que no existe.</param>
@@ -28,6 +33,10 @@ public sealed record NotFoundError(string Message) : DomainError(Message) {
     /// <returns>NotFoundError formateado.</returns>
     public static NotFoundError FromName(string name, string resourceType = "Unknown") {
         return new NotFoundError($"{resourceType} con nombre {name} no encontrado");
+    }
+    
+    public static NotFoundError FromEmail(string email, string resourceType = "Unknown") {
+        return new NotFoundError($"{resourceType} con email {email} no encontrado");
     }
     
     /// <summary>Crea error "no encontrado" con formato estándar.</summary>
