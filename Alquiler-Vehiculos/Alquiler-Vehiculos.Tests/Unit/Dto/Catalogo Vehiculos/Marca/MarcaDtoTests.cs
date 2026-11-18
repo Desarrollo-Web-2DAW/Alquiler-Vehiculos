@@ -1,56 +1,49 @@
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Marca;
+using FluentAssertions;
 
 namespace Alquiler_Vehiculos.Tests.Dto.Catalogo_Vehiculos.Marca;
 
 [TestFixture]
+[Category("Unit")]
 public class MarcaDtoTests {
     [Test]
     public void Constructor_SinDatos_InicializaCadenasYColeccionVacias() {
-        // Arrange & Act
+        // Arrange
+        // No se necesitan datos previos.
+        // Act
         var dto = new MarcaDto();
-
         // Assert
-        using (Assert.EnterMultipleScope()) {
-            Assert.That(dto.Nombre, Is.Empty);
-            Assert.That(dto.Pais, Is.Empty);
-            Assert.That(dto.Web, Is.Empty);
-            Assert.That(dto.ModelosDisponibles, Is.Not.Null.And.Empty);
-        }
+        dto.Nombre.Should().BeEmpty();
+        dto.Pais.Should().BeEmpty();
+        dto.Web.Should().BeEmpty();
+        dto.ModelosDisponibles.Should().NotBeNull().And.BeEmpty();
     }
 
     [Test]
     public void Propiedades_AsignarDatos_ConservaValores() {
         // Arrange
         var dto = new MarcaDto();
-
         // Act
         dto.Nombre = "Toyota";
         dto.Pais = "Japón";
         dto.Web = "https://toyota.example.com";
         dto.ModelosDisponibles = new List<string> { "Corolla", "Yaris" };
-
         // Assert
-        using (Assert.EnterMultipleScope()) {
-            Assert.That(dto.Nombre, Is.EqualTo("Toyota"));
-            Assert.That(dto.Pais, Is.EqualTo("Japón"));
-            Assert.That(dto.Web, Is.EqualTo("https://toyota.example.com"));
-            Assert.That(dto.ModelosDisponibles, Is.EqualTo(new[] { "Corolla", "Yaris" }));
-        }
+        dto.Nombre.Should().Be("Toyota");
+        dto.Pais.Should().Be("Japón");
+        dto.Web.Should().Be("https://toyota.example.com");
+        dto.ModelosDisponibles.Should().Equal("Corolla", "Yaris");
     }
 
     [Test]
     public void ModelosDisponibles_AgregarModelo_NoModificaOtraInstancia() {
         // Arrange
         var dto = new MarcaDto();
-        var otroDto = new MarcaDto();
-
+        var otro = new MarcaDto();
         // Act
         dto.ModelosDisponibles.Add("Corolla");
-
         // Assert
-        using (Assert.EnterMultipleScope()) {
-            Assert.That(dto.ModelosDisponibles, Is.EqualTo(new[] { "Corolla" }));
-            Assert.That(otroDto.ModelosDisponibles, Is.Empty);
-        }
+        dto.ModelosDisponibles.Should().Equal("Corolla");
+        otro.ModelosDisponibles.Should().BeEmpty();
     }
 }

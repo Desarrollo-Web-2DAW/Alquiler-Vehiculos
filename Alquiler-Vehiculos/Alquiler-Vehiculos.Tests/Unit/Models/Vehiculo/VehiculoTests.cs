@@ -10,20 +10,22 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 /// Cubre valores por defecto, asignación completa, igualdad por referencia
 /// y auditoría.
 /// </summary>
+[TestFixture]
+[Category("Unit")]
 public class VehiculoTests
 {
     private static Vehiculo CrearVehiculoCompleto() => new()
     {
-        Id = "VH-001",
+        Id = "AbCdEf123_-",
         Marca = "Toyota",
         Modelo = "Corolla",
-        Acriss = "CDMR",
+        Acriss = "ILAH",
         Carroceria = TipoCarroceria.Sedan,
         Combustible = TipoCombustible.Hibrido,
         Transmision = TipoTransmision.Automatica,
         Estado = EstadoVehiculo.EnAlquiler,
         Color = TipoColor.Azul,
-        PrecioBaseDia = 12.45,
+        PrecioBaseDia = 12.45m,
         Plazas = 5,
         MaleteroLitros = 5,
         AutonomiaKm = 780,
@@ -35,7 +37,10 @@ public class VehiculoTests
     [Test]
     public void Constructor_PorDefecto_EstadoEsDisponible()
     {
-        // Arrange & Act
+        // Arrange
+        // No se necesitan datos previos.
+
+        // Act
         var vehiculo = new Vehiculo();
 
         // Assert
@@ -45,7 +50,10 @@ public class VehiculoTests
     [Test]
     public void Constructor_PorDefecto_ActivoEsTrue()
     {
-        // Arrange & Act
+        // Arrange
+        // No se necesitan datos previos.
+
+        // Act
         var vehiculo = new Vehiculo();
 
         // Assert
@@ -55,7 +63,10 @@ public class VehiculoTests
     [Test]
     public void Constructor_PorDefecto_ElRestoDePropiedadesTomaSuValorPorDefecto()
     {
-        // Arrange & Act
+        // Arrange
+        // No se necesitan datos previos.
+
+        // Act
         var vehiculo = new Vehiculo();
 
         // Assert
@@ -69,7 +80,7 @@ public class VehiculoTests
             Combustible = TipoCombustible.Gasolina,
             Transmision = TipoTransmision.Manual,
             Color = TipoColor.Rojo,
-            PrecioBaseDia = 0d,
+            PrecioBaseDia = 0m,
             Plazas = 0,
             MaleteroLitros = 0,
             AutonomiaKm = 0,
@@ -124,22 +135,25 @@ public class VehiculoTests
     [Test]
     public void Constructor_ConTodosLosValores_AsignaCadaPropiedad()
     {
-        // Arrange & Act
+        // Arrange
+        // Los datos se preparan en el método auxiliar.
+
+        // Act
         var vehiculo = CrearVehiculoCompleto();
 
         // Assert
         vehiculo.Should().BeEquivalentTo(new
         {
-            Id = "VH-001",
+            Id = "AbCdEf123_-",
             Marca = "Toyota",
             Modelo = "Corolla",
-            Acriss = "CDMR",
+            Acriss = "ILAH",
             Carroceria = TipoCarroceria.Sedan,
             Combustible = TipoCombustible.Hibrido,
             Transmision = TipoTransmision.Automatica,
             Estado = EstadoVehiculo.EnAlquiler,
             Color = TipoColor.Azul,
-            PrecioBaseDia = 12.45,
+            PrecioBaseDia = 12.45m,
             Plazas = 5,
             MaleteroLitros = 5,
             AutonomiaKm = 780,
@@ -152,8 +166,11 @@ public class VehiculoTests
     [Test]
     public void Estado_AsignarRetirado_ConservaElValor()
     {
-        // Arrange & Act
-        var vehiculo = new Vehiculo { Estado = EstadoVehiculo.Retirado };
+        // Arrange
+        const EstadoVehiculo estado = EstadoVehiculo.Retirado;
+
+        // Act
+        var vehiculo = new Vehiculo { Estado = estado };
 
         // Assert
         vehiculo.Estado.Should().Be(EstadoVehiculo.Retirado);
@@ -162,8 +179,11 @@ public class VehiculoTests
     [Test]
     public void Activo_AsignarFalse_ConservaElValor()
     {
-        // Arrange & Act
-        var vehiculo = new Vehiculo { Activo = false };
+        // Arrange
+        const bool activo = false;
+
+        // Act
+        var vehiculo = new Vehiculo { Activo = activo };
 
         // Assert
         vehiculo.Activo.Should().BeFalse();
@@ -176,8 +196,11 @@ public class VehiculoTests
         var original = CrearVehiculoCompleto();
         var copia = CrearVehiculoCompleto();
 
-        // Act & Assert
-        original.Should().NotBe(copia);
+        // Act
+        var iguales = original.Equals(copia);
+
+        // Assert
+        iguales.Should().BeFalse();
     }
 
     [Test]
@@ -186,8 +209,11 @@ public class VehiculoTests
         // Arrange
         var vehiculo = CrearVehiculoCompleto();
 
-        // Act & Assert
-        vehiculo.Should().BeSameAs(vehiculo);
+        // Act
+        var iguales = vehiculo.Equals(vehiculo);
+
+        // Assert
+        iguales.Should().BeTrue();
     }
 
     [Test]

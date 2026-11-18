@@ -6,6 +6,8 @@ namespace Alquiler_Vehiculos.Tests.Unit.Enums;
 /// <summary>
 /// Tests unitarios del enum <see cref="AcrissTipo"/> (segunda letra del código ACRISS).
 /// </summary>
+[TestFixture]
+[Category("Unit")]
 public class AcrissTipoTests
 {
     [TestCase(AcrissTipo.DosTresPuertas, 'B')]
@@ -26,7 +28,6 @@ public class AcrissTipoTests
     [TestCase(AcrissTipo.Monovolumen, 'M')]
     [TestCase(AcrissTipo.Recreativo, 'R')]
     [TestCase(AcrissTipo.Autocaravana, 'H')]
-    [TestCase(AcrissTipo.DosRuedas, 'Y')]
     [TestCase(AcrissTipo.Roadster, 'N')]
     [TestCase(AcrissTipo.Crossover, 'G')]
     [TestCase(AcrissTipo.FurgonetaComercial, 'K')]
@@ -34,7 +35,10 @@ public class AcrissTipoTests
         AcrissTipo valor,
         char codigoEsperado)
     {
-        // Arrange & Act
+        // Arrange
+        // El valor y el código esperado se reciben del caso de prueba.
+
+        // Act
         var codigo = (char)valor;
 
         // Assert
@@ -45,11 +49,13 @@ public class AcrissTipoTests
     public void Codigo_CasteadoAlEnum_DevuelveSuValor()
     {
         // Arrange
-        var pares = Enum.GetValues<AcrissTipo>()
-            .Select(valor => (Codigo: (char)valor, Valor: valor));
+        var valores = Enum.GetValues<AcrissTipo>();
 
-        // Act & Assert
-        pares.Should().OnlyContain(par => (AcrissTipo)par.Codigo == par.Valor);
+        // Act
+        var convertidos = valores.Select(valor => (AcrissTipo)(char)valor).ToArray();
+
+        // Assert
+        convertidos.Should().Equal(valores);
     }
 
     [Test]
@@ -58,25 +64,32 @@ public class AcrissTipoTests
         // Arrange
         var valores = Enum.GetValues<AcrissTipo>();
 
-        // Act & Assert
-        valores.Should().OnlyHaveUniqueItems();
+        // Act
+        var distintos = valores.Distinct().ToArray();
+
+        // Assert
+        distintos.Should().HaveCount(valores.Length);
     }
 
     [Test]
     public void Valores_SonLetrasMayusculasAscii()
     {
         // Arrange
-        var codigos = Enum.GetValues<AcrissTipo>().Select(valor => (char)valor);
+        var valores = Enum.GetValues<AcrissTipo>();
 
-        // Act & Assert
+        // Act
+        var codigos = valores.Select(valor => (char)valor).ToArray();
+
+        // Assert
         codigos.Should().OnlyContain(codigo => codigo >= 'A' && codigo <= 'Z');
     }
 
-    [Test]
-    public void Valor_NoDefinido_NoEsReconocidoPorElEnum()
+    [TestCase('A')]
+    [TestCase('Y')]
+    public void Valor_NoDefinido_NoEsReconocidoPorElEnum(char codigoInexistente)
     {
         // Arrange
-        const char codigoInexistente = 'A';
+        // La flota no admite el tipo de dos ruedas ('Y'), según RF-03.
 
         // Act
         var estaDefinido = Enum.IsDefined(typeof(AcrissTipo), (int)codigoInexistente);

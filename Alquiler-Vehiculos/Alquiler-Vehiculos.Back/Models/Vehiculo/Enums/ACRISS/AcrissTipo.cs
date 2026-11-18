@@ -30,7 +30,6 @@ public enum AcrissTipo
     Monovolumen = 'M',
     Recreativo = 'R',
     Autocaravana = 'H',
-    DosRuedas = 'Y',
     Roadster = 'N',
     Crossover = 'G',
     FurgonetaComercial = 'K'

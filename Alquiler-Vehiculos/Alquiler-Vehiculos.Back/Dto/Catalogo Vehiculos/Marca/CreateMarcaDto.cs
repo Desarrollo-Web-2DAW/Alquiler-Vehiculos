@@ -3,7 +3,7 @@
 /// <summary>
 /// Datos de entrada para crear una marca con sus modelos disponibles.
 /// </summary>
-public record CreateRequestMarcaDto {
+public record CreateMarcaDto {
     /// <summary>Nombre de la marca.</summary>
     public string Nombre { get; set; } = string.Empty;
     /// <summary>País de la marca.</summary>

@@ -1,9 +1,9 @@
 ﻿namespace Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Concesionario;
 
 /// <summary>
-/// Datos de entrada para crear un concesionario.
+/// Datos de entrada para actualizar un concesionario.
 /// </summary>
-public record CreateRequestConcesionarioDto {
+public record UpdateConcesionarioDto {
     /// <summary>Nombre del concesionario.</summary>
     public string Nombre { get; set; } = string.Empty;
     /// <summary>Ciudad donde se encuentra el concesionario.</summary>

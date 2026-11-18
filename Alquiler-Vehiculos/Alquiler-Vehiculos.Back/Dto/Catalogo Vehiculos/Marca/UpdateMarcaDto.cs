@@ -3,7 +3,7 @@
 /// <summary>
 /// Datos de entrada para actualizar una marca y sus modelos disponibles.
 /// </summary>
-public record UpdateRequesMarcaDto {
+public record UpdateMarcaDto {
     /// <summary>Nombre de la marca.</summary>
     public string Nombre { get; set; } = string.Empty;
     /// <summary>País de la marca.</summary>

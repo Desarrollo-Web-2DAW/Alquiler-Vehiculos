@@ -5,9 +5,11 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 
 /// <summary>
 /// Tests unitarios del record <see cref="Concesionario"/>.
-    /// Verifica la construcción, la igualdad estructural y la auditoría
+/// Verifica la construcción, la igualdad estructural y la auditoría
 /// y el resto del contrato generado por el compilador (<c>with</c>, deconstrucción, <c>ToString</c>).
 /// </summary>
+[TestFixture]
+[Category("Unit")]
 public class ConcesionarioTests
 {
     private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -18,7 +20,10 @@ public class ConcesionarioTests
     [Test]
     public void Constructor_ConTodosLosValores_AsignaCadaPropiedad()
     {
-        // Arrange & Act
+        // Arrange
+        // Los datos se preparan en el método auxiliar.
+
+        // Act
         var concesionario = CrearConcesionario();
 
         // Assert
@@ -35,8 +40,11 @@ public class ConcesionarioTests
     [Test]
     public void Constructor_ConCadenasVacias_ConservaLasCadenasVacias()
     {
-        // Arrange & Act
-        var concesionario = new Concesionario(0, string.Empty, string.Empty, string.Empty, string.Empty, false, Fecha, null, null);
+        // Arrange
+        var fecha = Fecha;
+
+        // Act
+        var concesionario = new Concesionario(0, string.Empty, string.Empty, string.Empty, string.Empty, false, fecha, null, null);
 
         // Assert
         concesionario.Should().BeEquivalentTo(new
@@ -56,8 +64,11 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
         var otroConcesionario = CrearConcesionario();
 
-        // Act & Assert
-        concesionario.Should().Be(otroConcesionario);
+        // Act
+        var iguales = concesionario.Equals(otroConcesionario);
+
+        // Assert
+        iguales.Should().BeTrue();
     }
 
     [Test]
@@ -67,8 +78,11 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
         var otroConcesionario = CrearConcesionario() with { Id = 11 };
 
-        // Act & Assert
-        concesionario.Should().NotBe(otroConcesionario);
+        // Act
+        var iguales = concesionario.Equals(otroConcesionario);
+
+        // Assert
+        iguales.Should().BeFalse();
     }
 
     [Test]
@@ -78,8 +92,11 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
         var otroConcesionario = CrearConcesionario() with { Nombre = "Motor Sur" };
 
-        // Act & Assert
-        concesionario.Should().NotBe(otroConcesionario);
+        // Act
+        var iguales = concesionario.Equals(otroConcesionario);
+
+        // Assert
+        iguales.Should().BeFalse();
     }
 
     [Test]
@@ -89,8 +106,11 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
         var otroConcesionario = CrearConcesionario() with { Ciudad = "Bilbao" };
 
-        // Act & Assert
-        concesionario.Should().NotBe(otroConcesionario);
+        // Act
+        var iguales = concesionario.Equals(otroConcesionario);
+
+        // Assert
+        iguales.Should().BeFalse();
     }
 
     [Test]
@@ -100,8 +120,11 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
         var otroConcesionario = CrearConcesionario() with { Telefono = "+34 942 000 222" };
 
-        // Act & Assert
-        concesionario.Should().NotBe(otroConcesionario);
+        // Act
+        var iguales = concesionario.Equals(otroConcesionario);
+
+        // Assert
+        iguales.Should().BeFalse();
     }
 
     [Test]
@@ -111,8 +134,11 @@ public class ConcesionarioTests
         var concesionario = CrearConcesionario();
         var otroConcesionario = CrearConcesionario() with { Email = "otro@motornorte.es" };
 
-        // Act & Assert
-        concesionario.Should().NotBe(otroConcesionario);
+        // Act
+        var iguales = concesionario.Equals(otroConcesionario);
+
+        // Assert
+        iguales.Should().BeFalse();
     }
 
     [Test]
@@ -223,5 +249,23 @@ public class ConcesionarioTests
             "Santander",
             "+34 942 000 111",
             "contacto@motornorte.es");
+    }
+
+    [Test]
+    public void Constructor_ConBajaLogicaYAuditoria_ConservaLosValores()
+    {
+        // Arrange
+        var actualizacion = Fecha.AddDays(1);
+        var baja = Fecha.AddDays(2);
+
+        // Act
+        var concesionario = new Concesionario(10, "Motor Norte", "Santander", "942000111",
+            "contacto@example.com", true, Fecha, actualizacion, baja);
+
+        // Assert
+        concesionario.IsDeleted.Should().BeTrue();
+        concesionario.CreatedAt.Should().Be(Fecha);
+        concesionario.UpdatedAt.Should().Be(actualizacion);
+        concesionario.DeletedAt.Should().Be(baja);
     }
 }
