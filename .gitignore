@@ -46,3 +46,18 @@ coveragereport/
 # Otros
 *.tmp
 *.bak
+
+
+# OpenCode (carpetas, configuraciones y archivos relacionados)
+.[Oo][Pp][Ee][Nn][Cc][Oo][Dd][Ee]*
+[Oo][Pp][Ee][Nn][Cc][Oo][Dd][Ee]*
+
+# Agentes e instrucciones
+.[Aa][Gg][Ee][Nn][Tt][Ss]/
+[Aa][Gg][Ee][Nn][Tt][Ss]/
+[Aa][Gg][Ee][Nn][Tt][Ss].*
+
+# Skills
+.[Ss][Kk][Ii][Ll][Ll][Ss]/
+[Ss][Kk][Ii][Ll][Ll][Ss]/
+[Ss][Kk][Ii][Ll][Ll].md
