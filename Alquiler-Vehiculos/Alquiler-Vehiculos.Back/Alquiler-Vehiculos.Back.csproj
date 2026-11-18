@@ -53,6 +53,7 @@
       <Folder Include="Services\Pago\" />
       <Folder Include="Services\Reserva\" />
       <Folder Include="Services\Trabajador\" />
+      <Folder Include="Services\Usuario\" />
       <Folder Include="Services\Vehiculo\" />
     </ItemGroup>
 
