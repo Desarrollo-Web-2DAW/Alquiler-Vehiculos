@@ -12,6 +12,14 @@ public class CreateVehiculoValidatorTests {
     [SetUp]
     public void SetUp() => _validator = new CreateVehiculoValidator();
 
+    private static CreateVehiculoDto CrearDtoValido() => new() {
+        Foto = "https://example.com/coche.jpg",
+        Matricula = "1234BCD", Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH",
+        Estado = "Disponible", Color = "Azul", PrecioBaseDia = 45.50m,
+        Plazas = 5, MaleteroLitros = 361, AutonomiaKm = 700, Kilometraje = 12000,
+        FechaUltimaRevision = "2026-11-01", Concesionario = 10L, IsActivo = true
+    };
+
     [TestCase(null)]
     [TestCase("")]
     [TestCase("https://example.com/coche.jpg")]
@@ -19,7 +27,8 @@ public class CreateVehiculoValidatorTests {
     [TestCase("ftp://example.com/coche.jpg")]
     public void Validate_FotoOpcionalOUrlAbsoluta_NoDevuelveErrores(string? foto) {
         // Arrange
-        var dto = new CreateVehiculoDto { Foto = foto! };
+        var dto = CrearDtoValido();
+        dto.Foto = foto!;
 
         // Act
         var resultado = _validator.Validate(dto);
@@ -34,7 +43,8 @@ public class CreateVehiculoValidatorTests {
     [TestCase("www.example.com/coche.jpg")]
     public void Validate_FotoSinUrlAbsoluta_DevuelveErrorDeFoto(string foto) {
         // Arrange
-        var dto = new CreateVehiculoDto { Foto = foto };
+        var dto = CrearDtoValido();
+        dto.Foto = foto;
 
         // Act
         var resultado = _validator.Validate(dto);
@@ -42,6 +52,7 @@ public class CreateVehiculoValidatorTests {
         // Assert
         resultado.IsValid.Should().BeFalse();
         resultado.Errors.Should().ContainSingle(e => e.PropertyName == nameof(dto.Foto)
-            && e.ErrorMessage == "La imagen debe ser una URL válida");
+            && e.ErrorMessage == "La imagen debe ser una URL válida.");
+        resultado.Errors.Should().OnlyContain(e => e.PropertyName == nameof(dto.Foto));
     }
 }

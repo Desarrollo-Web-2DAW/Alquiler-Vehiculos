@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <Include>[Alquiler-Vehiculos.Back]Alquiler_Vehiculos.Services.Storage.StorageService,[Alquiler-Vehiculos.Back]Alquiler_Vehiculos.Infrastructure.StorageInitializationExtensions</Include>
+          <!-- Se trasladan DLL/PDB compilados en el host; los fuentes no están en Linux. -->
+          <ExcludeAssembliesWithoutSources>None</ExcludeAssembliesWithoutSources>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>
