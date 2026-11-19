@@ -36,7 +36,6 @@
       <Folder Include="Exceptions\Reserva\" />
       <Folder Include="Exceptions\Trabajador\" />
       <Folder Include="Exceptions\Vehiculo\" />
-      <Folder Include="Infrastructure\" />
       <Folder Include="Mappers\" />
       <Folder Include="Middleware\" />
       <Folder Include="Models\Pago\" />
