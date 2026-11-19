@@ -1,6 +1,6 @@
 ﻿using Alquiler_Vehiculos.Models.Reserva.Enum;
 
-namespace Alquiler_Vehiculos.Models.Reserva;
+namespace Alquiler_Vehiculos.Models.Reservas;
 
 public class Reserva {
     public int Id {get; init;}

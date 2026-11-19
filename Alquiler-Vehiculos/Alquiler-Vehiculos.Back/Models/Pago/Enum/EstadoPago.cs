@@ -1,4 +1,4 @@
-﻿namespace Alquiler_Vehiculos.Models.Reserva.Enum;
+﻿namespace Alquiler_Vehiculos.Models.Pago.EstadoPagos;
 
 public enum EstadoPago {
     Aprobado, Rechazado, Reembolsado

@@ -10,7 +10,7 @@ public class LineaReserva {
     public decimal PrecioUnitario { get; init;}
     public decimal SubTotal { get; init;}
 
-    public Reserva Reserva { get; init; } = null!;
+    public Reservas.Reserva Reserva { get; init; } = null!;
     public int ReservaId {get; init;}
 
     public Poliza? Poliza { get; init; } = null!;

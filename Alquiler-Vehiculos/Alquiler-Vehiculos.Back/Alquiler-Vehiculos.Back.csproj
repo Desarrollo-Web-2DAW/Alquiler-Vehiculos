@@ -33,8 +33,6 @@
       <Folder Include="Mappers\" />
       <Folder Include="Middleware\" />
       <Folder Include="Models\Cliente\" />
-      <Folder Include="Models\Pago\" />
-      <Folder Include="Models\Reserva\" />
       <Folder Include="Models\Trabajador\" />
       <Folder Include="Models\Vehiculo\" />
       <Folder Include="Repositories\Cliente\" />
