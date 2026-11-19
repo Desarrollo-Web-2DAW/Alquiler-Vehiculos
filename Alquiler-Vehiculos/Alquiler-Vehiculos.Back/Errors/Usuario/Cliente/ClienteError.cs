@@ -21,11 +21,16 @@ public static class ClienteError {
         return NotFoundError.FromEmail(email, "Cliente");
     }
     
+    
     /// <summary>Ya existe un cliente con ese correo electrónico.</summary>
     /// <param name="email">Correo duplicado.</param>
     /// <returns>ConflictError (HTTP 409).</returns>
     public static ConflictError EmailAlreadyExists(string email) {
         return new ConflictError($"Ya existe un cliente con el email '{email}'");
+    }
+    
+    public static ConflictError TelefonoAlreadyExists(string telefono) {
+        return new ConflictError($"Ya existe un cliente con el teléfono '{telefono}'");
     }
     
     /// <summary>Ya existe un cliente con ese documento (DNI, NIE o pasaporte).</summary>
@@ -51,9 +56,21 @@ public static class ClienteError {
         return new BusinessRuleError($"El cliente con ID '{id}' está inactivo y no puede realizar reservas");
     }
     
+    /// <summary>El cliente es menor de edad (RF-13).</summary>
+    public static BusinessRuleError ClienteMenorDeEdad(int edad) {
+        return new BusinessRuleError($"El cliente tiene {edad} años. Debe ser mayor de edad para alquilar.");
+    }
+
+    /// <summary>La fecha de nacimiento es incorrecta.</summary>
+    public static BadRequestError FechaNacimientoInvalida() {
+        return new BadRequestError("La fecha de nacimiento no puede ser una fecha futura.");
+    }
+    
     
     public static BadRequestError ClienteBadRequestError(string name) {
         return new BadRequestError($"Reserva no encontrada para el cliente '{name}'");
     }
+    
+    
     
 }
