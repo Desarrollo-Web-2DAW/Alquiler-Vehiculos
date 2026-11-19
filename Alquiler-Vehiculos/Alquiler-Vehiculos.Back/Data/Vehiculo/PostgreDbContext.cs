@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Data.Vehiculo;
 
-public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<long>, long>(options) {
+public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options) {
     
     public DbSet<Models.Vehiculo.Vehiculo> Vehiculos =>  Set<Models.Vehiculo.Vehiculo>();
     public DbSet<Foto> Fotos => Set<Foto>();
