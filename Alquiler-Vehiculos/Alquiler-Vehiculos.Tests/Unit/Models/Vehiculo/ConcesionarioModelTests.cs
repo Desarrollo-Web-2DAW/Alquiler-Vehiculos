@@ -4,16 +4,16 @@ using FluentAssertions;
 namespace Alquiler_Vehiculos.Tests.Unit.Models;
 
 /// <summary>
-/// Tests unitarios del record <see cref="Concesionario"/>.
+/// Tests unitarios del record <see cref="ConcesionarioModel"/>.
 /// Verifica la construcción, la igualdad estructural y la auditoría
 /// y el resto del contrato generado por el compilador (<c>with</c>, deconstrucción, <c>ToString</c>).
 /// </summary>
 [TestFixture]
 [Category("Unit")]
-public class ConcesionarioTests
+public class ConcesionarioModelTests
 {
     private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static Concesionario CrearConcesionario() =>
+    private static ConcesionarioModel CrearConcesionario() =>
         new(10, "Motor Norte", "Santander", "+34 942 000 111", "contacto@motornorte.es", false, Fecha, null, null);
     
 
@@ -44,7 +44,7 @@ public class ConcesionarioTests
         var fecha = Fecha;
 
         // Act
-        var concesionario = new Concesionario(0, string.Empty, string.Empty, string.Empty, string.Empty, false, fecha, null, null);
+        var concesionario = new ConcesionarioModel(0, string.Empty, string.Empty, string.Empty, string.Empty, false, fecha, null, null);
 
         // Assert
         concesionario.Should().BeEquivalentTo(new
@@ -259,7 +259,7 @@ public class ConcesionarioTests
         var baja = Fecha.AddDays(2);
 
         // Act
-        var concesionario = new Concesionario(10, "Motor Norte", "Santander", "942000111",
+        var concesionario = new ConcesionarioModel(10, "Motor Norte", "Santander", "942000111",
             "contacto@example.com", true, Fecha, actualizacion, baja);
 
         // Assert

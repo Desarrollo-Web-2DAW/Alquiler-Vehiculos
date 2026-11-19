@@ -30,7 +30,6 @@
       <Folder Include="Errors\Pago\" />
       <Folder Include="Errors\Reserva\" />
       <Folder Include="Errors\Trabajador\" />
-      <Folder Include="Errors\Vehiculo\" />
       <Folder Include="Exceptions\Cliente\" />
       <Folder Include="Exceptions\Pago\" />
       <Folder Include="Exceptions\Reserva\" />

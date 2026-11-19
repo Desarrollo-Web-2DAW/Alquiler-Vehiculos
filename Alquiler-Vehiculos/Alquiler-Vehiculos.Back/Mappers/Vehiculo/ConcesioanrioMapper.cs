@@ -4,19 +4,19 @@ using Alquiler_Vehiculos.Models.Vehiculo;
 namespace Alquiler_Vehiculos.Mappers.Vehiculo;
 
 /// <summary>
-/// Clase estática que sirve como base para poder crear métodos de extensión para intercambiar datos entre distintas entidades de <see cref="Concesionario"/>
+/// Clase estática que sirve como base para poder crear métodos de extensión para intercambiar datos entre distintas entidades de <see cref="ConcesionarioModel"/>
 /// </summary>
 public static class ConcesionarioMapper
 {
     /// <summary>
-    /// Parte de un <see cref="CreateConcesionarioDto"/> para crear un <see cref="Concesionario"/> modelo
+    /// Parte de un <see cref="CreateConcesionarioDto"/> para crear un <see cref="ConcesionarioModel"/> modelo
     /// </summary>
     /// <param name="dto">Data Object Transfer con los datos proporcionados por el cliente</param>
     /// <param name="id">Parámetro opcional para que inicialice en 0 si no se especifica lo contrario</param>
-    /// <returns><see cref="Concesionario"/></returns>
-    public static Concesionario ToConcesionario(this CreateConcesionarioDto dto, long id = 0)
+    /// <returns><see cref="ConcesionarioModel"/></returns>
+    public static ConcesionarioModel ToConcesionario(this CreateConcesionarioDto dto, long id = 0)
     {
-        return new Concesionario(
+        return new ConcesionarioModel(
             Id: id,
             Nombre: dto.Nombre,
             Ciudad: dto.Ciudad,
@@ -30,18 +30,18 @@ public static class ConcesionarioMapper
     }
     
     /// <summary>
-    /// Parte de un <see cref="Concesionario"/> para crear un <see cref="ConcesionarioDto"/>
+    /// Parte de un <see cref="ConcesionarioModel"/> para crear un <see cref="ConcesionarioDto"/>
     /// </summary>
-    /// <param name="concesionario">El modelo</param>
+    /// <param name="concesionarioModel">El modelo</param>
     /// <returns><see cref="ConcesionarioDto"/></returns>
-    public static ConcesionarioDto ToDto(this Concesionario concesionario)
+    public static ConcesionarioDto ToDto(this ConcesionarioModel concesionarioModel)
     {
         return new ConcesionarioDto
         {
-            Nombre = concesionario.Nombre,
-            Ciudad = concesionario.Ciudad,
-            Telefono = concesionario.Telefono,
-            Email = concesionario.Email
+            Nombre = concesionarioModel.Nombre,
+            Ciudad = concesionarioModel.Ciudad,
+            Telefono = concesionarioModel.Telefono,
+            Email = concesionarioModel.Email
         };
     }
 }

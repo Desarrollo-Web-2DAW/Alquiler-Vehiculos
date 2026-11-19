@@ -4,7 +4,7 @@ using FluentAssertions;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Validators;
 
-/// <summary>Comprueba los campos y la colección de modelos al actualizar una marca.</summary>
+/// <summary>Comprueba los campos y la colección de modelos al actualizar una marcaModel.</summary>
 [TestFixture]
 [Category("Unit")]
 public class UpdateMarcaValidatorTests {
@@ -115,7 +115,7 @@ public class UpdateMarcaValidatorTests {
         // Assert
         resultado.IsValid.Should().BeFalse();
         resultado.Errors.Should().ContainSingle(e => e.PropertyName == "ModelosDisponibles"
-            && e.ErrorMessage == "La marca debe tener al menos un modelo disponible");
+            && e.ErrorMessage == "La marcaModel debe tener al menos un modelo disponible");
     }
 
     [TestCase(null)]

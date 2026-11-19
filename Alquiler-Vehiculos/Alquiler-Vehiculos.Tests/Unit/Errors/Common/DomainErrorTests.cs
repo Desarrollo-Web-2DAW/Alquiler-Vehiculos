@@ -74,15 +74,15 @@ public class DomainErrorTests {
         distintoMensaje.Should().BeFalse();
     }
 
-    [TestCase("id", false, "Vehiculo con ID 7 no encontrado")]
+    [TestCase("id", false, "VehiculoModel con ID 7 no encontrado")]
     [TestCase("id", true, "Unknown con ID 7 no encontrado")]
-    [TestCase("nombre", false, "Vehiculo con nombre Corolla no encontrado")]
+    [TestCase("nombre", false, "VehiculoModel con nombre Corolla no encontrado")]
     [TestCase("nombre", true, "Unknown con nombre Corolla no encontrado")]
-    [TestCase("objectId", false, "Vehiculo con ID abc123 no encontrado")]
+    [TestCase("objectId", false, "VehiculoModel con ID abc123 no encontrado")]
     [TestCase("objectId", true, "Unknown con ID abc123 no encontrado")]
     public void NotFound_Factorias_DevuelveMensajeEsperado(string metodo, bool porDefecto, string mensaje) {
         // Arrange
-        const string recurso = "Vehiculo";
+        const string recurso = "VehiculoModel";
 
         // Act
         var error = metodo switch {
@@ -138,21 +138,21 @@ public class DomainErrorTests {
     [Test]
     public void NotOwner_RecursoEIdentificador_IncluyeAmbosEnMensaje() {
         // Arrange
-        const string recurso = "vehiculo";
+        const string recurso = "vehiculoModel";
         const string id = "7";
 
         // Act
         var error = ForbiddenError.NotOwner(recurso, id);
 
         // Assert
-        error.Message.Should().Be("No tienes permisos para acceder a este vehiculo (ID: 7)");
+        error.Message.Should().Be("No tienes permisos para acceder a este vehiculoModel (ID: 7)");
     }
 
-    [TestCase(false, "Ya existe un Vehiculo con el valor '1234BCD'")]
-    [TestCase(true, "No se puede borrar Vehiculo con el valor '1234BCD'")]
+    [TestCase(false, "Ya existe un VehiculoModel con el valor '1234BCD'")]
+    [TestCase(true, "No se puede borrar VehiculoModel con el valor '1234BCD'")]
     public void Conflict_Factorias_IncluyeRecursoYValor(bool dependencia, string mensaje) {
         // Arrange
-        const string recurso = "Vehiculo";
+        const string recurso = "VehiculoModel";
         const string valor = "1234BCD";
 
         // Act

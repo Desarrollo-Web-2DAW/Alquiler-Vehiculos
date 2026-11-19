@@ -3,7 +3,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 
 namespace Alquiler_Vehiculos.Models.Vehiculo;
 
-public class Vehiculo
+public class VehiculoModel
 {
     public string Id { get; init; } = null!;
     public string FotoFk { get; init; } = string.Empty;

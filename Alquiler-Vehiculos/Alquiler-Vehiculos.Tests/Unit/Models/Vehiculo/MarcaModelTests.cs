@@ -3,12 +3,12 @@ using FluentAssertions;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Models;
 
-/// <summary>Pruebas de construcción, colección de modelos, igualdad y auditoría de una marca.</summary>
+/// <summary>Pruebas de construcción, colección de modelos, igualdad y auditoría de una marcaModel.</summary>
 [TestFixture]
 [Category("Unit")]
-public class MarcaTests {
+public class MarcaModelTests {
     private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static Marca CrearMarca() => new(1, "Toyota", "Japón", "https://www.toyota.es",
+    private static MarcaModel CrearMarca() => new(1, "Toyota", "Japón", "https://www.toyota.es",
         new List<string> { "Corolla", "Yaris" }, false, Fecha, null, null);
 
     [Test]
@@ -17,7 +17,7 @@ public class MarcaTests {
         var modelos = new List<string> { "Corolla", "Yaris" };
 
         // Act
-        var marca = new Marca(1, "Toyota", "Japón", "https://www.toyota.es", modelos,
+        var marca = new MarcaModel(1, "Toyota", "Japón", "https://www.toyota.es", modelos,
             false, Fecha, null, null);
 
         // Assert
@@ -35,7 +35,7 @@ public class MarcaTests {
         var modelos = new List<string>();
 
         // Act
-        var marca = new Marca(0, "", "", "", modelos, false, Fecha, null, null);
+        var marca = new MarcaModel(0, "", "", "", modelos, false, Fecha, null, null);
 
         // Assert
         marca.Id.Should().Be(0L);
@@ -51,7 +51,7 @@ public class MarcaTests {
         var modelos = new List<string>();
 
         // Act
-        var marca = new Marca(1, "Toyota", "Japón", "https://www.toyota.es", modelos,
+        var marca = new MarcaModel(1, "Toyota", "Japón", "https://www.toyota.es", modelos,
             true, Fecha, Fecha.AddDays(1), Fecha.AddDays(2));
 
         // Assert
@@ -65,7 +65,7 @@ public class MarcaTests {
     public void Igualdad_MismosValoresYMismaColeccion_SonIguales() {
         // Arrange
         var marca = CrearMarca();
-        var otra = new Marca(marca.Id, marca.Nombre, marca.Pais, marca.Web,
+        var otra = new MarcaModel(marca.Id, marca.Nombre, marca.Pais, marca.Web,
             marca.ModelosDisponibles, marca.IsDeleted, marca.CreatedAt, marca.UpdatedAt, marca.DeletedAt);
 
         // Act

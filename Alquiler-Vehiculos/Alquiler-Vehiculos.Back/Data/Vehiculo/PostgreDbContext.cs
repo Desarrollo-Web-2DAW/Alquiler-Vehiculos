@@ -8,14 +8,14 @@ namespace Alquiler_Vehiculos.Data.Vehiculo;
 
 public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<long>, long>(options) {
     
-    public DbSet<Models.Vehiculo.Vehiculo> Vehiculos =>  Set<Models.Vehiculo.Vehiculo>();
-    public DbSet<Marca> Marcas => Set<Marca>();
-    public DbSet<Concesionario> Concesionarios => Set<Concesionario>();
+    public DbSet<Models.Vehiculo.VehiculoModel> Vehiculos =>  Set<Models.Vehiculo.VehiculoModel>();
+    public DbSet<MarcaModel> Marcas => Set<MarcaModel>();
+    public DbSet<ConcesionarioModel> Concesionarios => Set<ConcesionarioModel>();
     
     public override void OnModelCreating(ModelBuilder modelBuilder) {
         base.OnModelCreating(modelBuilder);
         
-        modelBuilder.Entity<Models.Vehiculo.Vehiculo>(entity => {
+        modelBuilder.Entity<Models.Vehiculo.VehiculoModel>(entity => {
             entity.Property(p => p.Id)
                 .HasValueGenerator<YouTubeIdValueGenerator>()
                 .ValueGeneratedOnAdd();

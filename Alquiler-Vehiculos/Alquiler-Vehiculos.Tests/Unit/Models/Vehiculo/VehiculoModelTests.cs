@@ -6,15 +6,15 @@ using FluentAssertions;
 namespace Alquiler_Vehiculos.Tests.Unit.Models;
 
 /// <summary>
-/// Tests unitarios de la entidad <see cref="Vehiculo"/>.
+/// Tests unitarios de la entidad <see cref="VehiculoModel"/>.
 /// Cubre valores por defecto, asignación completa, igualdad por referencia
 /// y auditoría.
 /// </summary>
 [TestFixture]
 [Category("Unit")]
-public class VehiculoTests
+public class VehiculoModelTests
 {
-    private static Vehiculo CrearVehiculoCompleto() => new()
+    private static VehiculoModel CrearVehiculoCompleto() => new()
     {
         Id = "AbCdEf123_-",
         Marca = "Toyota",
@@ -41,7 +41,7 @@ public class VehiculoTests
         // No se necesitan datos previos.
 
         // Act
-        var vehiculo = new Vehiculo();
+        var vehiculo = new VehiculoModel();
 
         // Assert
         vehiculo.Estado.Should().Be(EstadoVehiculo.Disponible);
@@ -54,7 +54,7 @@ public class VehiculoTests
         // No se necesitan datos previos.
 
         // Act
-        var vehiculo = new Vehiculo();
+        var vehiculo = new VehiculoModel();
 
         // Assert
         vehiculo.Activo.Should().BeTrue();
@@ -67,7 +67,7 @@ public class VehiculoTests
         // No se necesitan datos previos.
 
         // Act
-        var vehiculo = new Vehiculo();
+        var vehiculo = new VehiculoModel();
 
         // Assert
         vehiculo.Should().BeEquivalentTo(new
@@ -96,7 +96,7 @@ public class VehiculoTests
         var antes = DateTime.UtcNow;
 
         // Act
-        var vehiculo = new Vehiculo();
+        var vehiculo = new VehiculoModel();
 
         // Assert
         vehiculo.FotoFk.Should().BeEmpty();
@@ -116,7 +116,7 @@ public class VehiculoTests
         var foto = new Foto { Nombre = "coche.png", Ruta = "/uploads/vehiculos/coche.png" };
 
         // Act
-        var vehiculo = new Vehiculo
+        var vehiculo = new VehiculoModel
         {
             FotoFk = "foto-001", Foto = foto, Matrícula = "1234BCD", ConesionarioFk = 10,
             CreatedAt = fecha, UpdatedAt = fecha.AddDays(1), DeletedAt = fecha.AddDays(2)
@@ -170,7 +170,7 @@ public class VehiculoTests
         const EstadoVehiculo estado = EstadoVehiculo.Retirado;
 
         // Act
-        var vehiculo = new Vehiculo { Estado = estado };
+        var vehiculo = new VehiculoModel { Estado = estado };
 
         // Assert
         vehiculo.Estado.Should().Be(EstadoVehiculo.Retirado);
@@ -183,7 +183,7 @@ public class VehiculoTests
         const bool activo = false;
 
         // Act
-        var vehiculo = new Vehiculo { Activo = activo };
+        var vehiculo = new VehiculoModel { Activo = activo };
 
         // Assert
         vehiculo.Activo.Should().BeFalse();

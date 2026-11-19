@@ -4,7 +4,7 @@ using FluentAssertions;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Validators;
 
-/// <summary>Pruebas de los datos de entrada para crear un concesionario.</summary>
+/// <summary>Pruebas de los datos de entrada para crear un concesionarioModel.</summary>
 [TestFixture]
 [Category("Unit")]
 public class CreateConcesionarioValidatorTests {

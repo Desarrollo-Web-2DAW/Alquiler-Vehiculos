@@ -4,7 +4,7 @@ using FluentAssertions;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Validators;
 
-/// <summary>Comprueba las reglas de actualización completa de un concesionario.</summary>
+/// <summary>Comprueba las reglas de actualización completa de un concesionarioModel.</summary>
 [TestFixture]
 [Category("Unit")]
 public class UpdateConcesionarioValidatorTests {
