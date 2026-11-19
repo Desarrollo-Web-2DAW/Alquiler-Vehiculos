@@ -5,7 +5,7 @@ namespace Alquiler_Vehiculos.Models.Reservas;
 public class Reserva {
     public int Id {get; init;}
     public string CodigoReferencia {get; init;} = string.Empty;
-    public string CategoriaSolicitada { get; init; } = string.Empty;
+    public CategoriaVehiculo CategoriaSolicitada { get; init; }
     public DateTime FechaCreacion { get; init; }
     public DateTime FechaRecogida  { get; init; }
     public DateTime FechaDevolucion   { get; init; }
