@@ -85,12 +85,12 @@ public static class IdentityConfig {
         services.AddAuthorizationBuilder()
             .AddPolicy(PolicyNames.Admin, policy => policy.RequireRole(
                 nameof(RolUsuario.Admin)))
-            .AddPolicy(PolicyNames.Cliente, policy => policy.RequireRole(
-                nameof(RolUsuario.Cliente), nameof(RolUsuario.Admin)))
-            .AddPolicy(PolicyNames.Trabajador, policy => policy.RequireRole(
-                nameof(RolUsuario.Trabajador), nameof(RolUsuario.Responsable), nameof(RolUsuario.Admin)))
             .AddPolicy(PolicyNames.Responsable, policy => policy.RequireRole(
-                nameof(RolUsuario.Responsable), nameof(RolUsuario.Admin)));
+                nameof(RolUsuario.Responsable)))
+            .AddPolicy(PolicyNames.Trabajador, policy => policy.RequireRole(
+                nameof(RolUsuario.Trabajador)))
+            .AddPolicy(PolicyNames.Cliente, policy => policy.RequireRole(
+                nameof(RolUsuario.Cliente)));
 
         Log.Information("Identity y JWT configurados correctamente.");
         return services;
