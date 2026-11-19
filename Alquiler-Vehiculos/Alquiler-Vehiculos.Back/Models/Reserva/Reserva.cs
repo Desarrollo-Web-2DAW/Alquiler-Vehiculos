@@ -16,10 +16,10 @@ public class Reserva {
     public Cliente Cliente { get; init; } = null!;
     public Guid ClienteId {get; init;}
     
-    public Usuario CreadoPorUsuario { get; init; }
+    public User CreadoPorUsuario { get; init; }
     public Guid CreadoPorUsuarioId  { get; init; }
 
-    public Vehiculo Vehiculo { get; init; } = null!;
+    public Vehiculo.Vehiculo Vehiculo { get; init; } = null!;
     public string VehiculoId { get; init; } = string.Empty;
     
     public DateTime CreatedAt { get; init; }
