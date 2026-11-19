@@ -1,7 +1,11 @@
-using FluentValidation;
 using System.Text;
 using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Infrastructure;
+using Alquiler_Vehiculos.Repositories.Clientes;
+using Alquiler_Vehiculos.Services.Usuarios.Auth;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
@@ -33,14 +37,30 @@ try {
     builder.Services.Configure<ApiSettings>(
         builder.Configuration.GetSection("Api"));
 
+    // ── BASE DE DATOS ────────────────────────────────────────────────────────
+    // Fail-fast: sin cadena de conexión la API no debe arrancar.
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+
+    if (string.IsNullOrWhiteSpace(connectionString)) {
+        throw new InvalidOperationException(
+            "Falta la cadena de conexión 'ConnectionStrings:DefaultConnection'. " +
+            "Añádela en appsettings.Development.json o en User Secrets.");
+    }
+
+    builder.Services.AddDbContext<AppDbContextUsuarios>(options =>
+        options.UseNpgsql(connectionString));
+
     // ── IDENTITY + JWT ─────────────────────────────────────────────────────
     builder.Services.AddIdentityConfiguration(builder.Configuration, builder.Environment);
 
-    // ── SERVICIOS ─────────────────────────────────────────────────────────────
+    // ── CONTROLADORES Y VALIDACIÓN ───────────────────────────────────────────
     builder.Services.AddControllers();
-    // Registra los validadores del proyecto en el contenedor de dependencias.
-    // Su ejecución se conectará al implementar los endpoints del catálogo.
+    builder.Services.AddHttpContextAccessor(); // SignInManager lo necesita
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+    // ── SERVICIOS ─────────────────────────────────────────────────────────────
+    builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+    builder.Services.AddScoped<IAuthService, AuthService>();
 
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
     var app = builder.Build();
@@ -58,6 +78,23 @@ try {
     }
 
     app.MapControllers();
+
+    // ── BASE DE DATOS: esquema + roles y cuentas iniciales ───────────────────
+    // El esquema se construye SIEMPRE con migraciones, nunca con EnsureCreated.
+    // Las migraciones van antes del seeder: sin tablas, el seeder no puede
+    // escribir roles ni cuentas.
+    using (var scope = app.Services.CreateScope()) {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContextUsuarios>();
+
+        // En desarrollo se parte de cero en cada arranque (criterio del profe).
+        if (app.Environment.IsDevelopment()) {
+            await db.Database.EnsureDeletedAsync();
+        }
+
+        await db.Database.MigrateAsync();
+    }
+
+    await IdentitySeeder.SeedAsync(app.Services, app.Configuration);
 
     // ── CONFIGURACIÓN TIPADA: se lee y se muestra al arrancar ────────────────
     var apiConfig = app.Services.GetRequiredService<IOptions<ApiSettings>>().Value;
@@ -96,6 +133,9 @@ try {
         .WithName("GetWeatherForecast");
 
     await app.RunAsync();
+} catch (HostAbortedException) {
+    // Las herramientas de EF Core abortan el host a propósito al leer el modelo
+    // para generar una migración. No es un error: solo ocurre con `dotnet ef`.
 } catch (Exception ex) {
     Log.Fatal(ex, "La aplicación terminó de forma inesperada");
 } finally {
