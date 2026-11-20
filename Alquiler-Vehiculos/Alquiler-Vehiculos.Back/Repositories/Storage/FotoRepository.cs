@@ -1,4 +1,6 @@
 using Alquiler_Vehiculos.Models.Storage;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace Alquiler_Vehiculos.Repositories.Storage;
 
@@ -6,9 +8,9 @@ namespace Alquiler_Vehiculos.Repositories.Storage;
 /// Repositorio de Fotos que implementa las operaciones CRUD
 /// utilizando Entity Framework Core, usando el Nombre como clave primaria.
 /// </summary>
-public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger)
+public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger) : IFotoRepository
 {
-    /// <summary>Crea una nueva foto.</summary>
+    /// <inheritdoc cref="IFotoRepository.Create" />
     public async Task<Foto> Create(Foto item) {
         logger.LogInformation("Creando Foto: {nombre}", item.Nombre);
         await context.Set<Foto>().AddAsync(item);
@@ -16,7 +18,7 @@ public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger
         return item;
     }
     
-    /// <summary>Realiza un borrado lógico de la foto por su nombre.</summary>
+    /// <inheritdoc cref="IFotoRepository.SoftDelete" />
     public async Task<bool> SoftDelete(string key) {
         logger.LogInformation("Realizando borrado lógico de Foto ID: {Id}", key);
         return await context.Set<Foto>()
@@ -27,7 +29,7 @@ public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger
                 .SetProperty(f => f.Activo, false)) > 0;
     }
 
-    /// <summary>Obtiene una foto por su nombre.</summary>
+    /// <inheritdoc cref="IFotoRepository.GetById" />
     public async Task<Foto?> GetById(string key) {
         logger.LogDebug("Obteniendo Foto por ID: {Key}", key);
         return await context.Set<Foto>()
@@ -35,7 +37,7 @@ public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger
             .FirstOrDefaultAsync(f => f.Nombre == key);
     }
 
-    /// <summary>Actualiza una foto existente.</summary>
+    /// <inheritdoc cref="IFotoRepository.Update" />
     public async Task<Foto?> Update(string key, Foto item) 
     {
         logger.LogInformation("Actualizando Foto ID: {Id}", key);
@@ -58,7 +60,7 @@ public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger
         return actualizado;
     }
 
-    /// <summary>Obtiene todas las fotos activas o existentes.</summary>
+    /// <inheritdoc cref="IFotoRepository.GetAll" />
     public async Task<IEnumerable<Foto>> GetAll() {
         logger.LogDebug("Obteniendo todas las Fotos");
         return await context.Set<Foto>()
@@ -67,7 +69,7 @@ public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger
             .ToListAsync();
     }
 
-    /// <summary>Verifica si existe una foto por su nombre.</summary>
+    /// <inheritdoc cref="IFotoRepository.ExistById" />
     public async Task<bool> ExistById(string key)
     {
         logger.LogDebug("Verificando existencia de Foto por Id: {Id}", key);
@@ -75,5 +77,25 @@ public class FotoRepository(AppDbContext context, ILogger<FotoRepository> logger
             .IgnoreQueryFilters()
             .AsNoTracking()
             .AnyAsync(f => f.Nombre == key);
+    }
+
+    /// <inheritdoc cref="IFotoRepository.Restore" />
+    public async Task<Foto?> Restore(string name)
+    {
+        logger.LogDebug("Restaurando Foto por Id: {Id}", name);
+        
+        Foto existente = await context.Set<Foto>().FirstOrDefaultAsync(f => f.Nombre == name);
+        if (existente == null) return null;
+        
+        var actualizado = existente with {
+            Activo = true,
+            UpdatedAt = DateTime.UtcNow,
+            DeletedAt = null
+        };
+        
+        context.Entry(existente).CurrentValues.SetValues(actualizado);
+        await context.SaveChangesAsync();
+    
+        return actualizado;
     }
 }
