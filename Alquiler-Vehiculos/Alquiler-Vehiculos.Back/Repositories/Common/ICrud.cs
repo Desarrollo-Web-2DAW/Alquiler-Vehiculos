@@ -30,9 +30,10 @@ public interface ICrud<TValue, TKey> {
     /// <summary>
     /// Actualiza una entidad existente en el repositorio.
     /// </summary>
-    /// <param name="key">Entidad con los datos que se desean actualizar.</param>
+    /// <param name="key">Id con el que buscar la antigua entidad</param>
+    /// <param name="item">Entidad con los datos que se desean actualizar.</param>
     /// <returns>Entidad actualizada.</returns>
-    Task<TValue?> Update(TKey key);
+    Task<TValue?> Update(TKey key, TValue item);
 
     /// <summary>
     /// Obtiene todas las entidades del repositorio.
