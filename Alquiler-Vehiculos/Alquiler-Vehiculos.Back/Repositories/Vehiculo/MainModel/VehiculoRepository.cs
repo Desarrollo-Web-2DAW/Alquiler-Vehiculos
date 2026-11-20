@@ -1,8 +1,6 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
-using Alquiler_Vehiculos.Models.Vehiculo.Enums;
-using MongoDB.Bson;
 
-namespace Alquiler_Vehiculos.Repositories.Vehiculo;
+namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 
 /// <summary>
 /// Repositorio de Vehiculos que implementa las operaciones CRUD
