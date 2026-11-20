@@ -17,6 +17,8 @@
         <PackageReference Include="MongoDB.EntityFrameworkCore" Version="10.0.2" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
         <PackageReference Include="Serilog" Version="4.4.0" />
+        <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.1" />
+        <PackageReference Include="StackExchange.Redis" Version="3.4.35" />
     </ItemGroup>
 
     <ItemGroup>
@@ -47,5 +49,4 @@
       <Folder Include="Services\Reserva\" />
       <Folder Include="Services\Trabajador\" />
     </ItemGroup>
-
 </Project>

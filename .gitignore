@@ -44,6 +44,10 @@ coveragereport/
 .vshistory/
 
 # Otros
+# OpenCode - nunca subir a GitHub
+.opencode
+.opencode/
+**/.opencode/**
 *.tmp
 *.bak
 

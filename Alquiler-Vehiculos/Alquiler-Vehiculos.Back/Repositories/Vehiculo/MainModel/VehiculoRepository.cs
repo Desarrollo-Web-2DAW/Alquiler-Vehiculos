@@ -41,7 +41,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     {
         logger.LogInformation("Actualizando Vehiculo ID: {Id}", key);
     
-        VehiculoModel existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
+        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null || existente.Activo) return null;
         
         var actualizado = existente with {
@@ -54,7 +54,6 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             Carroceria = item.Carroceria,
             Combustible = item.Combustible,
             Transmision = item.Transmision,
-            Estado = item.Estado,
             Color = item.Color,
             PrecioBaseDia = item.PrecioBaseDia,
             Plazas = item.Plazas,
@@ -67,6 +66,8 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             UpdatedAt = DateTime.UtcNow,
             DeletedAt = item.DeletedAt
         };
+        
+        actualizado.CambiarEstadoMapper(item.Estado);
         
         context.Entry(existente).CurrentValues.SetValues(actualizado);
         await context.SaveChangesAsync();
