@@ -200,26 +200,31 @@ Todas con la alternativa descartada y el motivo, como exige la entrega.
 
 | # | Decisión | Alternativas descartadas | Justificación |
 |---|---|---|---|
-| 1 | **Patrón *outbox***: el correo se encola y lo envía un `BackgroundService` | Envío directo desde el servicio de negocio; cola tipo `Channel`/`ConcurrentQueue` en memoria (la que usan el proyecto de referencia y el del profe) | RF-35 exige que el correo nunca bloquee ni rompa la reserva y que el error quede **registrado para reintentarlo**. Con envío directo, un SMTP caído retrasa o rompe la petición. Con una cola solo en memoria, los mensajes se pierden al reiniciar la aplicación. El outbox deja constancia del mensaje y su estado (`Pendiente`, `Enviado`, `Fallido`) |
+| 1 | **Patrón *outbox***: el correo se encola y lo envía un `BackgroundService` | Envío directo desde el servicio de negocio; cola tipo `Channel`/`ConcurrentQueue` en memoria (la que usan las implementaciones de ejemplo) | RF-35 exige que el correo nunca bloquee ni rompa la reserva y que el error quede **registrado para reintentarlo**. Con envío directo, un SMTP caído retrasa o rompe la petición. Con una cola solo en memoria, los mensajes se pierden al reiniciar la aplicación. El outbox deja constancia del mensaje y su estado (`Pendiente`, `Enviado`, `Fallido`) |
 | 2 | **Clave de idempotencia** por evento (`{Tipo}:{CodigoReferencia}`) | Confiar en que cada evento se notifica una sola vez | CU-17 pide *"ni cero ni dos"* correos por cliente. Ante reintentos, reinicios o dobles llamadas (el enunciado advierte de carreras), la clave única hace que el segundo encolado se descarte |
-| 3 | **Reintentos con backoff exponencial** (30 s · 60 s · 120 s…, máx. 5) en el worker | Un único intento; reintento inmediato; Polly con *circuit breaker* (la solución del profe) | Cumple RF-35 sin saturar un SMTP caído. Polly es una mejora válida (la dejamos como ampliación) pero añade una dependencia para algo que el worker resuelve con pocas líneas y es más fácil de explicar y probar. Al agotar intentos, el mensaje queda `Fallido` y auditable: *"el sistema no se queda nunca sin dejar constancia"* |
-| 4 | **Mailpit** como servidor de correo en desarrollo (contenedor en `compose.yaml`) | `MemoryEmailService` que solo loguea (referencia y profe); MailHog; cuenta de Gmail real | RF-36 pide **ver** el correo en desarrollo sin salir de la máquina. Mailpit da SMTP real (puerto 1025) y bandeja web (8025) con los HTML renderizados, y además permite probar el envío SMTP de verdad. MailHog está abandonado; una cuenta real exige credenciales y red |
-| 5 | **Plantillas HTML como ficheros** con marcadores `{{Propiedad}}` y bloques `{{#each}}` | HTML embebido en strings de C# (profe); Razor Light / Scriban; generación por código | El equipo pidió plantillas en HTML, CSS, JavaScript y Bootstrap. Como ficheros se editan y previsualizan sin recompilar y separan diseño de lógica. Un motor de plantillas completo (Razor/Scriban) aportaría condicionales a cambio de una dependencia más; el mini-renderizador cubre el 100 % de las necesidades con ~80 líneas |
+| 3 | **Reintentos con backoff exponencial** (30 s · 60 s · 120 s…, máx. 5) en el worker | Un único intento; reintento inmediato; Polly con *circuit breaker* (reintentos con apertura de circuito) | Cumple RF-35 sin saturar un SMTP caído. Polly es una mejora válida (la dejamos como ampliación) pero añade una dependencia para algo que el worker resuelve con pocas líneas y es más fácil de explicar y probar. Al agotar intentos, el mensaje queda `Fallido` y auditable: *"el sistema no se queda nunca sin dejar constancia"* |
+| 4 | **Cuenta SMTP real del proyecto (Gmail)** como envío activo, con **Mailpit** disponible para desarrollo (contenedor en `compose.yaml`) | `MemoryEmailService` que solo loguea; MailHog (abandonado) | RF-36 pide **ver** el correo en desarrollo sin salir de la máquina: Mailpit da SMTP real (puerto 1025) y bandeja web (8025) con los HTML renderizados, y se mantiene como alternativa comentada en la configuración de desarrollo. El equipo decide enviar con la cuenta real del proyecto; Mailpit cubre el escenario de captura local |
+| 5 | **Plantillas HTML como ficheros** con marcadores `{{Propiedad}}` y bloques `{{#each}}` | HTML embebido en strings de C#; Razor Light / Scriban; generación por código | El equipo pidió plantillas en HTML, CSS, JavaScript y Bootstrap. Como ficheros se editan y previsualizan sin recompilar y separan diseño de lógica. Un motor de plantillas completo (Razor/Scriban) aportaría condicionales a cambio de una dependencia más; el mini-renderizador cubre el 100 % de las necesidades con ~80 líneas |
 | 6 | **MailKit** para SMTP | `System.Net.Mail.SmtpClient` (obsoleto); API de un proveedor de correo (SendGrid, Mailgun) | MailKit es la librería estándar en .NET, soporta TLS/SSL, autenticación opcional (Mailpit no la exige) y permite inyectar `ISmtpClient` para pruebas. Un proveedor de correo ataría el proyecto a un servicio externo de pago (se menciona en la estimación de gastos como opción) |
 | 7 | **Interfaz `IEmailOutboxStore` con implementación en memoria** | Implementación EF Core desde el día uno | La base de datos transaccional aún no está decidida por el equipo. La interfaz está pensada para que al fijar EF Core solo se añada una implementación nueva (con tabla y migración) sin tocar el resto del módulo. La versión en memoria indexa por clave de idempotencia, así que el comportamiento observable es el mismo |
-| 8 | **Configuración tipada `EmailSettings`** (sección `Email`) con secretos fuera del repositorio | Cadenas sueltas en `appsettings`; credenciales en el código | RNF-03 exige secretos fuera del repositorio. En desarrollo los valores apuntan a Mailpit sin credenciales; en producción `Email__Password` llega por variable de entorno. `Email:UseSmtp=false` permite conmutar al servicio simulado sin cambiar código |
+| 8 | **Configuración tipada `EmailSettings`** (sección `Email`) con secretos fuera del repositorio | Cadenas sueltas en `appsettings`; credenciales en el código | RNF-03 exige secretos fuera del repositorio. La contraseña va en *user-secrets* en desarrollo y en la variable de entorno `Email__Password` en producción. `Email:UseSmtp=false` permite conmutar al servicio simulado sin cambiar código |
 | 9 | **Registros (`ILogger`) solo con tipo y código de referencia** | Registrar destinatario y asunto completos | RNF-09 prohíbe datos sensibles en los mensajes de log. El email del cliente es dato personal: se registra el evento (`TipoNotificacion`) y la `CodigoReferencia`, suficiente para diagnosticar |
 | 10 | **Notificador que nunca lanza excepción** | Propagar el error al servicio de negocio | RF-35 literal: *"el envío de correo nunca bloquea ni rompe la reserva"*. Si el encolado falla, se registra el error y la operación continúa; la garantía de entrega la da la cola, no la llamada |
 
 ## 6. Configuración por entornos (RF-36)
 
-| Variable | Desarrollo (Mailpit) | Producción |
+| Variable | Desarrollo | Producción |
 |---|---|---|
-| `Email:Host` / `Email:Port` | `localhost` / `1025` | Servidor SMTP real |
-| `Email:Security` | `None` | `Tls` (o `Ssl` según proveedor) |
-| `Email:Username` / `Email:Password` | vacíos (Mailpit no autentica) | Credenciales por variable de entorno (`Email__Password`), nunca en Git |
-| `Email:From` / `Email:FromName` | `no-reply@alquilervehiculos.local` | Correo del dominio de la empresa |
-| `Email:UseSmtp` | `true` (envía a Mailpit) | `true`; `false` activa el servicio simulado (pruebas) |
+| `Email:Host` / `Email:Port` | `smtp.gmail.com` / `587` | `smtp.gmail.com` / `587` |
+| `Email:Security` | `Tls` | `Tls` |
+| `Email:Username` | `funkopopapi@gmail.com` | `funkopopapi@gmail.com` |
+| `Email:Password` | *user-secrets*, nunca en el repositorio | Variable de entorno `Email__Password`, nunca en el repositorio |
+| `Email:From` / `Email:FromName` | `funkopopapi@gmail.com` / `Alquiler Vehículos` | Igual que en desarrollo |
+| `Email:UseSmtp` | `true`; `false` activa el servicio simulado (pruebas) | `true` |
+
+Alternativa de desarrollo con captura local (RF-36): Mailpit sigue disponible en el
+`compose.yaml`; para usarlo se cambia el bloque `Email` de `appsettings.Development.json`
+al que viene comentado (`localhost:1025`, sin credenciales):
 
 ```bash
 # Desarrollo: un solo comando (RNF-05)

@@ -167,8 +167,7 @@ Estado de las pruebas (`dotnet test`): **Total: 27 · OK: 22 · KO: 0 · Omitida
 
 ## 1. Investigación: envío de correos en la API
 
-- **Proyecto de referencia** (FunkoApiProyecto, rama `feature/email`): `IEmailService` + `MailKitEmailService` (MailKit/MimeKit, con `ISmtpClient` inyectable para pruebas), `MemoryEmailService` (mock con `SentEmails`), `EmailQueueService` (`ConcurrentQueue` + `SemaphoreSlim`) y `EmailBackgroundWorker` (`BackgroundService` que dequeúa y envía). `SmtpSettings` tipado en la sección `Email`.
-- **Versión del profe** (TiendaDawApi-NetCore): mismo esqueleto, pero con `Channel<T>` en vez de cola manual, plantillas HTML generadas desde C# (`EmailTemplates.cs`), pipeline **Polly** (retry + circuit breaker + timeout) y `EmailConfig` para el registro por entornos.
+- **Implementaciones de ejemplo estudiadas**: una con `IEmailService` + `MailKitEmailService` (MailKit/MimeKit, con `ISmtpClient` inyectable para pruebas), `MemoryEmailService` (mock con `SentEmails`), `EmailQueueService` (`ConcurrentQueue` + `SemaphoreSlim`) y `EmailBackgroundWorker` (`BackgroundService` que dequeúa y envía), con su configuración SMTP tipada; otra con el mismo esqueleto pero con `Channel<T>` en vez de cola manual, plantillas HTML generadas desde C#, pipeline **Polly** (retry + circuit breaker + timeout) y registro de servicios por entornos.
 - **Carencias comunes** que nuestro diseño resuelve: la cola vive solo en memoria (se pierde al reiniciar la app), un fallo de envío se traga el mensaje sin reintentos, no hay control de duplicados (ni cero ni dos no está garantizado) y en desarrollo solo se loguea el correo en vez de poder *verlo*.
 
 ## 2. Decisiones tomadas
@@ -185,15 +184,15 @@ Cada decisión con su justificación y la alternativa descartada (versión compl
 
 **D3 — Reintentos con backoff exponencial (30 s · 60 s · 120 s…, máx. 5) en el worker.**
 - *Justificación:* cumple RF-35 sin saturar un servidor caído; al agotar intentos el mensaje queda `Fallido` y auditable.
-- *Alternativa descartada:* Polly con *circuit breaker* (la solución del profe), válida como ampliación pero añade dependencia para lo que el worker resuelve con pocas líneas.
+- *Alternativa descartada:* Polly con *circuit breaker* (reintentos con apertura de circuito), válida como ampliación pero añade dependencia para lo que el worker resuelve con pocas líneas.
 
-**D4 — Mailpit como correo en desarrollo (contenedor en `compose.yaml`).**
-- *Justificación:* RF-36 pide *ver* el correo en desarrollo: Mailpit da SMTP real (1025) y bandeja web (8025) con los HTML renderizados.
-- *Alternativas descartadas:* `MemoryEmailService` que solo loguea (referencia y profe), MailHog (abandonado) y cuenta real (credenciales y red).
+**D4 — Cuenta SMTP real del proyecto como envío activo, con Mailpit disponible para desarrollo.**
+- *Justificación:* el equipo decide enviar con la cuenta real del proyecto; RF-36 pide además *ver* el correo en desarrollo sin salir de la máquina, y Mailpit (contenedor en `compose.yaml`, SMTP 1025 y bandeja web 8025) cubre ese escenario como alternativa comentada en la configuración de desarrollo.
+- *Alternativas descartadas:* `MemoryEmailService` que solo loguea y MailHog (abandonado).
 
 **D5 — Plantillas HTML como ficheros con marcadores `{{Propiedad}}` y bloques `{{#each}}`.**
 - *Justificación:* el equipo pidió plantillas en HTML, CSS, JavaScript y Bootstrap; como ficheros se editan y previsualizan sin recompilar.
-- *Alternativas descartadas:* HTML embebido en strings de C# (profe) y motores tipo Razor/Scriban (dependencia extra para condicionales que no necesitamos).
+- *Alternativas descartadas:* HTML embebido en strings de C# y motores tipo Razor/Scriban (dependencia extra para condicionales que no necesitamos).
 
 **D6 — MailKit para SMTP.**
 - *Alternativa descartada:* `System.Net.Mail.SmtpClient` (obsoleto) y proveedores externos tipo SendGrid (atan el proyecto a un servicio de pago).
@@ -203,7 +202,7 @@ Cada decisión con su justificación y la alternativa descartada (versión compl
 - *Alternativa descartada:* EF Core desde el día uno, que depende de una decisión que no es nuestra.
 
 **D8 — Configuración tipada `EmailSettings` (sección `Email`) con secretos fuera del repositorio.**
-- *Justificación:* RNF-03; en desarrollo apunta a Mailpit sin credenciales y en producción `Email__Password` llega por variable de entorno. `Email:UseSmtp=false` conmuta al servicio simulado para pruebas.
+- *Justificación:* RNF-03; la contraseña va en *user-secrets* en desarrollo y en la variable de entorno `Email__Password` en producción, nunca en el repositorio. `Email:UseSmtp=false` conmuta al servicio simulado para pruebas.
 - *Alternativa descartada:* cadenas sueltas y credenciales en el código.
 
 ## 3. Diseño del flujo (boceto)
@@ -229,7 +228,7 @@ doc/Notificaciones-Email-Memoria.md   documentación para la memoria
 
 ## 5. Plan de trabajo
 
-1. ~~Investigar el repo de referencia y el del profe y compararlos~~ (hecho).
+1. ~~Investigar y comparar implementaciones de envío de correo de ejemplo~~ (hecho).
 2. ~~Contratos y DTOs de los 11 eventos~~ (hecho).
 3. ~~Renderizador de plantillas y plantillas HTML con Bootstrap~~ (hecho).
 4. ~~Cola outbox con idempotencia + worker con reintentos~~ (hecho).
@@ -240,10 +239,12 @@ doc/Notificaciones-Email-Memoria.md   documentación para la memoria
 
 ## 6. Registro de implementación (18/11/2026)
 
-- Paquete **MailKit 4.18.2**: se descartó la 4.13.0 que trae el proyecto de referencia porque NuGet reporta vulnerabilidades conocidas en MailKit/MimeKit de esa línea.
+- Paquete **MailKit 4.18.2**: se descartó la 4.13.0 porque NuGet reporta vulnerabilidades conocidas en MailKit/MimeKit de esa línea.
 - Resuelto el aviso heredado que quedaba en el apartado 7 de la tarea de caché: `Microsoft.AspNetCore.OpenApi` actualizado a 10.0.15, que elimina la vulnerabilidad de `Microsoft.OpenApi` 2.0.0. La solución compila con **0 errores y 0 advertencias**.
 - Diagramas Mermaid de la memoria revisados con un parser real: se corrigieron dos fallos (paréntesis en etiqueta de flecha del diagrama de arquitectura y una declaración de `participant` sin la palabra clave en el diagrama de secuencia).
 - Merge de `origin/dev` (módulo de caché) en esta rama: conflictos resueltos combinando ambos módulos en `Program.cs` (registros `AddCache` y `AddEmailNotifications`), `appsettings*.json` (secciones `Email`, `Cache` y `Redis`) y `.csproj` (paquetes MailKit, StackExchange.Redis y OpenApi).
+
+**Configuración con cuenta real (20/11/2026):** el envío se configura con la cuenta del proyecto (`funkopopapi@gmail.com`) por SMTP con TLS (`smtp.gmail.com:587`). La contraseña de aplicación queda **fuera del repositorio** (RNF-03): *user-secrets* en desarrollo y variable de entorno `Email__Password` en producción. Se añade `appsettings.Production.json` para la configuración por entornos (RNF-05) y se mantiene comentada la alternativa de Mailpit para la captura local de RF-36. No se registran credenciales en el código, en la configuración versionada ni en esta bitácora.
 
 ## 7. Pendientes
 
