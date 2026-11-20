@@ -128,4 +128,24 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
             .AsNoTracking()
             .AnyAsync(f => f.matricula == key);
     }
+    
+    /// <inheritdoc cref="IVehiculoRepository.Restore" />
+    public async Task<VehiculoModel?> Restore(string name)
+    {
+        logger.LogDebug("Restaurando Foto por Id: {Id}", name);
+        
+        VehiculoModel existente = await context.Set<VehiculoModel>().FirstOrDefaultAsync(f => f.Nombre == name);
+        if (existente == null) return null;
+        
+        var actualizado = existente with {
+            Activo = true,
+            UpdatedAt = DateTime.UtcNow,
+            DeletedAt = null
+        };
+        
+        context.Entry(existente).CurrentValues.SetValues(actualizado);
+        await context.SaveChangesAsync();
+    
+        return actualizado;
+    }
 }

@@ -1,7 +1,7 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Repositories.Common;
 
-namespace Alquiler_Vehiculos.Repositories.Vehiculo;
+namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 
 public interface IVehiculoRepository : ICrud<VehiculoModel, string>
 {
@@ -33,4 +33,11 @@ public interface IVehiculoRepository : ICrud<VehiculoModel, string>
     /// <param name="pageSize">Número máximo de elementos por página.</param>
     /// <returns>Elementos de la página y total de registros.</returns>
     Task<(IEnumerable<VehiculoModel> Items, int TotalItems)> GetPaged(int page, int pageSize);
+    
+    /// <summary>
+    /// Restaura una Vehiculo por su Id
+    /// </summary>
+    /// <param name="key">El id</param>
+    /// <returns><see cref="VehiculoModel"/>si existe, null si no existe</returns>
+    Task<VehiculoModel?> Restore(string key);
 }
