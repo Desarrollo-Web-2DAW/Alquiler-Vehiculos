@@ -1,5 +1,8 @@
+using Alquiler_Vehiculos.Errors.Common;
+using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
+using CSharpFunctionalExtensions;
 
 namespace Alquiler_Vehiculos.Models.Vehiculo;
 
@@ -15,7 +18,7 @@ public record VehiculoModel
     public TipoCarroceria Carroceria { get; init; }
     public TipoCombustible Combustible { get; init; }
     public TipoTransmision Transmision { get; init; }
-    public EstadoVehiculo Estado { get; init; } = EstadoVehiculo.Disponible;
+    public EstadoVehiculo Estado { get; private set; } = EstadoVehiculo.Disponible;
     public TipoColor Color { get; init; }
     public decimal PrecioBaseDia { get; init; }
     public int Plazas { get; init; }
@@ -28,4 +31,51 @@ public record VehiculoModel
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; set; }
     public DateTime? DeletedAt { get; set; }
+
+    public Result<bool, DomainError> MarcarVehiculoDisponible()
+    {
+        if (Estado != EstadoVehiculo.Retirado)
+        {
+            Estado = EstadoVehiculo.Disponible;
+            return true;
+        }
+
+        return Result.Failure<bool, DomainError>(VehiculoError.CambiarDeEstado(this.Estado.ToString(), nameof(EstadoVehiculo.Disponible)));
+    }
+    
+    public Result<bool, DomainError> MarcarVehiculoReservado(EstadoVehiculo estado)
+    {
+        if (Estado != EstadoVehiculo.Retirado && Estado == EstadoVehiculo.Disponible)
+        {
+            Estado = EstadoVehiculo.Reservado;
+            return true;
+        }
+        return Result.Failure<bool, DomainError>(VehiculoError.CambiarDeEstado(this.Estado.ToString(),  nameof(EstadoVehiculo.Reservado)));
+    }
+    
+    public Result<bool, DomainError> MarcarVehiculoAlquilado()
+    {
+        if (Estado != EstadoVehiculo.Retirado  && Estado == EstadoVehiculo.Reservado)
+        {
+            Estado = EstadoVehiculo.EnAlquiler;
+            return true;
+        }
+        return Result.Failure<bool, DomainError>(VehiculoError.CambiarDeEstado(this.Estado.ToString(), nameof(EstadoVehiculo.EnAlquiler)));
+    }
+    
+    public Result<bool, DomainError> MeterVehiculoTaller()
+    {
+        if (Estado != EstadoVehiculo.Retirado)
+        {
+            Estado = EstadoVehiculo.Mantenimiento;
+            return true;
+        }
+        return Result.Failure<bool, DomainError>(VehiculoError.CambiarDeEstado(this.Estado.ToString(), nameof(EstadoVehiculo.Mantenimiento)));
+    }
+
+    protected void CambiarEstadoMapper(EstadoVehiculo estado)
+    {
+        Estado = estado;
+    }
+    
 }
