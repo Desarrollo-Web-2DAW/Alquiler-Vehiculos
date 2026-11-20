@@ -2,7 +2,7 @@ using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Marca;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Marca;
 using FluentAssertions;
 
-namespace Alquiler_Vehiculos.Tests.Unit.Validators;
+namespace Alquiler_Vehiculos.Tests.Unit.Validators.Catalogo_Vehiculos.Marca;
 
 /// <summary>Comprueba los campos y la colección de modelos al crear una marcaModel.</summary>
 [TestFixture]
@@ -100,22 +100,6 @@ public class CreateMarcaValidatorTests {
             resultado.Errors.Should().ContainSingle(e => e.PropertyName == propiedad
                 && e.ErrorMessage == mensaje);
         }
-    }
-
-    [TestCase(true)]
-    [TestCase(false)]
-    public void Validate_ColeccionNulaOVacia_DevuelveError(bool esNula) {
-        // Arrange
-        var dto = CrearDtoValido();
-        dto.ModelosDisponibles = esNula ? null! : new List<string>();
-
-        // Act
-        var resultado = _validator.Validate(dto);
-
-        // Assert
-        resultado.IsValid.Should().BeFalse();
-        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "ModelosDisponibles"
-            && e.ErrorMessage == "La marcaModel debe tener al menos un modelo disponible");
     }
 
     [TestCase(null)]

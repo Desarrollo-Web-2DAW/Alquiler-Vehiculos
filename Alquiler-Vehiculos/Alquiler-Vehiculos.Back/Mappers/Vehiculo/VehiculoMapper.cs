@@ -22,7 +22,7 @@ public static class VehiculoMapper
     /// <returns><see cref="Vehiculo"/></returns>
     public static Result<VehiculoModel, DomainError> ToVehiculo(this CreateVehiculoDto dto, Foto foto)
     {
-        var carroceria = ObtenerTipoCarroceria(dto.Acriss[1],dto.Acriss[0]);
+        var carroceria = ObtenerTipoCarroceria(dto.Acriss[0]);
         if (carroceria.IsFailure) return carroceria.Error;
         var combustible = ObtenerTipoCombustible(dto.Acriss[2]);
         if (combustible.IsFailure) return combustible.Error;
@@ -87,36 +87,46 @@ public static class VehiculoMapper
     }
     
     /// <summary>
-    /// Obtiene <see cref="TipoCarroceria"/> según la segunda letra del ACRISS y siguiendo las restricciones del enunciado
-    /// utilizando para comprobar la primera para saber si es un Hatchback si la segunda letra no coincide con nigún tiopo de carrocería del catálogo
-    /// comprobandose este con la primera letra del ACRISS
+    /// Obtiene <see cref="TipoCarroceria"/> a partir de la primera letra del ACRISS,
+    /// que se interpreta como <see cref="AcrissTipo"/>.
     /// </summary>
-    /// <param name="letra2">AcrissCategoria</param>
-    /// <param name="letra1">AcrissTipo</param>
+    /// <remarks>
+    /// El mapa es explícito a propósito: cada miembro de <see cref="AcrissTipo"/> que tiene
+    /// equivalente en <see cref="TipoCarroceria"/> aparece aquí. Los que no lo tienen
+    /// (<c>Deportivo</c>, <c>Roadster</c>, <c>Crossover</c>, pickups, autocaravanas,
+    /// recreativos y los códigos comerciales <c>Especial</c>/<c>OfertaEspecial</c>)
+    /// devuelven error de carrocería.
+    /// </remarks>
+    /// <param name="letraTipo">Primera letra del ACRISS (catálogo <see cref="AcrissTipo"/>).</param>
     /// <returns><see cref="TipoCarroceria"/> o <see cref="BadRequestError"/></returns>
-    private static Result<TipoCarroceria, DomainError> ObtenerTipoCarroceria( char letra2, char letra1)
+    private static Result<TipoCarroceria, DomainError> ObtenerTipoCarroceria(char letraTipo)
     {
-        var acrissCategoria = (AcrissCategoria)letra2;
-        if (!Enum.TryParse(acrissCategoria.ToString(), out TipoCarroceria categoria))
+        return (AcrissTipo)letraTipo switch
         {
-            Enum.TryParse(letra1.ToString().AsSpan(), out AcrissTipo tipo);
-            if (tipo != AcrissTipo.DosCuatroPuertas && tipo != AcrissTipo.DosTresPuertas && tipo != AcrissTipo.CuatroCincoPuertas)
-            {
-                return VehiculoError.TipoDeCarroceria();
-            }
-            return TipoCarroceria.Hatchback;
-        }
-        return categoria;
+            AcrissTipo.DosTresPuertas
+                or AcrissTipo.DosCuatroPuertas
+                or AcrissTipo.CuatroCincoPuertas => TipoCarroceria.Hatchback,
+            AcrissTipo.Berlina                => TipoCarroceria.Sedan,
+            AcrissTipo.Familiar               => TipoCarroceria.Familiar,
+            AcrissTipo.FurgonetaPasajeros
+                or AcrissTipo.FurgonetaComercial => TipoCarroceria.Furgoneta,
+            AcrissTipo.Suv                    => TipoCarroceria.Suv,
+            AcrissTipo.TodoTerrenoAbierto     => TipoCarroceria.TodoTerreno,
+            AcrissTipo.Descapotable           => TipoCarroceria.Descapotable,
+            AcrissTipo.Coupe                  => TipoCarroceria.Coupe,
+            AcrissTipo.Monovolumen            => TipoCarroceria.Monovolumen,
+            _                                 => VehiculoError.TipoDeCarroceria()
+        };
     }
     
     /// <summary>
-    /// Obtiene <see cref="TipoCombustible"/> según la cuarta letra del ACRISS
+    /// Obtiene <see cref="TipoCombustible"/> según la tercera letra del ACRISS
     /// </summary>
-    /// <param name="letra4">AcrissCombustible</param>
+    /// <param name="letraCombustible">AcrissCombustible</param>
     /// <returns><see cref="TipoCombustible"/> o <see cref="BadRequestError"/></returns>
-    private static Result<TipoCombustible, DomainError> ObtenerTipoCombustible( char letra4)
+    private static Result<TipoCombustible, DomainError> ObtenerTipoCombustible(char letraCombustible)
     {
-        var acrrisTipoCombustible = (AcrissCombustibleClimatizacion)letra4;
+        var acrrisTipoCombustible = (AcrissCombustibleClimatizacion)letraCombustible;
         
         TipoCombustible[] valores = Enum.GetValues<TipoCombustible>();
 
@@ -130,13 +140,13 @@ public static class VehiculoMapper
     
     
     /// <summary>
-    /// Obtiene <see cref="TipoCombustible"/> según la tercera letra del ACRISS
+    /// Obtiene <see cref="TipoTransmision"/> según la cuarta letra del ACRISS
     /// </summary>
-    /// <param name="letra3">AcrissTransmision</param>
-    /// <returns><see cref="TipoCombustible"/> o <see cref="BadRequestError"/></returns>
-    private static Result<TipoTransmision, DomainError> ObtenerTipoTransmision( char letra3)
+    /// <param name="letraTransmision">AcrissTransmision</param>
+    /// <returns><see cref="TipoTransmision"/> o <see cref="BadRequestError"/></returns>
+    private static Result<TipoTransmision, DomainError> ObtenerTipoTransmision(char letraTransmision)
     {
-        var acrissTipoTransmision = (AcrissTransmisionTraccion)letra3;
+        var acrissTipoTransmision = (AcrissTransmisionTraccion)letraTransmision;
         
         TipoTransmision[] valores = Enum.GetValues<TipoTransmision>();
 
@@ -144,8 +154,7 @@ public static class VehiculoMapper
         {
             if (acrissTipoTransmision.ToString().Contains(valor.ToString())) return valor;
         }
-
-
+        
         return VehiculoError.TipoDeTransmision();
     }
 }

@@ -2,7 +2,7 @@ using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using FluentAssertions;
 
-namespace Alquiler_Vehiculos.Tests.Unit.Validators;
+namespace Alquiler_Vehiculos.Tests.Unit.Validators.Catalogo_Vehiculos.Vehiculo;
 
 [TestFixture]
 [Category("Unit")]
@@ -94,7 +94,7 @@ public class UpdateVehiculoValidatorTests {
     }
 
     [TestCase("Matricula", "La matrícula no puede estar vacía.")]
-    [TestCase("MarcaModel", "La marcaModel no puede estar vacía.")]
+    [TestCase("Marca", "La marca no puede estar vacía.")]
     [TestCase("Modelo", "El modelo no puede estar vacío.")]
     [TestCase("Acriss", "El código ACRISS no puede estar vacío.")]
     [TestCase("Estado", "El estado no puede estar vacío.")]
@@ -117,10 +117,10 @@ public class UpdateVehiculoValidatorTests {
         }
     }
 
-    [TestCase("MarcaModel", 1, false)]
-    [TestCase("MarcaModel", 2, true)]
-    [TestCase("MarcaModel", 100, true)]
-    [TestCase("MarcaModel", 101, false)]
+    [TestCase("Marca", 1, false)]
+    [TestCase("Marca", 2, true)]
+    [TestCase("Marca", 100, true)]
+    [TestCase("Marca", 101, false)]
     [TestCase("Modelo", 1, false)]
     [TestCase("Modelo", 2, true)]
     [TestCase("Modelo", 100, true)]
@@ -129,7 +129,9 @@ public class UpdateVehiculoValidatorTests {
         // Arrange
         var dto = CrearDtoValido();
         AsignarTexto(dto, campo, new string('a', longitud));
-        var nombre = campo == "MarcaModel" ? "La marcaModel" : "El modelo";
+        
+        // Ajustamos el artículo y nombre según la propiedad real
+        var nombre = campo == "Marca" ? "La marca" : "El modelo";
         var mensaje = longitud < 2 ? $"{nombre} no puede tener menos de 2 caracteres."
             : $"{nombre} no puede tener más de 100 caracteres.";
 
@@ -138,8 +140,14 @@ public class UpdateVehiculoValidatorTests {
 
         // Assert
         resultado.IsValid.Should().Be(valido);
-        if (valido) resultado.Errors.Should().BeEmpty();
-        else resultado.Errors.Should().ContainSingle(e => e.PropertyName == campo && e.ErrorMessage == mensaje);
+        if (valido) 
+        {
+            resultado.Errors.Should().BeEmpty();
+        }
+        else 
+        {
+            resultado.Errors.Should().ContainSingle(e => e.PropertyName == campo && e.ErrorMessage == mensaje);
+        }
     }
 
     [TestCase("PrecioBaseDia", -1, false, "El precio base por día debe ser mayor que cero.")]
@@ -159,9 +167,9 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Kilometraje", -1, false, "El kilometraje no puede ser negativo.")]
     [TestCase("Kilometraje", 0, true, "")]
     [TestCase("Kilometraje", 1, true, "")]
-    [TestCase("ConcesionarioModel", -1, false, "El identificador del concesionarioModel debe ser válido.")]
-    [TestCase("ConcesionarioModel", 0, false, "El identificador del concesionarioModel debe ser válido.")]
-    [TestCase("ConcesionarioModel", 1, true, "")]
+    [TestCase("Concesionario", -1, false, "El identificador del concesionarioç debe ser válido.")]
+    [TestCase("Concesionario", 0, false, "El identificador del concesionario debe ser válido.")]
+    [TestCase("Concesionario", 1, true, "")]
     public void Validate_CampoNumerico_RespetaLimites(string campo, int valor, bool valido, string mensaje) {
         // Arrange
         var dto = CrearDtoValido();
@@ -171,7 +179,7 @@ public class UpdateVehiculoValidatorTests {
             case "MaleteroLitros": dto.MaleteroLitros = valor; break;
             case "AutonomiaKm": dto.AutonomiaKm = valor; break;
             case "Kilometraje": dto.Kilometraje = valor; break;
-            case "ConcesionarioModel": dto.Concesionario = valor; break;
+            case "Concesionario": dto.Concesionario = valor; break;
         }
 
         // Act
@@ -186,7 +194,7 @@ public class UpdateVehiculoValidatorTests {
     private static void AsignarTexto(UpdateVehiculoDto dto, string campo, string valor) {
         switch (campo) {
             case "Matricula": dto.Matricula = valor; break;
-            case "MarcaModel": dto.Marca = valor; break;
+            case "Marca": dto.Marca = valor; break;
             case "Modelo": dto.Modelo = valor; break;
             case "Acriss": dto.Acriss = valor; break;
             case "Estado": dto.Estado = valor; break;

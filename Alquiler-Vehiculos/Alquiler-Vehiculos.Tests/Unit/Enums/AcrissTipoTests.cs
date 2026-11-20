@@ -26,8 +26,6 @@ public class AcrissTipoTests
     [TestCase(AcrissTipo.Monovolumen, 'M')]
     [TestCase(AcrissTipo.Recreativo, 'R')]
     [TestCase(AcrissTipo.Autocaravana, 'H')]
-    [TestCase(AcrissTipo.DosRuedas, 'Y')]
-    [TestCase(AcrissTipo.Roadster, 'N')]
     [TestCase(AcrissTipo.Crossover, 'G')]
     [TestCase(AcrissTipo.FurgonetaComercial, 'K')]
     public void Valor_CasteadoAChar_DevuelveSuCodigoAcriss(

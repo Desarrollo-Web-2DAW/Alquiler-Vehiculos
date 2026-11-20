@@ -1,7 +1,7 @@
 using Alquiler_Vehiculos.Models.Vehiculo.Enums.ACRISS;
 using FluentAssertions;
 
-namespace Alquiler_Vehiculos.Tests.Unit.Enums;
+namespace Alquiler_Vehiculos.Tests.Unit.Models.Vehiculo.Enums;
 
 /// <summary>
 /// Tests unitarios del enum <see cref="AcrissTransmisionTraccion"/> (tercera letra del código ACRISS).
