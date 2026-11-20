@@ -7,12 +7,12 @@ namespace Alquiler_Vehiculos.Tests.Unit.Errors.Storage;
 [TestFixture]
 [Category("Unit")]
 public class StorageErrorTests {
-    [TestCase("vacio", "El archivo está vacío o no se ha proporcionado.")]
-    [TestCase("grande", "El archivo supera el tamaño máximo permitido.")]
-    [TestCase("extension", "La extensión del archivo no está permitida.")]
-    [TestCase("contenido", "El tipo de contenido del archivo no está permitido.")]
-    [TestCase("nombre", "El nombre del archivo contiene caracteres no válidos.")]
-    public void Factoria_ErrorDeValidacion_DevuelveReglaDeNegocio(string caso, string mensaje) {
+    [TestCase("vacio", "ARCHIVO_VACIO", "El archivo está vacío o no se ha proporcionado.")]
+    [TestCase("grande", "ARCHIVO_MUY_GRANDE", "El archivo supera el tamaño máximo permitido.")]
+    [TestCase("extension", "EXTENSION_NO_PERMITIDA", "La extensión del archivo no está permitida.")]
+    [TestCase("contenido", "TIPO_CONTENIDO_NO_PERMITIDO", "El tipo de contenido del archivo no está permitido.")]
+    [TestCase("nombre", "NOMBRE_ARCHIVO_INVALIDO", "El nombre del archivo contiene caracteres no válidos.")]
+    public void Factoria_ErrorDeValidacion_DevuelveReglaDeNegocio(string caso, string codigo, string mensaje) {
         // Arrange
         // Cada caso representa una validación de almacenamiento.
 
@@ -27,6 +27,7 @@ public class StorageErrorTests {
 
         // Assert
         error.Should().BeOfType<BusinessRuleError>();
+        error.Code.Should().Be(codigo);
         error.Message.Should().Be(mensaje);
     }
 
@@ -41,6 +42,7 @@ public class StorageErrorTests {
 
         // Assert
         error.Should().BeOfType<InternalError>();
+        error.Code.Should().Be("ERROR_INTERNO");
         error.Message.Should().Be(mensaje);
     }
 }

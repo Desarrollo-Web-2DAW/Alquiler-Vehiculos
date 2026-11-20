@@ -7,18 +7,18 @@ namespace Alquiler_Vehiculos.Tests.Unit.Errors.Common;
 [Category("Unit")]
 public class DomainErrorTests {
     // DomainError es abstracto: este tipo permite comprobar su implementación de ToString.
-    private sealed record ErrorDePrueba(string Message) : DomainError(Message) {
+    private sealed record ErrorDePrueba(string Code, string Message) : DomainError(Code, Message) {
         public override string ToString() => base.ToString();
     }
 
     private static IEnumerable<DomainError> Errores() {
-        yield return new BadRequestError("mensaje");
-        yield return new BusinessRuleError("mensaje");
-        yield return new ConflictError("mensaje");
-        yield return new ForbiddenError("mensaje");
+        yield return ValidationError.Create("mensaje");
+        yield return new BusinessRuleError("REGLA", "mensaje");
+        yield return new ConflictError("CONFLICTO", "mensaje");
+        yield return new ForbiddenError("SIN_PERMISOS", "mensaje");
         yield return new InternalError("mensaje");
-        yield return new NotFoundError("mensaje");
-        yield return new UnauthorizedError("mensaje");
+        yield return new NotFoundError("NO_ENCONTRADO", "mensaje");
+        yield return new UnauthorizedError("NO_AUTENTICADO", "mensaje");
     }
 
     [TestCaseSource(nameof(Errores))]
@@ -34,24 +34,24 @@ public class DomainErrorTests {
         error.Should().BeAssignableTo<DomainError>();
     }
 
-    [TestCase("")]
-    [TestCase("Fallo de prueba")]
-    public void ToString_ErrorDerivado_FormateaTipoYMensaje(string mensaje) {
+    [TestCase("REGLA", "")]
+    [TestCase("ERROR_PRUEBA", "Fallo de prueba")]
+    public void ToString_ErrorDerivado_FormateaCodigoYMensaje(string codigo, string mensaje) {
         // Arrange
-        DomainError error = new ErrorDePrueba(mensaje);
+        DomainError error = new ErrorDePrueba(codigo, mensaje);
 
         // Act
         var resultado = error.ToString();
 
         // Assert
-        resultado.Should().Be($"ErrorDePrueba: {mensaje}");
+        resultado.Should().Be($"{codigo}: {mensaje}");
     }
 
     [Test]
-    public void Igualdad_MismoTipoYMensaje_SonIguales() {
+    public void Igualdad_MismoTipoCodigoYMensaje_SonIguales() {
         // Arrange
-        var primero = new BusinessRuleError("regla");
-        var segundo = new BusinessRuleError("regla");
+        var primero = new BusinessRuleError("REGLA", "regla");
+        var segundo = new BusinessRuleError("REGLA", "regla");
 
         // Act
         var iguales = primero == segundo;
@@ -61,51 +61,54 @@ public class DomainErrorTests {
     }
 
     [Test]
-    public void Igualdad_DistintoTipoOMensaje_NoSonIguales() {
+    public void Igualdad_DistintoTipoCodigoOMensaje_NoSonIguales() {
         // Arrange
-        DomainError error = new BusinessRuleError("regla");
+        DomainError error = new BusinessRuleError("ERROR_INTERNO", "regla");
 
         // Act
         var distintoTipo = error == new InternalError("regla");
-        var distintoMensaje = error == new BusinessRuleError("otra regla");
+        var distintoCodigo = error == new BusinessRuleError("OTRA_REGLA", "regla");
+        var distintoMensaje = error == new BusinessRuleError("ERROR_INTERNO", "otra regla");
 
         // Assert
         distintoTipo.Should().BeFalse();
+        distintoCodigo.Should().BeFalse();
         distintoMensaje.Should().BeFalse();
     }
 
-    [TestCase("id", false, "Vehiculo con ID 7 no encontrado")]
-    [TestCase("id", true, "Unknown con ID 7 no encontrado")]
-    [TestCase("nombre", false, "Vehiculo con nombre Corolla no encontrado")]
-    [TestCase("nombre", true, "Unknown con nombre Corolla no encontrado")]
-    [TestCase("objectId", false, "Vehiculo con ID abc123 no encontrado")]
-    [TestCase("objectId", true, "Unknown con ID abc123 no encontrado")]
-    public void NotFound_Factorias_DevuelveMensajeEsperado(string metodo, bool porDefecto, string mensaje) {
+    [TestCase("id", "Vehiculo con ID '00000000-0000-0000-0000-000000000007' no encontrado")]
+    [TestCase("nombre", "Vehiculo con nombre 'Corolla' no encontrado")]
+    [TestCase("email", "Vehiculo con email 'prueba@example.com' no encontrado")]
+    public void NotFound_Factorias_DevuelveCodigoYMensajeEsperados(string metodo, string mensaje) {
         // Arrange
         const string recurso = "Vehiculo";
+        const string codigo = "VEHICULO_NO_ENCONTRADO";
+        var id = Guid.Parse("00000000-0000-0000-0000-000000000007");
 
         // Act
         var error = metodo switch {
-            "id" => porDefecto ? NotFoundError.FromId(7) : NotFoundError.FromId(7, recurso),
-            "nombre" => porDefecto ? NotFoundError.FromName("Corolla") : NotFoundError.FromName("Corolla", recurso),
-            _ => porDefecto ? NotFoundError.FromObjectId("abc123") : NotFoundError.FromObjectId("abc123", recurso)
+            "id" => NotFoundError.FromId(id, recurso, codigo),
+            "nombre" => NotFoundError.FromName("Corolla", recurso, codigo),
+            _ => NotFoundError.FromEmail("prueba@example.com", recurso, codigo)
         };
 
         // Assert
+        error.Code.Should().Be(codigo);
         error.Message.Should().Be(mensaje);
     }
 
     [Test]
-    public void ValidationError_SinErroresDeCampo_ConservaMensajeYDiccionarioNulo() {
+    public void ValidationError_SinErroresDeCampo_ConservaMensajeYDiccionarioVacio() {
         // Arrange
         const string mensaje = "Datos incorrectos";
 
         // Act
-        var error = new BadRequestError.ValidationError(mensaje);
+        var error = ValidationError.Create(mensaje);
 
         // Assert
+        error.Code.Should().Be("VALIDACION");
         error.Message.Should().Be(mensaje);
-        error.ValidationErrors.Should().BeNull();
+        error.ValidationErrors.Should().BeEmpty();
     }
 
     [Test]
@@ -114,51 +117,49 @@ public class DomainErrorTests {
         var campos = new Dictionary<string, string[]> { ["Foto"] = ["URL incorrecta"] };
 
         // Act
-        var error = BadRequestError.ValidationError.WithFieldErrors(campos);
+        var error = ValidationError.WithFieldErrors(campos);
 
         // Assert
+        error.Code.Should().Be("VALIDACION");
         error.Message.Should().Be("Errores de validación");
         error.ValidationErrors.Should().BeSameAs(campos);
         error.ValidationErrors!["Foto"].Should().Equal("URL incorrecta");
     }
 
-    [TestCase(false, "Credenciales inválidas")]
-    [TestCase(true, "Token expirado o inválido")]
-    public void Unauthorized_Factorias_DevuelveMensajeEsperado(bool token, string mensaje) {
+    [TestCase("BusinessRule")]
+    [TestCase("Conflict")]
+    [TestCase("Forbidden")]
+    [TestCase("NotFound")]
+    [TestCase("Unauthorized")]
+    public void Constructor_CodigoPersonalizado_ConservaCodigo(string tipo) {
         // Arrange
-        // No requiere dependencias.
+        const string codigo = "CODIGO_PRUEBA";
+        const string mensaje = "mensaje";
 
         // Act
-        var error = token ? UnauthorizedError.TokenExpired() : UnauthorizedError.InvalidCredentials();
+        DomainError error = tipo switch {
+            "BusinessRule" => new BusinessRuleError(codigo, mensaje),
+            "Conflict" => new ConflictError(codigo, mensaje),
+            "Forbidden" => new ForbiddenError(codigo, mensaje),
+            "NotFound" => new NotFoundError(codigo, mensaje),
+            _ => new UnauthorizedError(codigo, mensaje)
+        };
 
         // Assert
+        error.Code.Should().Be(codigo);
         error.Message.Should().Be(mensaje);
     }
 
     [Test]
-    public void NotOwner_RecursoEIdentificador_IncluyeAmbosEnMensaje() {
+    public void InternalError_MensajePersonalizado_UtilizaCodigoFijo() {
         // Arrange
-        const string recurso = "vehiculo";
-        const string id = "7";
+        const string mensaje = "Fallo interno";
 
         // Act
-        var error = ForbiddenError.NotOwner(recurso, id);
+        var error = new InternalError(mensaje);
 
         // Assert
-        error.Message.Should().Be("No tienes permisos para acceder a este vehiculo (ID: 7)");
-    }
-
-    [TestCase(false, "Ya existe un Vehiculo con el valor '1234BCD'")]
-    [TestCase(true, "No se puede borrar Vehiculo con el valor '1234BCD'")]
-    public void Conflict_Factorias_IncluyeRecursoYValor(bool dependencia, string mensaje) {
-        // Arrange
-        const string recurso = "Vehiculo";
-        const string valor = "1234BCD";
-
-        // Act
-        var error = dependencia ? ConflictError.Dependency(recurso, valor) : ConflictError.Duplicate(recurso, valor);
-
-        // Assert
+        error.Code.Should().Be("ERROR_INTERNO");
         error.Message.Should().Be(mensaje);
     }
 }

@@ -11,7 +11,7 @@ public static class StorageError {
     /// </summary>
     /// <returns>Error de tipo BusinessRuleError.</returns>
     public static BusinessRuleError ArchivoVacio() {
-        return new BusinessRuleError("El archivo está vacío o no se ha proporcionado.");
+        return new BusinessRuleError("ARCHIVO_VACIO", "El archivo está vacío o no se ha proporcionado.");
     }
 
     /// <summary>
@@ -19,7 +19,7 @@ public static class StorageError {
     /// </summary>
     /// <returns>Error de tipo BusinessRuleError.</returns>
     public static BusinessRuleError ArchivoMuyGrande() {
-        return new BusinessRuleError("El archivo supera el tamaño máximo permitido.");
+        return new BusinessRuleError("ARCHIVO_MUY_GRANDE", "El archivo supera el tamaño máximo permitido.");
     }
 
     /// <summary>
@@ -27,7 +27,7 @@ public static class StorageError {
     /// </summary>
     /// <returns>Error de tipo BusinessRuleError.</returns>
     public static BusinessRuleError ExtensionNoPermitida() {
-        return new BusinessRuleError("La extensión del archivo no está permitida.");
+        return new BusinessRuleError("EXTENSION_NO_PERMITIDA", "La extensión del archivo no está permitida.");
     }
 
     /// <summary>
@@ -35,7 +35,7 @@ public static class StorageError {
     /// </summary>
     /// <returns>Error de tipo BusinessRuleError.</returns>
     public static BusinessRuleError TipoContenidoNoPermitido() {
-        return new BusinessRuleError("El tipo de contenido del archivo no está permitido.");
+        return new BusinessRuleError("TIPO_CONTENIDO_NO_PERMITIDO", "El tipo de contenido del archivo no está permitido.");
     }
 
     /// <summary>
@@ -43,7 +43,7 @@ public static class StorageError {
     /// </summary>
     /// <returns>Error de tipo BusinessRuleError.</returns>
     public static BusinessRuleError NombreArchivoInvalido() {
-        return new BusinessRuleError("El nombre del archivo contiene caracteres no válidos.");
+        return new BusinessRuleError("NOMBRE_ARCHIVO_INVALIDO", "El nombre del archivo contiene caracteres no válidos.");
     }
 
     /// <summary>

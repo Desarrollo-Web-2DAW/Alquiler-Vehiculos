@@ -1,5 +1,6 @@
 using System.Text;
 using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Repositories.Clientes;
@@ -7,6 +8,7 @@ using Alquiler_Vehiculos.Services.Usuarios.Auth;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using Serilog;
 using Serilog.Events;
 
@@ -50,6 +52,37 @@ try {
     builder.Services.AddDbContext<AppDbContextUsuarios>(options =>
         options.UseNpgsql(connectionString));
 
+    // Catálogo utiliza una base de datos distinta a la de usuarios.
+    var catalogoConnectionString = builder.Configuration.GetConnectionString("Catalogo");
+
+    if (string.IsNullOrWhiteSpace(catalogoConnectionString)) {
+        throw new InvalidOperationException(
+            "Falta la cadena de conexión 'ConnectionStrings:Catalogo'. " +
+            "Añádela en User Secrets o en una variable de entorno.");
+    }
+
+    builder.Services.AddDbContext<PostgreDbContext>(options =>
+        options.UseNpgsql(catalogoConnectionString));
+
+    // Marcas utiliza MongoDB con el driver nativo, sin Entity Framework.
+    var mongoConnectionString = builder.Configuration["MongoDbSettings:ConnectionString"];
+    var mongoDatabaseName = builder.Configuration["MongoDbSettings:DatabaseName"];
+
+    if (string.IsNullOrWhiteSpace(mongoConnectionString) ||
+        string.IsNullOrWhiteSpace(mongoDatabaseName)) {
+        throw new InvalidOperationException(
+            "Falta configurar 'MongoDbSettings:ConnectionString' o " +
+            "'MongoDbSettings:DatabaseName'. Añádelos en User Secrets " +
+            "o en la configuración del entorno.");
+    }
+
+    var mongoClient = new MongoClient(mongoConnectionString);
+    var mongoDatabase = mongoClient.GetDatabase(mongoDatabaseName);
+
+    builder.Services.AddSingleton<IMongoClient>(mongoClient);
+    builder.Services.AddSingleton<IMongoDatabase>(mongoDatabase);
+    builder.Services.AddSingleton<MongoDbContext>();
+
     // ── IDENTITY + JWT ─────────────────────────────────────────────────────
     builder.Services.AddIdentityConfiguration(builder.Configuration, builder.Environment);
 
@@ -64,6 +97,10 @@ try {
 
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
     var app = builder.Build();
+
+    // Crear el índice de marcas al arrancar, sin borrar datos de MongoDB.
+    var mongoContext = app.Services.GetRequiredService<MongoDbContext>();
+    mongoContext.CrearIndices();
 
     app.UseSerilogRequestLogging();
 

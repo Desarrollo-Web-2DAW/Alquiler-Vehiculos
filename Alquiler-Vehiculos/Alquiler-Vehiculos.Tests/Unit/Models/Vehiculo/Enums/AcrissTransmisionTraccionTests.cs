@@ -6,6 +6,8 @@ namespace Alquiler_Vehiculos.Tests.Unit.Enums;
 /// <summary>
 /// Tests unitarios del enum <see cref="AcrissTransmisionTraccion"/> (tercera letra del código ACRISS).
 /// </summary>
+[TestFixture]
+[Category("Unit")]
 public class AcrissTransmisionTraccionTests
 {
     [TestCase(AcrissTransmisionTraccion.ManualSinTraccionDefinida, 'M')]
@@ -21,7 +23,10 @@ public class AcrissTransmisionTraccionTests
         AcrissTransmisionTraccion valor,
         char codigoEsperado)
     {
-        // Arrange & Act
+        // Arrange
+        // El valor se recibe del caso de prueba.
+
+        // Act
         var codigo = (char)valor;
 
         // Assert
@@ -32,11 +37,13 @@ public class AcrissTransmisionTraccionTests
     public void Codigo_CasteadoAlEnum_DevuelveSuValor()
     {
         // Arrange
-        var pares = Enum.GetValues<AcrissTransmisionTraccion>()
-            .Select(valor => (Codigo: (char)valor, Valor: valor));
+        var valores = Enum.GetValues<AcrissTransmisionTraccion>();
 
-        // Act & Assert
-        pares.Should().OnlyContain(par => (AcrissTransmisionTraccion)par.Codigo == par.Valor);
+        // Act
+        var convertidos = valores.Select(valor => (AcrissTransmisionTraccion)(char)valor).ToArray();
+
+        // Assert
+        convertidos.Should().Equal(valores);
     }
 
     [Test]
@@ -45,17 +52,23 @@ public class AcrissTransmisionTraccionTests
         // Arrange
         var valores = Enum.GetValues<AcrissTransmisionTraccion>();
 
-        // Act & Assert
-        valores.Should().OnlyHaveUniqueItems();
+        // Act
+        var distintos = valores.Distinct().ToArray();
+
+        // Assert
+        distintos.Should().HaveCount(valores.Length);
     }
 
     [Test]
     public void Valores_SonLetrasMayusculasAscii()
     {
         // Arrange
-        var codigos = Enum.GetValues<AcrissTransmisionTraccion>().Select(valor => (char)valor);
+        var valores = Enum.GetValues<AcrissTransmisionTraccion>();
 
-        // Act & Assert
+        // Act
+        var codigos = valores.Select(valor => (char)valor).ToArray();
+
+        // Assert
         codigos.Should().OnlyContain(codigo => codigo >= 'A' && codigo <= 'Z');
     }
 

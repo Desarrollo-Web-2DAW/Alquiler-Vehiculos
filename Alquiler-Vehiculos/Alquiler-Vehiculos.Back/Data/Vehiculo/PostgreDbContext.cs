@@ -1,13 +1,11 @@
 ﻿using Alquiler_Vehiculos.Generators;
 using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Data.Vehiculo;
 
-public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options) {
+public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbContext(options) {
     
     public DbSet<Models.Vehiculo.Vehiculo> Vehiculos =>  Set<Models.Vehiculo.Vehiculo>();
     public DbSet<Foto> Fotos => Set<Foto>();
@@ -21,7 +19,7 @@ public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, G
                 .HasValueGenerator<YouTubeIdValueGenerator>()
                 .ValueGeneratedOnAdd();
 
-            entity.HasOne<Foto>()
+            entity.HasOne(v => v.Foto)
                 .WithOne()
                 .HasForeignKey<Models.Vehiculo.Vehiculo>(v => v.FotoFk)
                 .OnDelete(DeleteBehavior.Restrict);

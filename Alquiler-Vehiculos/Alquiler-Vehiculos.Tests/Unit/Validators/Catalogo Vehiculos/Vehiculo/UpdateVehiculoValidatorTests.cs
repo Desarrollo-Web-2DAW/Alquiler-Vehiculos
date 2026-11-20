@@ -58,6 +58,9 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Matricula", "1234BCD", true)]
     [TestCase("Matricula", "0000ZZZ", true)]
     [TestCase("Matricula", "123BCD", false)]
+    [TestCase("Matricula", "12345BCD", false)]
+    [TestCase("Matricula", "1234ÑBC", false)]
+    [TestCase("Matricula", "1234QBC", false)]
     [TestCase("Matricula", "1234ABC", false)]
     [TestCase("Matricula", "1234bcd", false)]
     [TestCase("Matricula", "1234 BCD", false)]
@@ -66,15 +69,25 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Acriss", "ilah", false)]
     [TestCase("Acriss", "ILA", false)]
     [TestCase("Acriss", "ILAHH", false)]
+    [TestCase("Acriss", "1LAH", false)]
     [TestCase("Acriss", "ZLAH", false)]
     [TestCase("Acriss", "IUAH", false)]
     [TestCase("Acriss", "ILZH", false)]
     [TestCase("Acriss", "ILAU", false)]
     [TestCase("Estado", "Disponible", true)]
+    [TestCase("Estado", "Reservado", true)]
+    [TestCase("Estado", "Mantenimiento", true)]
+    [TestCase("Estado", "Retirado", true)]
     [TestCase("Estado", "enAlquiler", true)]
     [TestCase("Estado", "Desconocido", false)]
     [TestCase("Color", "Azul", true)]
     [TestCase("Color", "rojo", true)]
+    [TestCase("Color", "Verde", true)]
+    [TestCase("Color", "Naranja", true)]
+    [TestCase("Color", "Amarillo", true)]
+    [TestCase("Color", "Blanco", true)]
+    [TestCase("Color", "Negro", true)]
+    [TestCase("Color", "Fucsia", true)]
     [TestCase("Color", "Inexistente", false)]
     public void Validate_FormatoOEnumeracion_RespetaReglaDelCampo(string campo, string valor, bool valido) {
         // Arrange
@@ -181,6 +194,50 @@ public class UpdateVehiculoValidatorTests {
         resultado.IsValid.Should().Be(valido);
         if (valido) resultado.Errors.Should().BeEmpty();
         else resultado.Errors.Should().ContainSingle(e => e.PropertyName == campo && e.ErrorMessage == mensaje);
+    }
+
+    [Test]
+    public void Validate_PrecioPositivoMenorQueUno_NoDevuelveErrores() {
+        // Arrange
+        var dto = CrearDtoValido();
+        dto.PrecioBaseDia = 0.01m;
+
+        // Act
+        var resultado = _validator.Validate(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeTrue();
+        resultado.Errors.Should().BeEmpty();
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public void Validate_IsActivo_NoRestringeElValor(bool activo) {
+        // Arrange
+        var dto = CrearDtoValido();
+        dto.IsActivo = activo;
+
+        // Act
+        var resultado = _validator.Validate(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeTrue();
+        resultado.Errors.Should().BeEmpty();
+    }
+
+    [Test]
+    public void Validate_DtoVacio_DevuelveErroresDeTodosLosCamposObligatorios() {
+        // Arrange
+        var dto = new UpdateVehiculoDto();
+
+        // Act
+        var resultado = _validator.Validate(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeFalse();
+        resultado.Errors.Select(e => e.PropertyName).Distinct().Should().BeEquivalentTo(
+            "Matricula", "Marca", "Modelo", "Acriss", "Estado", "Color", "PrecioBaseDia",
+            "Plazas", "AutonomiaKm", "FechaUltimaRevision", "Concesionario");
     }
 
     private static void AsignarTexto(UpdateVehiculoDto dto, string campo, string valor) {
