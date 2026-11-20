@@ -42,7 +42,6 @@
       <Folder Include="Models\Trabajador\" />
       <Folder Include="Repositories\Cliente\" />
       <Folder Include="Repositories\Reserva\" />
-      <Folder Include="Repositories\Vehiculo\" />
       <Folder Include="Services\Cliente\" />
       <Folder Include="Services\Pago\" />
       <Folder Include="Services\Reserva\" />

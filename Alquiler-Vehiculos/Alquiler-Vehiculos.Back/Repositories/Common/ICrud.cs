@@ -1,4 +1,4 @@
-namespace Alquiler_Vehiculos.Repositories.Vehiculo;
+namespace Alquiler_Vehiculos.Repositories.Common;
 
 /// <summary>
 /// Interfaz genérica que define las operaciones CRUD de un repositorio.
@@ -23,23 +23,16 @@ public interface ICrud<TValue, TKey> {
     /// <summary>
     /// Elimina lógicamente una entidad mediante su identificador.
     /// </summary>
-    /// <param name="id">Identificador de la entidad que se desea eliminar.</param>
+    /// <param name="key">Identificador de la entidad que se desea eliminar.</param>
     /// <returns>True si se elimina correctamente o false en caso contrario.</returns>
-    Task<bool> SoftDelete(TKey id);
-
-    /// <summary>
-    /// Elimina físicamente una entidad del repositorio.
-    /// </summary>
-    /// <param name="item">Entidad que se desea eliminar definitivamente.</param>
-    /// <returns>True si se elimina correctamente o false en caso contrario.</returns>
-    Task<bool> HardDelete(TValue item);
+    Task<bool> SoftDelete(TKey key);
 
     /// <summary>
     /// Actualiza una entidad existente en el repositorio.
     /// </summary>
-    /// <param name="item">Entidad con los datos que se desean actualizar.</param>
+    /// <param name="key">Entidad con los datos que se desean actualizar.</param>
     /// <returns>Entidad actualizada.</returns>
-    Task<TValue?> Update(TValue item);
+    Task<TValue?> Update(TKey key);
 
     /// <summary>
     /// Obtiene todas las entidades del repositorio.
