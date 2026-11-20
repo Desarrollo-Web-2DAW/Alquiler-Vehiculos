@@ -76,4 +76,14 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
             .AsNoTracking()
             .AnyAsync(f => f.Id == key);
     }
+    
+    /// <inheritdoc cref="IConcesionarioRepository.ExistById" />
+    public async Task<bool> ExistByTelefono(string telefono)
+    {
+        logger.LogDebug("Verificando existencia de Concesionario por Id: {Id}", telefono);
+        return await context.Concesionarios
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .AnyAsync(f => f.Telefono == telefono);
+    }
 }

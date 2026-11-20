@@ -28,6 +28,8 @@ public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, G
                 .HasMaxLength(7)
                 .IsRequired();
             
+            entity.HasIndex(v => v.Matrícula).IsUnique();
+            
             entity.Property(v => v.Marca).IsRequired();
             entity.Property(v => v.Modelo).IsRequired();
             entity.Property(v => v.Acriss).IsRequired();
@@ -75,6 +77,7 @@ public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, G
             entity.Property(c => c.Nombre).IsRequired();
             entity.Property(c => c.Ciudad).IsRequired();
             entity.Property(c => c.Telefono).IsRequired();
+            entity.HasIndex(v => v.Telefono).IsUnique();
             entity.Property(c => c.Email).IsRequired();
         });
     }
