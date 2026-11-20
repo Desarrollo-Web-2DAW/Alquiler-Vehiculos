@@ -307,7 +307,8 @@ public class VehiculoMapperTests
         var resultado = dto.ToVehiculo(CrearFoto());
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeEquivalentTo(VehiculoError.TipoDeCarroceria());
     }
 
     [Test]
@@ -319,7 +320,9 @@ public class VehiculoMapperTests
         // Act
         var sinCarroceria = tipos
             .Select(tipo => (Tipo: (char)tipo, Resultado: CrearDto(CrearAcriss((char)tipo)).ToVehiculo(CrearFoto())))
-            .Where(x => x.Resultado.IsFailure && x.Resultado.Error == VehiculoError.TipoDeCarroceria())
+            .Where(x => x.Resultado.IsFailure &&
+                x.Resultado.Error.Code == VehiculoError.TipoDeCarroceria().Code &&
+                x.Resultado.Error.Message == VehiculoError.TipoDeCarroceria().Message)
             .Select(x => x.Tipo)
             .ToArray();
 
@@ -384,7 +387,8 @@ public class VehiculoMapperTests
         var resultado = dto.ToVehiculo(CrearFoto());
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoCombustible());
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeEquivalentTo(VehiculoError.TipoCombustible());
     }
 
     [TestCase('M', TipoTransmision.Manual)]          // ManualSinTraccionDefinida
@@ -419,7 +423,8 @@ public class VehiculoMapperTests
         var resultado = dto.ToVehiculo(CrearFoto());
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoDeTransmision());
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeEquivalentTo(VehiculoError.TipoDeTransmision());
     }
 
     [Test]

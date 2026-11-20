@@ -8,15 +8,22 @@ using Microsoft.EntityFrameworkCore;
 namespace Alquiler_Vehiculos.Entities;
 
 /// <summary>
-/// Contexto único de la aplicación: Identity y dominio comparten base de datos.
-/// Dos DbContext sobre la misma BD romperían la creación del esquema
-/// (apuntes 16.6.2), así que todo lo que añada el equipo va aquí.
+/// Contexto de PostgreSQL para Identity, clientes y trabajadores.
+/// El catálogo de vehículos utiliza otro contexto y otra base de datos.
 /// </summary>
+/// <param name="options">Opciones de conexión y proveedor de Entity Framework Core.</param>
 public class AppDbContextUsuarios(DbContextOptions<AppDbContextUsuarios> options)
     : IdentityDbContext<User, IdentityRole<Guid>, Guid>(options) {
+    /// <summary>Clientes asociados a las cuentas de usuario.</summary>
     public DbSet<Cliente> Clientes { get; set; } = null!;
+    /// <summary>Trabajadores asociados a las cuentas de usuario.</summary>
     public DbSet<Trabajador> Trabajadores { get; set; } = null!;
 
+    /// <summary>
+    /// Configura las tablas de Identity y del dominio de usuarios y sus índices únicos.
+    /// Conserva la configuración base de Identity antes de aplicar la propia.
+    /// </summary>
+    /// <param name="modelBuilder">Constructor del modelo de persistencia.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         base.OnModelCreating(modelBuilder);
 

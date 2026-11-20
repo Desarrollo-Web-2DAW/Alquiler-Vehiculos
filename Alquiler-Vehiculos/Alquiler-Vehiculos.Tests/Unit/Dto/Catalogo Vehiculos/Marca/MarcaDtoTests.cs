@@ -13,6 +13,7 @@ public class MarcaDtoTests {
         // Act
         var dto = new MarcaDto();
         // Assert
+        dto.Id.Should().BeEmpty();
         dto.Nombre.Should().BeEmpty();
         dto.Pais.Should().BeEmpty();
         dto.Web.Should().BeEmpty();
@@ -24,11 +25,13 @@ public class MarcaDtoTests {
         // Arrange
         var dto = new MarcaDto();
         // Act
+        dto.Id = "000000000000000000000001";
         dto.Nombre = "Toyota";
         dto.Pais = "Japón";
         dto.Web = "https://toyota.example.com";
         dto.ModelosDisponibles = new List<string> { "Corolla", "Yaris" };
         // Assert
+        dto.Id.Should().Be("000000000000000000000001");
         dto.Nombre.Should().Be("Toyota");
         dto.Pais.Should().Be("Japón");
         dto.Web.Should().Be("https://toyota.example.com");

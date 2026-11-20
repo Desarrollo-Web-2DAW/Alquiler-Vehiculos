@@ -16,6 +16,8 @@ public class MongoDbContextTests {
     private IMongoDatabase _database = null!;
     private MongoDbContext _context = null!;
     private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly ObjectId Id = ObjectId.Parse("000000000000000000000001");
+    private static readonly ObjectId OtroId = ObjectId.Parse("000000000000000000000002");
 
     [OneTimeSetUp]
     public async Task ArrancarContenedor() {
@@ -43,11 +45,11 @@ public class MongoDbContextTests {
         }
     }
 
-    private static Marca CrearMarca(long id = 1, string nombre = "Toyota") => new(
-        id, nombre, "Japón", "https://www.toyota.es", new List<string> { "Corolla", "Yaris" },
+    private static MarcaModel CrearMarca(ObjectId? id = null, string nombre = "Toyota") => new(
+        id ?? Id, nombre, "Japón", "https://www.toyota.es", new List<string> { "Corolla", "Yaris" },
         false, Fecha, null, null);
 
-    private IMongoCollection<Marca> ColeccionDeLectura() =>
+    private IMongoCollection<MarcaModel> ColeccionDeLectura() =>
         new MongoDbContext(_database).Marcas;
 
     [Test]
@@ -77,7 +79,7 @@ public class MongoDbContextTests {
         guardada.Should().NotBeSameAs(marca);
         var documento = await _database.GetCollection<BsonDocument>("marcas")
             .Find(new BsonDocument("_id", marca.Id)).SingleAsync();
-        documento["_id"].AsInt64.Should().Be(marca.Id);
+        documento["_id"].AsObjectId.Should().Be(marca.Id);
         documento["ModelosDisponibles"].AsBsonArray.Should().HaveCount(2);
     }
 
@@ -87,7 +89,7 @@ public class MongoDbContextTests {
         var coleccion = _context.Marcas;
 
         // Act
-        var resultado = await coleccion.Find(m => m.Id == 999).FirstOrDefaultAsync();
+        var resultado = await coleccion.Find(m => m.Id == OtroId).FirstOrDefaultAsync();
 
         // Assert
         resultado.Should().BeNull();
@@ -123,7 +125,7 @@ public class MongoDbContextTests {
 
         // Assert
         resultado.DeletedCount.Should().Be(1);
-        (await ColeccionDeLectura().CountDocumentsAsync(FilterDefinition<Marca>.Empty)).Should().Be(0);
+        (await ColeccionDeLectura().CountDocumentsAsync(FilterDefinition<MarcaModel>.Empty)).Should().Be(0);
     }
 
     [Test]
@@ -181,13 +183,13 @@ public class MongoDbContextTests {
     public async Task InsertMany_NombreRepetidoConIdsDistintos_IndicePermiteAmbasMarcas() {
         // Arrange
         _context.CrearIndices();
-        var marcas = new[] { CrearMarca(1), CrearMarca(2) };
+        var marcas = new[] { CrearMarca(Id), CrearMarca(OtroId) };
 
         // Act
         await _context.Marcas.InsertManyAsync(marcas);
 
         // Assert
         var guardadas = await ColeccionDeLectura().Find(m => m.Nombre == "Toyota").ToListAsync();
-        guardadas.Select(m => m.Id).Should().BeEquivalentTo(new[] { 1L, 2L });
+        guardadas.Select(m => m.Id).Should().BeEquivalentTo(new[] { Id, OtroId });
     }
 }

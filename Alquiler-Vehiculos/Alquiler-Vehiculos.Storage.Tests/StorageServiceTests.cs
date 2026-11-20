@@ -2,6 +2,8 @@ using Alquiler_Vehiculos.Errors.Storage;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Moq;
+using Alquiler_Vehiculos.Models.Storage;
+using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Storage.Tests;
 
@@ -67,6 +69,12 @@ public class StorageServiceTests : StorageTestBase {
         foto.UpdatedAt.Should().BeNull();
         foto.DeletedAt.Should().BeNull();
         File.ReadAllBytes(Path.Combine(RootPath, "uploads", "vehiculos", foto.Nombre)).Should().Equal(datos);
+        await using var lectura = CrearContextoDeLectura();
+        var guardada = await lectura.Fotos.SingleAsync(f => f.Ruta == foto.Ruta);
+        guardada.Nombre.Should().Be(foto.Nombre);
+        guardada.Extension.Should().Be(extension);
+        guardada.Tamano.Should().Be(datos.Length);
+        guardada.Activo.Should().BeTrue();
     }
 
     [TestCase("coche.pdf", "image/jpeg", "extension")]
@@ -91,6 +99,8 @@ public class StorageServiceTests : StorageTestBase {
         resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().Be(esperado);
         Directory.GetFileSystemEntries(Path.Combine(RootPath, "uploads")).Should().BeEmpty();
+        await using var lectura = CrearContextoDeLectura();
+        (await lectura.Fotos.CountAsync()).Should().Be(0);
     }
 
     [Test]
@@ -190,6 +200,10 @@ public class StorageServiceTests : StorageTestBase {
         var servicio = CrearServicio();
         var ruta = Path.Combine(RootPath, "uploads", "borrar.jpg");
         File.WriteAllText(ruta, "foto");
+        Db.Fotos.Add(new Foto {
+            Nombre = "borrar.jpg", Ruta = "/uploads/borrar.jpg", Extension = ".jpg", Tamano = 4
+        });
+        await Db.SaveChangesAsync();
 
         // Act
         var resultado = await servicio.DeleteFileAsync("borrar.jpg");
@@ -198,6 +212,10 @@ public class StorageServiceTests : StorageTestBase {
         resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeTrue();
         File.Exists(ruta).Should().BeFalse();
+        await using var lectura = CrearContextoDeLectura();
+        var guardada = await lectura.Fotos.SingleAsync(f => f.Nombre == "borrar.jpg");
+        guardada.Activo.Should().BeFalse();
+        guardada.DeletedAt.Should().NotBeNull();
     }
 
     [Test]

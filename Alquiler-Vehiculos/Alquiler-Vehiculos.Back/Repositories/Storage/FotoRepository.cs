@@ -1,3 +1,4 @@
+using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -42,7 +43,7 @@ public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> lo
     {
         logger.LogInformation("Actualizando Foto ID: {Id}", key);
     
-        Foto existente = await context.Set<Foto>().FirstOrDefaultAsync(f => f.Nombre == key);
+        Foto? existente = await context.Set<Foto>().FirstOrDefaultAsync(f => f.Nombre == key);
         if (existente == null || existente.DeletedAt != null) return null;
         
         var actualizado = existente with {
@@ -84,7 +85,7 @@ public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> lo
     {
         logger.LogDebug("Restaurando Foto por Id: {Id}", name);
         
-        Foto existente = await context.Set<Foto>().FirstOrDefaultAsync(f => f.Nombre == name);
+        Foto? existente = await context.Set<Foto>().FirstOrDefaultAsync(f => f.Nombre == name);
         if (existente == null) return null;
         
         var actualizado = existente with {

@@ -5,6 +5,8 @@ namespace Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Marca;
 /// Datos de una marca y sus modelos disponibles devueltos por la API.
 /// </summary>
 public record MarcaDto {
+    /// <summary>ObjectId de la marca representado como cadena hexadecimal de 24 caracteres.</summary>
+    public string Id { get; set; } = string.Empty;
     /// <summary>Nombre de la marca.</summary>
     public string Nombre { get; set; } = string.Empty;
     /// <summary>País de la marca.</summary>

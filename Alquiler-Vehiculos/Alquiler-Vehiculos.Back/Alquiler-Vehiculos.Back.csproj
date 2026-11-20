@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Alquiler_Vehiculos</RootNamespace>
+        <UserSecretsId>alquiler-vehiculos-back-local</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,11 +13,16 @@
         <PackageReference Include="FluentValidation" Version="12.2.0" />
         <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
         <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.0" />
         <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+        <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
         <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.8" />
         <PackageReference Include="MongoDB.EntityFrameworkCore" Version="10.0.2" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.2" />
         <PackageReference Include="Serilog" Version="4.4.0" />
+        <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+        <PackageReference Include="Serilog.Sinks.Console" Version="6.0.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="6.0.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -36,10 +42,8 @@
       <Folder Include="Exceptions\Trabajador\" />
       <Folder Include="Exceptions\Vehiculo\" />
       <Folder Include="Middleware\" />
-      <Folder Include="Models\Cliente\" />
       <Folder Include="Models\Pago\" />
       <Folder Include="Models\Reserva\" />
-      <Folder Include="Models\Trabajador\" />
       <Folder Include="Repositories\Cliente\" />
       <Folder Include="Repositories\Reserva\" />
       <Folder Include="Services\Cliente\" />

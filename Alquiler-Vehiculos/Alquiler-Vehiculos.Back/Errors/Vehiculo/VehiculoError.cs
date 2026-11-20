@@ -1,22 +1,21 @@
 using Alquiler_Vehiculos.Errors.Common;
-using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Alquiler_Vehiculos.Errors.Vehiculo;
 
 public static class VehiculoError
 {
-    public static BadRequestError TipoDeCarroceria()
+    public static ValidationError TipoDeCarroceria()
     {
-        return new BadRequestError("El Acriss dado no es correcto respecto al catálogo, tipo de Categoría no válido");
+        return ValidationError.Create("El Acriss dado no es correcto respecto al catálogo, tipo de Categoría no válido");
     }
     
-    public static BadRequestError TipoCombustible()
+    public static ValidationError TipoCombustible()
     {
-        return new BadRequestError("El Acriss dado no es correcto respecto al catálogo, tipo de Combustible no válido");
+        return ValidationError.Create("El Acriss dado no es correcto respecto al catálogo, tipo de Combustible no válido");
     }
     
-    public static BadRequestError TipoDeTransmision()
+    public static ValidationError TipoDeTransmision()
     {
-        return new BadRequestError("El Acriss dado no es correcto respecto al catálogo, tipo de Transmision no válido");
+        return ValidationError.Create("El Acriss dado no es correcto respecto al catálogo, tipo de Transmision no válido");
     }
 }

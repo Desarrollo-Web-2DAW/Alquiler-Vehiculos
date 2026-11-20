@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
 using FluentAssertions;
+using MongoDB.Bson;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Models;
 
@@ -8,7 +9,8 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 [Category("Unit")]
 public class MarcaModelTests {
     private static readonly DateTime Fecha = new(2026, 11, 1, 0, 0, 0, DateTimeKind.Utc);
-    private static MarcaModel CrearMarca() => new(1, "Toyota", "Japón", "https://www.toyota.es",
+    private static readonly ObjectId Id = ObjectId.Parse("000000000000000000000001");
+    private static MarcaModel CrearMarca() => new(Id, "Toyota", "Japón", "https://www.toyota.es",
         new List<string> { "Corolla", "Yaris" }, false, Fecha, null, null);
 
     [Test]
@@ -17,12 +19,12 @@ public class MarcaModelTests {
         var modelos = new List<string> { "Corolla", "Yaris" };
 
         // Act
-        var marca = new MarcaModel(1, "Toyota", "Japón", "https://www.toyota.es", modelos,
+        var marca = new MarcaModel(Id, "Toyota", "Japón", "https://www.toyota.es", modelos,
             false, Fecha, null, null);
 
         // Assert
         marca.Should().BeEquivalentTo(new {
-            Id = 1L, Nombre = "Toyota", Pais = "Japón", Web = "https://www.toyota.es",
+            Id, Nombre = "Toyota", Pais = "Japón", Web = "https://www.toyota.es",
             ModelosDisponibles = new[] { "Corolla", "Yaris" }, IsDeleted = false,
             CreatedAt = Fecha, UpdatedAt = (DateTime?)null, DeletedAt = (DateTime?)null
         });
@@ -35,10 +37,10 @@ public class MarcaModelTests {
         var modelos = new List<string>();
 
         // Act
-        var marca = new MarcaModel(0, "", "", "", modelos, false, Fecha, null, null);
+        var marca = new MarcaModel(ObjectId.Empty, "", "", "", modelos, false, Fecha, null, null);
 
         // Assert
-        marca.Id.Should().Be(0L);
+        marca.Id.Should().Be(ObjectId.Empty);
         marca.Nombre.Should().BeEmpty();
         marca.Pais.Should().BeEmpty();
         marca.Web.Should().BeEmpty();
@@ -51,7 +53,7 @@ public class MarcaModelTests {
         var modelos = new List<string>();
 
         // Act
-        var marca = new MarcaModel(1, "Toyota", "Japón", "https://www.toyota.es", modelos,
+        var marca = new MarcaModel(Id, "Toyota", "Japón", "https://www.toyota.es", modelos,
             true, Fecha, Fecha.AddDays(1), Fecha.AddDays(2));
 
         // Assert
@@ -86,7 +88,7 @@ public class MarcaModelTests {
         // Arrange
         var marca = CrearMarca();
         var otra = propiedad switch {
-            "Id" => marca with { Id = 2 },
+            "Id" => marca with { Id = ObjectId.Parse("000000000000000000000002") },
             "Nombre" => marca with { Nombre = "Honda" },
             "Pais" => marca with { Pais = "Alemania" },
             "Web" => marca with { Web = "https://www.honda.es" },
@@ -124,7 +126,7 @@ public class MarcaModelTests {
         // Assert
         original.Nombre.Should().Be("Toyota");
         modificada.Should().BeEquivalentTo(new {
-            Id = 1L, Nombre = "Honda", Pais = "Japón", Web = "https://www.toyota.es"
+            Id, Nombre = "Honda", Pais = "Japón", Web = "https://www.toyota.es"
         });
         modificada.Should().NotBeSameAs(original);
         modificada.ModelosDisponibles.Should().BeSameAs(original.ModelosDisponibles);
@@ -151,6 +153,6 @@ public class MarcaModelTests {
         var texto = marca.ToString();
 
         // Assert
-        texto.Should().ContainAll("1", "Toyota", "Japón", "https://www.toyota.es");
+        texto.Should().ContainAll(Id.ToString(), "Toyota", "Japón", "https://www.toyota.es");
     }
 }

@@ -1,3 +1,4 @@
+using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,7 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
     {
         logger.LogInformation("Actualizando Concesionario ID: {Id}", key);
     
-        ConcesionarioModel existente = await context.Concesionarios.FirstOrDefaultAsync(f => f.Id == key);
+        ConcesionarioModel? existente = await context.Concesionarios.FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null || existente.IsDeleted) return null;
         
         var actualizado = existente with {

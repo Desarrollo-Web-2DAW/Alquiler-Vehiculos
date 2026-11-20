@@ -1,0 +1,27 @@
+name: alquiler-vehiculos
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD antes de arrancar}
+      POSTGRES_DB: alquiler
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7.0
+    ports:
+      - "127.0.0.1:27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: alquiler
+      MONGO_INITDB_ROOT_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD antes de arrancar}
+    volumes:
+      - mongodb-data:/data/db
+
+volumes:
+  postgres-data:
+  mongodb-data:

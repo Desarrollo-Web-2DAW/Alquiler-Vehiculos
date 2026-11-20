@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Marca;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using MongoDB.Bson;
 
 namespace Alquiler_Vehiculos.Mappers.Vehiculo;
 /// <summary>
@@ -11,9 +12,9 @@ public static class MarcaMapper
     /// Parte de un <see cref="CreateMarcaDto"/> para crear un <see cref="MarcaModel"/> modelo
     /// </summary>
     /// <param name="dto">Data Object Transfer con los datos proporcionados por el cliente</param>
-    /// <param name="id">Parámetro opcional para que inicialice en 0 sino se especifica lo contrario</param>
+    /// <param name="id">Identificador opcional. Si está vacío, el driver lo genera al insertar.</param>
     /// <returns><see cref="MarcaModel"/></returns>
-    public static MarcaModel ToMarca(this CreateMarcaDto dto, long id = 0)
+    public static MarcaModel ToMarca(this CreateMarcaDto dto, ObjectId id = default)
     {
         return new MarcaModel(
             Id: id,
@@ -37,6 +38,7 @@ public static class MarcaMapper
     {
         return new MarcaDto
         {
+            Id = marcaModel.Id.ToString(),
             Nombre = marcaModel.Nombre,
             Pais = marcaModel.Pais,
             Web = marcaModel.Web,

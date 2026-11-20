@@ -5,23 +5,36 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Data.Vehiculo;
 
+/// <summary>
+/// Contexto de PostgreSQL del catálogo: vehículos, fotografías y concesionarios.
+/// Utiliza una base de datos distinta de la del contexto de usuarios.
+/// </summary>
+/// <param name="options">Opciones de conexión y proveedor de Entity Framework Core.</param>
 public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbContext(options) {
     
-    public DbSet<Models.Vehiculo.Vehiculo> Vehiculos =>  Set<Models.Vehiculo.Vehiculo>();
+    /// <summary>Vehículos del catálogo.</summary>
+    public DbSet<VehiculoModel> Vehiculos => Set<VehiculoModel>();
+    /// <summary>Fotografías identificadas por su ruta.</summary>
     public DbSet<Foto> Fotos => Set<Foto>();
-    public DbSet<Concesionario> Concesionarios => Set<Concesionario>();
+    /// <summary>Concesionarios a los que pertenecen los vehículos.</summary>
+    public DbSet<ConcesionarioModel> Concesionarios => Set<ConcesionarioModel>();
 
+    /// <summary>
+    /// Configura la generación de identificadores, los campos obligatorios, la precisión
+    /// de los precios, los índices y las relaciones con borrado restringido.
+    /// </summary>
+    /// <param name="modelBuilder">Constructor del modelo de persistencia.</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Models.Vehiculo.Vehiculo>(entity => {
+        modelBuilder.Entity<VehiculoModel>(entity => {
             entity.Property(v => v.Id)
                 .HasValueGenerator<YouTubeIdValueGenerator>()
                 .ValueGeneratedOnAdd();
 
             entity.HasOne(v => v.Foto)
                 .WithOne()
-                .HasForeignKey<Models.Vehiculo.Vehiculo>(v => v.FotoFk)
+                .HasForeignKey<VehiculoModel>(v => v.FotoFk)
                 .OnDelete(DeleteBehavior.Restrict);
 
             entity.Property(v => v.Matrícula)
@@ -47,7 +60,7 @@ public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbC
             entity.Property(v => v.Kilometraje).IsRequired();
             entity.Property(v => v.FechaUltimaRevision).IsRequired();
 
-            entity.HasOne<Concesionario>()
+            entity.HasOne<ConcesionarioModel>()
                 .WithMany()
                 .HasForeignKey(v => v.ConesionarioFk)
                 .OnDelete(DeleteBehavior.Restrict);
@@ -69,7 +82,7 @@ public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbC
 
         });
         
-        modelBuilder.Entity<Concesionario>(entity => {
+        modelBuilder.Entity<ConcesionarioModel>(entity => {
             entity.HasKey(c => c.Id);
             entity.Property(c => c.Id).ValueGeneratedOnAdd();
             entity.Property(c => c.Nombre).IsRequired();

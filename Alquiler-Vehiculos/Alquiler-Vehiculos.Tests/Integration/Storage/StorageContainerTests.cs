@@ -2,6 +2,8 @@ using System.Xml.Linq;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using FluentAssertions;
+using Npgsql;
+using Testcontainers.PostgreSql;
 
 namespace Alquiler_Vehiculos.Tests.Integration.Storage;
 
@@ -10,15 +12,25 @@ namespace Alquiler_Vehiculos.Tests.Integration.Storage;
 [NonParallelizable]
 public class StorageContainerTests {
     private IContainer? _container;
+    private PostgreSqlContainer? _postgres;
 
     [OneTimeSetUp]
     public async Task ArrancarContenedor() {
+        _postgres = new PostgreSqlBuilder("postgres:17-alpine")
+            .WithDatabase("storage_tests")
+            .Build();
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        await _postgres.StartAsync(timeout.Token);
+        var conexion = new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString()) {
+            Host = "host.docker.internal"
+        };
         var archivos = new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "StorageContainer"));
         archivos.Exists.Should().BeTrue("la compilación debe copiar el proyecto auxiliar de tests");
         _container = new ContainerBuilder("mcr.microsoft.com/dotnet/sdk:10.0")
             .WithResourceMapping(DirectoryPath.Of(archivos.FullName), DirectoryPath.Of("/tests/"), uid: 1654, gid: 1654)
             .WithWorkingDirectory("/tests")
             .WithEnvironment("STORAGE_TEST_CONTAINER", "1")
+            .WithEnvironment("STORAGE_TEST_CONNECTION", conexion.ConnectionString)
             .WithEnvironment("DOTNET_CLI_UI_LANGUAGE", "en")
             .WithEnvironment("DOTNET_SKIP_FIRST_TIME_EXPERIENCE", "1")
             .WithEnvironment("DOTNET_CLI_HOME", "/tmp")
@@ -27,7 +39,6 @@ public class StorageContainerTests {
             .WithCommand("sleep", "infinity")
             .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("dotnet", "--info"))
             .Build();
-        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
         await _container.StartAsync(timeout.Token);
     }
 
@@ -87,6 +98,10 @@ public class StorageContainerTests {
 
     [OneTimeTearDown]
     public async Task EliminarContenedor() {
-        if (_container is not null) await _container.DisposeAsync();
+        try {
+            if (_container is not null) await _container.DisposeAsync();
+        } finally {
+            if (_postgres is not null) await _postgres.DisposeAsync();
+        }
     }
 }

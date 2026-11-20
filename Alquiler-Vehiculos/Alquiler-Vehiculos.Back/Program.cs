@@ -4,6 +4,7 @@ using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Repositories.Clientes;
+using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Usuarios.Auth;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
@@ -93,6 +94,7 @@ try {
 
     // ── SERVICIOS ─────────────────────────────────────────────────────────────
     builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+    builder.Services.AddScoped<IMarcaRepository, MarcaRepository>();
     builder.Services.AddScoped<IAuthService, AuthService>();
 
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
@@ -123,11 +125,7 @@ try {
     using (var scope = app.Services.CreateScope()) {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContextUsuarios>();
 
-        // En desarrollo se parte de cero en cada arranque (criterio del profe).
-        if (app.Environment.IsDevelopment()) {
-            await db.Database.EnsureDeletedAsync();
-        }
-
+        // Aplicar las migraciones pendientes sin borrar los datos existentes.
         await db.Database.MigrateAsync();
     }
 
@@ -143,10 +141,7 @@ try {
     Console.WriteLine($"  {apiConfig.Nombre}");
     Console.WriteLine($"  {apiConfig.Mensaje}");
     Console.WriteLine($"  http://localhost:{port}");
-    if (app.Environment.IsDevelopment()) {
-        Console.WriteLine($"  Swagger: http://localhost:{port}/swagger");
-        Console.WriteLine($"  GraphQL: http://localhost:{port}/graphql");
-    }
+    Console.WriteLine($"  Comprobación: http://localhost:{port}/weatherforecast");
     Console.WriteLine($"  Entorno: {app.Environment.EnvironmentName}");
     Console.WriteLine("========================================");
 

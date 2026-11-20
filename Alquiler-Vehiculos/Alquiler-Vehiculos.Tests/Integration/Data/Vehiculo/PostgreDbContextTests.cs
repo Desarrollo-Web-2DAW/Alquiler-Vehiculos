@@ -6,7 +6,6 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Testcontainers.PostgreSql;
-using VehiculoModel = Alquiler_Vehiculos.Models.Vehiculo.Vehiculo;
 
 namespace Alquiler_Vehiculos.Tests.Integration.Data.Vehiculo;
 
@@ -54,9 +53,9 @@ public class PostgreDbContextTests {
         Activo = true, CreatedAt = Fecha
     };
 
-    private async Task<Concesionario> GuardarConcesionario() {
+    private async Task<ConcesionarioModel> GuardarConcesionario() {
         await using var db = CrearContexto();
-        var concesionario = new Concesionario(0, "Motor Norte", "Santander", "942000111",
+        var concesionario = new ConcesionarioModel(0, "Motor Norte", "Santander", "942000111",
             "contacto@example.com", false, Fecha, null, null);
         db.Concesionarios.Add(concesionario);
         await db.SaveChangesAsync();
@@ -88,7 +87,7 @@ public class PostgreDbContextTests {
     public async Task SaveChanges_ConcesionarioSinId_GeneraIdYPersisteDatos() {
         // Arrange
         await using var db = CrearContexto();
-        var concesionario = new Concesionario(0, "Motor Norte", "Santander", "942000111",
+        var concesionario = new ConcesionarioModel(0, "Motor Norte", "Santander", "942000111",
             "contacto@example.com", false, Fecha, null, null);
         db.Concesionarios.Add(concesionario);
 

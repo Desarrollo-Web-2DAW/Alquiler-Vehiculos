@@ -1,3 +1,4 @@
+using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,7 +42,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     {
         logger.LogInformation("Actualizando Vehiculo ID: {Id}", key);
     
-        VehiculoModel existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
+        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null || existente.Activo) return null;
         
         var actualizado = existente with {
