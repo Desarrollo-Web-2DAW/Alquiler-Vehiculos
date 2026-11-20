@@ -3,11 +3,9 @@ using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Concesionario;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Mappers.Vehiculo;
-using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Concesionario;
 using CSharpFunctionalExtensions;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
 
 namespace Alquiler_Vehiculos.Services.Vehiculo.Concesonario;
@@ -35,8 +33,10 @@ public class ConcesionarioService(
         
         var concesionario = await repository.GetById(key);
         if (concesionario == null) return Result.Failure<ConcesionarioDto, DomainError>(ConcesionarioError.NotFoundConcesionario(key));
-        await cache.SetAsync(_concesionarioKey + key, concesionario.ToDto());       
-        return Result.Success<ConcesionarioDto, DomainError>(concesionario.ToDto());
+
+        var dto = concesionario.ToDto();
+        await cache.SetAsync(_concesionarioKey + key, dto);
+        return Result.Success<ConcesionarioDto, DomainError>(dto);
     }
     
     /// <inheritdoc cref="IConcesionarioService.Create" />
@@ -52,7 +52,7 @@ public class ConcesionarioService(
         }
         if (await repository.ExistsByTelefono(item.Telefono)) return Result.Failure<ConcesionarioDto, DomainError>(ConcesionarioError.ConcesionarioYaExiste(item.Telefono));
 
-        var concesionario = new ConcesionarioModel(0, item.Nombre, item.Ciudad, item.Telefono, item.Email, false, DateTime.UtcNow, null, null);
+        var concesionario = item.ToConcesionario();
         var creado = await repository.Create(concesionario);
         return Result.Success<ConcesionarioDto, DomainError>(creado.ToDto());
     }
@@ -74,7 +74,12 @@ public class ConcesionarioService(
         
         if (item.Telefono != existente.Telefono && await repository.ExistsByTelefono(item.Telefono)) return Result.Failure<ConcesionarioDto, DomainError>(ConcesionarioError.ConcesionarioYaExiste(item.Telefono));
         
-        var concesionario = new ConcesionarioModel(0, item.Nombre, item.Ciudad, item.Telefono, item.Email, false, DateTime.UtcNow, null, null);
+        var concesionario = existente with {
+            Nombre = item.Nombre,
+            Ciudad = item.Ciudad,
+            Telefono = item.Telefono,
+            Email = item.Email
+        };
         
         var actualizado = await repository.Update(key, concesionario);
         if (actualizado == null) return Result.Failure<ConcesionarioDto, DomainError>(ConcesionarioError.NotFoundConcesionario(key));
@@ -94,8 +99,8 @@ public class ConcesionarioService(
     public async Task<Result<bool, DomainError>> SoftDelete(long key) {
         Log.Debug("Borrado lógico de concesionario con ID {Id}", key);
         
-        if(await repository.HasVehiculos(key)) return Result.Failure<bool, DomainError>(new BusinessRuleError("No se puede borrar un concesionario con vehiculos asociados"));
         if(!await repository.ExistById(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.NotFoundConcesionario(key));
+        if(await repository.HasVehiculos(key)) return Result.Failure<bool, DomainError>(new BusinessRuleError("No se puede borrar un concesionario con vehiculos asociados"));
         
         if(!await repository.SoftDelete(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.BorradoError());
         
