@@ -22,14 +22,14 @@ public class ConcesionarioService(
 
     /// <inheritdoc cref="IConcesionarioService.GetAll" />
     public async Task<IEnumerable<ConcesionarioDto>> GetAll() {
-        Log.Debug("Consultando todas las categorías");
+        Log.Debug("Consultando todos los concesionarios");
         var lista = await repository.GetAll();
         return lista.Select(c => c.ToDto());
     }
 
     /// <inheritdoc cref="IConcesionarioService.GetById" />
     public async Task<Result<ConcesionarioDto, DomainError>> GetById(long key) {
-        Log.Debug("Consultando categoría con ID {Id}", key);
+        Log.Debug("Consultando concesionario con ID {Id}", key);
         var cached = await cache.GetAsync<ConcesionarioDto>(_concesionarioKey + key);
         if(cached != null) return Result.Success<ConcesionarioDto, DomainError>(cached);
         
@@ -41,7 +41,7 @@ public class ConcesionarioService(
     
     /// <inheritdoc cref="IConcesionarioService.Create" />
     public async Task<Result<ConcesionarioDto, DomainError>> Create(CreateConcesionarioDto item) {
-        Log.Debug("Creando categoría con nombre {Nombre}", item.Nombre);
+        Log.Debug("Creando concesionario con nombre {Nombre}", item.Nombre);
 
         var validationResult = await createConcesionarioValidator.ValidateAsync(item);
         
@@ -57,9 +57,9 @@ public class ConcesionarioService(
         return Result.Success<ConcesionarioDto, DomainError>(creado.ToDto());
     }
 
-    /// <inheritdoc cref="DbLoggerCategory.Update" />
+    /// <inheritdoc cref="IConcesionarioService.Update" />
     public async Task<Result<ConcesionarioDto, DomainError>> Update(UpdateConcesionarioDto item, long key){
-        Log.Debug("Actualizando categoría con ID {Id}", key);
+        Log.Debug("Actualizando concesionario con ID {Id}", key);
         
         var validationResult = await updateConcesionarioValidator.ValidateAsync(item);
         
@@ -84,7 +84,7 @@ public class ConcesionarioService(
         var vehiculos = await repository.GetVehiculos(key);
         foreach (var vehiculo in vehiculos) {
             await cache.RemoveAsync("vehiculo:" + vehiculo.Id);
-            await cache.RemoveAsync("vehiculo:" + vehiculo.Matricula);
+            await cache.RemoveAsync("vehiculo:" + vehiculo.Matrícula);
         }
 
         return Result.Success<ConcesionarioDto, DomainError>(actualizado.ToDto());
@@ -92,7 +92,7 @@ public class ConcesionarioService(
 
     /// <inheritdoc cref="IConcesionarioService.SoftDelete" />
     public async Task<Result<bool, DomainError>> SoftDelete(long key) {
-        Log.Debug("Borrado lógico de categoría con ID {Id}", key);
+        Log.Debug("Borrado lógico de concesionario con ID {Id}", key);
         
         if(await repository.HasVehiculos(key)) return Result.Failure<bool, DomainError>(new BusinessRuleError("No se puede borrar un concesionario con vehiculos asociados"));
         if(!await repository.ExistById(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.NotFoundConcesionario(key));

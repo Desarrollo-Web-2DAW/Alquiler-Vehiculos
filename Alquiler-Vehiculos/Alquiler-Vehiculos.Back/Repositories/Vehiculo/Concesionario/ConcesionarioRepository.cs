@@ -76,11 +76,27 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
             .AsNoTracking()
             .AnyAsync(f => f.Id == key);
     }
-    
-    /// <inheritdoc cref="IConcesionarioRepository.ExistById" />
-    public async Task<bool> ExistByTelefono(string telefono)
+
+    public async Task<IEnumerable<VehiculoModel>> GetVehiculos(long key)
     {
-        logger.LogDebug("Verificando existencia de Concesionario por Id: {Id}", telefono);
+        logger.LogDebug("Obteniendo todos los Vehiculos relacionados al concesionario {Key}", key);
+        return await context.Vehiculos
+            .Where(v => v.ConesionarioFk == key)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<bool> HasVehiculos(long key)
+    {
+        logger.LogDebug("Comprobando si existe algun vehiculo relacionado al concesionario {Key}", key);
+        return await context.Vehiculos
+            .AnyAsync(v => v.ConesionarioFk == key);
+    }
+
+    /// <inheritdoc cref="IConcesionarioRepository.ExistsByTelefono" />
+    public async Task<bool> ExistsByTelefono(string telefono)
+    {
+        logger.LogDebug("Verificando existencia de Concesionario por Telefono: {Telefono}", telefono);
         return await context.Concesionarios
             .IgnoreQueryFilters()
             .AsNoTracking()
