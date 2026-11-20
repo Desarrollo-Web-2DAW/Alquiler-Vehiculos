@@ -1,6 +1,7 @@
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Models.Storage;
+using Alquiler_Vehiculos.Repositories.Storage;
 using CSharpFunctionalExtensions;
 
 namespace Alquiler_Vehiculos.Services.Storage;
@@ -18,7 +19,7 @@ public class StorageService : IStorageService
     private readonly string[] _allowedExtensions;
     private readonly string[] _allowedContentTypes;
     private readonly ILogger<StorageService> _logger;
-    //private IFotoRepository _fotoRepository;
+    private IFotoRepository _fotoRepository;
 
     /// <summary>
     /// Lee los límites y tipos admitidos, calcula la ubicación del almacenamiento
@@ -27,9 +28,10 @@ public class StorageService : IStorageService
     /// <param name="configuration">Configuración que contiene la sección Storage.</param>
     /// <param name="logger">Registrador de los mensajes y errores de este servicio.</param>
     /// <param name="env">Entorno del que se obtiene la raíz web o, si es nula, la raíz del proyecto.</param>
+    /// <param name="fotoRepository">Repositorio de <see cref="Foto"/></param>
     public StorageService(IConfiguration configuration, ILogger<StorageService> logger,
-        IWebHostEnvironment env
-        //IFotoRepository fotoRepository
+        IWebHostEnvironment env,
+        IFotoRepository fotoRepository
         )
     {
         _logger = logger;
@@ -46,16 +48,16 @@ public class StorageService : IStorageService
 
         if (!Directory.Exists(_rootPath)) Directory.CreateDirectory(_rootPath);
 
-        //_fotoRepository = fotoRepository;
+        _fotoRepository = fotoRepository;
 
         _logger.LogInformation("Storage service inicializado en: {Path}", _rootPath);
     }
 
     /// <inheritdoc cref="IStorageService.SaveFileAsync"/>
-    public Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder)
+    public async Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder)
     {
         var validation = ValidateFile(file);
-        if (validation.IsFailure) return Task.FromResult(Result.Failure<Foto, DomainError>(validation.Error));
+        if (validation.IsFailure) return await Task.FromResult(Result.Failure<Foto, DomainError>(validation.Error));
 
         try
         {
@@ -75,45 +77,43 @@ public class StorageService : IStorageService
                 Activo = true,             
                 CreatedAt = DateTime.UtcNow
             };
-            //var result = _fotoRepository.Save(fotoModel);
-            //if (result.IsFailure) Result.Failure<Foto, DomainError>(result.Error);
+            var result = await _fotoRepository.Create(fotoModel);
             
             using var stream = new FileStream(filePath, FileMode.Create);
-            file.CopyToAsync(stream);
+            await file.CopyToAsync(stream);
 
             _logger.LogInformation("Archivo guardado: {Path}", relativePath);
             
-            return Task.FromResult(Result.Success<Foto, DomainError>(fotoModel));
+            return await Task.FromResult(Result.Success<Foto, DomainError>(fotoModel));
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error guardando archivo");
-            return Task.FromResult(Result.Failure<Foto, DomainError>(StorageError.ErrorGuardando()));
+            return await Task.FromResult(Result.Failure<Foto, DomainError>(StorageError.ErrorGuardando()));
         }
     }
 
     /// <inheritdoc cref="IStorageService.DeleteFileAsync"/>
-    public Task<Result<bool, DomainError>> DeleteFileAsync(string filename)
+    public async Task<Result<bool, DomainError>> DeleteFileAsync(string filename)
     {
-        if (string.IsNullOrEmpty(filename)) return Task.FromResult(Result.Success<bool, DomainError>(true));
+        if (string.IsNullOrEmpty(filename)) return await Task.FromResult(Result.Success<bool, DomainError>(true));
 
         try
         {
             var fullPath = GetFullPath(filename);
             if (File.Exists(fullPath))
             {
-                //Comprobación de la lógica de negocio necesaria en el repositorio
-                //var result = _fotoRepository.Delete(filename);
+                await _fotoRepository.SoftDelete(filename);
                 File.Delete(fullPath);
                 _logger.LogInformation("Archivo eliminado: {Filename}", filename);
             }
 
-            return Task.FromResult(Result.Success<bool, DomainError>(true));
+            return await Task.FromResult(Result.Success<bool, DomainError>(true));
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error eliminando archivo {Filename}", filename);
-            return Task.FromResult(Result.Failure<bool, DomainError>(StorageError.ErrorEliminando()));
+            return await Task.FromResult(Result.Failure<bool, DomainError>(StorageError.ErrorEliminando()));
         }
     }
 

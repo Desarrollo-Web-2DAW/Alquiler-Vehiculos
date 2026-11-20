@@ -2,7 +2,7 @@ using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using FluentAssertions;
 
-namespace Alquiler_Vehiculos.Tests.Unit.Validators;
+namespace Alquiler_Vehiculos.Tests.Unit.Validators.Catalogo_Vehiculos.Vehiculo;
 
 [TestFixture]
 [Category("Unit")]
@@ -142,6 +142,8 @@ public class UpdateVehiculoValidatorTests {
         // Arrange
         var dto = CrearDtoValido();
         AsignarTexto(dto, campo, new string('a', longitud));
+        
+        // Ajustamos el artículo y nombre según la propiedad real
         var nombre = campo == "Marca" ? "La marca" : "El modelo";
         var mensaje = longitud < 2 ? $"{nombre} no puede tener menos de 2 caracteres."
             : $"{nombre} no puede tener más de 100 caracteres.";
@@ -151,8 +153,14 @@ public class UpdateVehiculoValidatorTests {
 
         // Assert
         resultado.IsValid.Should().Be(valido);
-        if (valido) resultado.Errors.Should().BeEmpty();
-        else resultado.Errors.Should().ContainSingle(e => e.PropertyName == campo && e.ErrorMessage == mensaje);
+        if (valido) 
+        {
+            resultado.Errors.Should().BeEmpty();
+        }
+        else 
+        {
+            resultado.Errors.Should().ContainSingle(e => e.PropertyName == campo && e.ErrorMessage == mensaje);
+        }
     }
 
     [TestCase("PrecioBaseDia", -1, false, "El precio base por día debe ser mayor que cero.")]

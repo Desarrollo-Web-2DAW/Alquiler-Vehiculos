@@ -1,6 +1,7 @@
 namespace Alquiler_Vehiculos.Models.Storage;
 
-public class Foto {
+public record Foto
+{ 
     public string Nombre { get; set; } = string.Empty;
     public string Ruta { get; set; } = string.Empty;
     public string Extension { get; set; } = string.Empty;

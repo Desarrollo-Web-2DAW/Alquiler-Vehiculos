@@ -3,12 +3,12 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 
 namespace Alquiler_Vehiculos.Models.Vehiculo;
 
-public class Vehiculo
+public record VehiculoModel
 {
     public string Id { get; init; } = null!;
     public string FotoFk { get; init; } = string.Empty;
     public Foto Foto { get; init; } = null!;
-    public string  Matrícula { get; init; } = string.Empty;
+    public string Matrícula { get; init; } = string.Empty;
     public string Marca { get; init; } = string.Empty;
     public string Modelo { get; init; } = string.Empty;
     public string Acriss { get; init; } = string.Empty;
