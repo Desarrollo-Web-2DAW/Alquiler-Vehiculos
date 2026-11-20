@@ -146,6 +146,38 @@ Estado de las pruebas (`dotnet test`): **Total: 27 · OK: 22 · KO: 0 · Omitida
 - Decide el grupo si se incorporan FluentAssertions y Moq (D12) y la ubicación definitiva de `CacheConfig.cs` (aquí, dentro de `Cache/`).
 - Aviso heredado de la plantilla: NuGet reporta vulnerabilidad alta en `Microsoft.OpenApi` 2.0.0 (dependencia de `Microsoft.AspNetCore.OpenApi` 10.0.1). Conviene actualizar el paquete cuando el grupo toque la API.
 
+## 8. Revisión de tests y cobertura (20/11/2026)
+
+Revisión del código y de las pruebas según las convenciones de calidad del proyecto y el enunciado de Práctica 4.
+
+**Tests alineados con las convenciones de testing del proyecto:**
+
+- Comentarios `// Arrange`, `// Act` y `// Assert` en todos los casos (patrón AAA).
+- Aserciones con **FluentAssertions** (`Should()`): se adopta la librería que quedó pendiente en D12. Las excepciones se comprueban con `Action` / `Func<Task>` y `Should().Throw*`.
+- Atributos `Category("Unit")` y `Category("Integration")` para ejecutar por filtros.
+- Nombres `Método_Escenario_ResultadoEsperado` y `#region` por método (convención del proyecto).
+- Dobles a mano (`FakeCacheStore`, `CacheStub`) sin Moq: no se mockea lo que se puede probar con objetos reales.
+
+**Cambios aplicados:**
+
+- `RedisCacheStoreTests` reescrito con **Testcontainers** (`Testcontainers.Redis` 4.17.0, imagen `redis:7.4-alpine`): el contenedor se arranca en `OneTimeSetUp` y se libera en `OneTimeTearDown`. Se retira el `Assert.Ignore` que omitía las pruebas sin Redis: si falta Docker, el bloqueo queda a la vista y no se oculta.
+- Tests nuevos: `CacheConfigTests` (registro en DI y enlace de opciones), `CachePruneServiceTests` (poda periódica, resiliencia ante fallos y cancelación limpia al detener, RF-40) y casos nuevos de `LruCacheService` (Remove, deadline agotado con valor físico vivo, vida máxima propia, factory null, dependencias null).
+- `CachePolicyTests` y `LruCacheServiceTests` reescritos al nuevo estilo.
+- Código: eliminados `TagKey` y `TagsOfKey` de `RedisCacheStore` (helpers sin uso, detectados en la revisión) y `Microsoft.AspNetCore.OpenApi` actualizado a 10.0.15, que resuelve el aviso del apartado 7. Borrado `UnitTest1.cs` (template de Visual Studio sin uso).
+- Dependencias de pruebas nuevas: `FluentAssertions` 8.11.0 y `Testcontainers.Redis` 4.17.0 (módulo de Redis actual, con su constructor de imagen, que sustituye al obsoleto).
+
+**Resultados (`dotnet test`):**
+
+- Unitarias de caché: **35/35 OK**.
+- Suite completa con integración (Redis de verdad en contenedor): **43/43 OK · 0 omitidas**.
+- Cobertura del módulo `Cache/` (`dotnet test --collect:"XPlat Code Coverage"`): **181/181 líneas (100 %)**.
+
+**Resoluciones y nuevos pendientes:**
+
+- Resuelto: decisión D12 (FluentAssertions adoptado; Moq no hace falta) y el aviso de `Microsoft.OpenApi` (actualizado el paquete).
+- Siguen abiertos: tabla **evento → etiquetas invalidadas** (D4), servicio Redis en el `compose.yaml` (RNF-05) y la integración con el servicio de disponibilidad.
+- Nuevo pendiente: decidir si el contrato `ICacheService` mantiene sus adiciones (`ExistsAsync`, `GetOrSetAsync`, `RemoveByTagAsync`, `ClearAsync`, `PruneAsync` y `CancellationToken`) frente al contrato base (solo `Get`/`Set`/`Remove` sin token), y citar la decisión en la memoria.
+
 ---
 
 ## Tarea: notificaciones por correo electrónico
@@ -248,8 +280,18 @@ doc/Notificaciones-Email-Memoria.md   documentación para la memoria
 
 ## 7. Pendientes
 
-- Pruebas del módulo (la estrategia está tabulada en `doc/Notificaciones-Email-Memoria.md`, apartado 7).
+- ~~Pruebas del módulo (la estrategia está tabulada en `doc/Notificaciones-Email-Memoria.md`, apartado 7)~~ (hecho: ver apartado 8).
 - Pasar `IEmailOutboxStore` a EF Core cuando el grupo fije la BBDD transaccional.
 - Acordar con el grupo los puntos de llamada: **evento → método de `IEmailNotifier`** (una línea por evento; tabla en la memoria).
 - Decisión a documentar: los clientes de correo reales (Outlook, Gmail) no soportan Bootstrap ni JavaScript; si se exige envío a buzones reales, generar variante con estilos *inline*.
 - Añadir los servicios de Mailpit y Redis al `docker compose` definitivo (RNF-05): hoy hay `compose.yaml` solo con Mailpit.
+
+## 8. Pruebas y cobertura (20/11/2026)
+
+Pruebas del módulo de correo siguiendo la convención de pruebas del proyecto: NUnit + FluentAssertions, patrón AAA con sus comentarios (`// Arrange`, `// Act`, `// Assert`), `Category("Unit")` y `Category("Integration")`, nombres `Método_Escenario_Resultado`, dobles a mano salvo donde hace falta un doble de interfaz (Moq con su `Verify`) e integración con servicios reales en contenedor.
+
+- **Unitarias (40, todas OK)**: renderizador de plantillas (marcadores, listas, formatos y las 11 plantillas), notificador (los 11 eventos, idempotencia y resiliencia ante fallos), worker (envío, reintentos con backoff, agotamiento de intentos y cancelación), cola outbox, servicio simulado, envío SMTP (autenticación, modos de seguridad y propagación de fallos), DTOs y registro en el contenedor.
+- **Integración (2, OK) contra Mailpit en contenedor** con Testcontainers: envío real con MailKit por el camino de producción (sin cliente simulado) y flujo completo notificador → cola → worker verificado en la bandeja, incluida la comprobación de no duplicados de CU-17.
+- **Cobertura del módulo de correo**: **365/365 líneas (100 %)** con `dotnet test --collect:"XPlat Code Coverage"`.
+
+Requisitos cubiertos por las pruebas: **RF-34**, **RF-35**, **RF-36** y **CU-17** (y los avisos de CU-12, CU-23 y CU-24 a través de sus plantillas).
