@@ -2,8 +2,8 @@
 
 public class Poliza {
     public int Id {get; init;}
-    public string Nombre {get; init;}
-    public string Descripcion {get; init;}
-    public decimal IncrementoDiario {get; init;}
-    public bool Activo {get; init;}
+    public string Nombre {get; set;} = string.Empty;
+    public string Descripcion {get; set;} = string.Empty;
+    public decimal IncrementoDiario {get; set;}
+    public bool Activo {get; set;}
 }
