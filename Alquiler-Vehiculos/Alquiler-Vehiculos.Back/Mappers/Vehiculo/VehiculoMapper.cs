@@ -144,7 +144,8 @@ public static class VehiculoMapper
         {
             if (acrissTipoTransmision.ToString().Contains(valor.ToString())) return valor;
         }
-        
+
+
         return VehiculoError.TipoDeTransmision();
     }
 }
