@@ -1,4 +1,5 @@
 ﻿using Alquiler_Vehiculos.Generators;
+using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -13,15 +14,15 @@ public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, G
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<Models.Vehiculo.Vehiculo>(entity => {
+        modelBuilder.Entity<VehiculoModel>(entity => {
             entity.Property(v => v.Id)
                 .HasValueGenerator<YouTubeIdValueGenerator>()
                 .ValueGeneratedOnAdd();
 
             entity.HasOne<Foto>()
                 .WithOne()
-                .HasForeignKey<Models.Vehiculo.Vehiculo>(v => v.FotoFk)
-                .OnDelete(DeleteBehavior.Restrict);
+                .HasForeignKey<VehiculoModel>(v => v.FotoFk)
+                .OnDelete(DeleteBehavior.Cascade);
 
             entity.Property(v => v.Matrícula)
                 .HasMaxLength(7)
