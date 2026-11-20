@@ -5,6 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Alquiler_Vehiculos</RootNamespace>
+        <UserSecretsId>alquiler-vehiculos-2daw-2026</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
