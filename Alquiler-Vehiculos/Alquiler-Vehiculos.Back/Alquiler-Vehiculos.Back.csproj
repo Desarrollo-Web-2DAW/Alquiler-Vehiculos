@@ -29,11 +29,9 @@
     <ItemGroup>
       <Folder Include="Controllers\Pago\" />
       <Folder Include="Controllers\Reserva\" />
-      <Folder Include="Controllers\Usuario\" />
       <Folder Include="Controllers\Vehiculo\" />
       <Folder Include="Errors\Pago\" />
       <Folder Include="Errors\Reserva\" />
-      <Folder Include="Errors\Usuario\" />
       <Folder Include="Errors\Vehiculo\" />
       <Folder Include="Exceptions\Cliente\" />
       <Folder Include="Exceptions\Pago\" />

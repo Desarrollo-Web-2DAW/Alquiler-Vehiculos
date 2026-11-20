@@ -11,7 +11,7 @@ public interface IAuthService {
     /// <summary>Inicia sesión con email y contraseña.</summary>
     /// <param name="loginDto">Credenciales de acceso.</param>
     /// <returns>Token y datos de la cuenta, o el error de dominio.</returns>
-    Task<Result<AuthResponseDto, DomainError>> SignInAsync(LoginDto loginDto);
+    Task<Result<AuthResponseDto, DomainError>> Login(LoginDto loginDto);
 
     /// <summary>Da de alta un cliente con su cuenta y devuelve el token.</summary>
     /// <param name="signupDto">Datos de la persona y credenciales.</param>
