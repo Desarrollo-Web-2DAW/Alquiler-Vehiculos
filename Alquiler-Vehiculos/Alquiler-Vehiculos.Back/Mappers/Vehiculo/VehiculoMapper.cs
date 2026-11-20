@@ -28,8 +28,10 @@ public static class VehiculoMapper
         if (combustible.IsFailure) return combustible.Error;
         var transmision = ObtenerTipoTransmision(dto.Acriss[3]);
         if (transmision.IsFailure) return transmision.Error;
+
+        var estado = dto.IsActivo ? EstadoVehiculo.Disponible : EstadoVehiculo.Retirado;
         
-        return new VehiculoModel()
+        var vehiculo = new VehiculoModel()
         {
             FotoFk = dto.Foto,
             Foto = foto,
@@ -40,7 +42,6 @@ public static class VehiculoMapper
             Carroceria = carroceria.Value,
             Combustible = combustible.Value,
             Transmision = transmision.Value,
-            Estado = dto.IsActivo ? EstadoVehiculo.Disponible : EstadoVehiculo.Retirado,
             Color = (TipoColor)Enum.Parse(typeof(TipoColor), dto.Color, ignoreCase: true),
             PrecioBaseDia = dto.PrecioBaseDia,
             Plazas = dto.Plazas,
@@ -54,6 +55,9 @@ public static class VehiculoMapper
             UpdatedAt = null,
             DeletedAt = null
         };
+        
+        vehiculo.CambiarEstadoMapper(estado);
+        return vehiculo;
     }
     
     /// <summary>

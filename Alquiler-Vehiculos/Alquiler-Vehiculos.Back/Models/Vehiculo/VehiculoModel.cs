@@ -73,7 +73,7 @@ public record VehiculoModel
         return Result.Failure<bool, DomainError>(VehiculoError.CambiarDeEstado(this.Estado.ToString(), nameof(EstadoVehiculo.Mantenimiento)));
     }
 
-    protected void CambiarEstadoMapper(EstadoVehiculo estado)
+    public void CambiarEstadoMapper(EstadoVehiculo estado)
     {
         Estado = estado;
     }

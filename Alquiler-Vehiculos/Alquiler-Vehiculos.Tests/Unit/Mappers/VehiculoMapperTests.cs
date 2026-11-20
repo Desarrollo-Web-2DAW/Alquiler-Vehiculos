@@ -51,27 +51,31 @@ public class VehiculoMapperTests
         Tamano = 1024
     };
 
-    private static VehiculoModel CrearModelo() => new()
+    private static VehiculoModel CrearModelo()
     {
-        FotoFk = "/uploads/vehiculos/delantera.jpg",
-        Matrícula = "1234BCD",
-        Marca = "Toyota",
-        Modelo = "Corolla",
-        Acriss = AcrissValido,
-        Carroceria = TipoCarroceria.Sedan,
-        Combustible = TipoCombustible.Hibrido,
-        Transmision = TipoTransmision.Automatica,
-        Estado = EstadoVehiculo.EnAlquiler,
-        Color = TipoColor.Rojo,
-        PrecioBaseDia = 45.90m,
-        Plazas = 5,
-        MaleteroLitros = 361,
-        AutonomiaKm = 780,
-        Kilometraje = 12_500,
-        FechaUltimaRevision = new DateTime(2026, 10, 1),
-        ConesionarioFk = 10L,
-        Activo = true
-    };
+        var vehiculo = new VehiculoModel
+        {
+            FotoFk = "/uploads/vehiculos/delantera.jpg",
+            Matrícula = "1234BCD",
+            Marca = "Toyota",
+            Modelo = "Corolla",
+            Acriss = AcrissValido,
+            Carroceria = TipoCarroceria.Sedan,
+            Combustible = TipoCombustible.Hibrido,
+            Transmision = TipoTransmision.Automatica,
+            Color = TipoColor.Rojo,
+            PrecioBaseDia = 45.90m,
+            Plazas = 5,
+            MaleteroLitros = 361,
+            AutonomiaKm = 780,
+            Kilometraje = 12_500,
+            FechaUltimaRevision = new DateTime(2026, 10, 1),
+            ConesionarioFk = 10L,
+            Activo = true
+        };
+        vehiculo.CambiarEstadoMapper(EstadoVehiculo.EnAlquiler);
+        return vehiculo;
+    }
 
     /// <summary>
     /// Construye un ACRISS de cuatro letras fijando la letra que se quiere probar
