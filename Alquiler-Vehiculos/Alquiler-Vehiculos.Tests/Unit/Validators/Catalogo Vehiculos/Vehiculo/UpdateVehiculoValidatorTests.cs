@@ -167,7 +167,7 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Kilometraje", -1, false, "El kilometraje no puede ser negativo.")]
     [TestCase("Kilometraje", 0, true, "")]
     [TestCase("Kilometraje", 1, true, "")]
-    [TestCase("Concesionario", -1, false, "El identificador del concesionarioç debe ser válido.")]
+    [TestCase("Concesionario", -1, false, "El identificador del concesionario debe ser válido.")]
     [TestCase("Concesionario", 0, false, "El identificador del concesionario debe ser válido.")]
     [TestCase("Concesionario", 1, true, "")]
     public void Validate_CampoNumerico_RespetaLimites(string campo, int valor, bool valido, string mensaje) {
