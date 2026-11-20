@@ -6,9 +6,16 @@ namespace Alquiler_Vehiculos.Repositories.Storage;
 public interface IFotoRepository : ICrud<Foto, string>
 {
     /// <summary>
-    /// Comprueba si un vehiculo existe en base a su Id
+    /// Comprueba si una foto existe en base a su Id
     /// </summary>
     /// <param name="name">El id</param>
     /// <returns>True si existe, false si no existe</returns>
     Task<bool> ExistById(string name);
+    
+    /// <summary>
+    /// Restaura una foto por su Id
+    /// </summary>
+    /// <param name="name">El id</param>
+    /// <returns><see cref="Foto"/>si existe, null si no existe</returns>
+    Task<Foto?> Restore(string name);
 }
