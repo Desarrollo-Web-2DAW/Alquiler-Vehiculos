@@ -20,8 +20,6 @@ public class RedisCacheStore(IConnectionMultiplexer multiplexer) : ICacheStore {
     private const string LruKey = Prefix + "lru";
 
     private static string ValKey(string key) => Prefix + "val:" + key;
-    private static string TagKey(string tag) => Prefix + "tag:" + tag;
-    private static string TagsOfKey(string key) => Prefix + "tags:" + key;
 
     private IDatabase Db => multiplexer.GetDatabase();
 

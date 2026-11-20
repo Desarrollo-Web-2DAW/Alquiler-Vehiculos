@@ -145,3 +145,35 @@ Estado de las pruebas (`dotnet test`): **Total: 27 · OK: 22 · KO: 0 · Omitida
 - Añadir el servicio Redis al `docker compose` (RNF-05) cuando se monte; en desarrollo `Redis:ConnectionString` apunta a `localhost:6379`.
 - Decide el grupo si se incorporan FluentAssertions y Moq (D12) y la ubicación definitiva de `CacheConfig.cs` (aquí, dentro de `Cache/`).
 - Aviso heredado de la plantilla: NuGet reporta vulnerabilidad alta en `Microsoft.OpenApi` 2.0.0 (dependencia de `Microsoft.AspNetCore.OpenApi` 10.0.1). Conviene actualizar el paquete cuando el grupo toque la API.
+
+## 8. Revisión de tests y cobertura (20/11/2026)
+
+Revisión del código y de las pruebas según las convenciones de calidad del proyecto y el enunciado de Práctica 4, todo aplicado en esta rama.
+
+**Tests alineados con las convenciones de testing del proyecto:**
+
+- Comentarios `// Arrange`, `// Act` y `// Assert` en todos los casos (patrón AAA).
+- Aserciones con **FluentAssertions** (`Should()`): se adopta la librería que quedó pendiente en D12. Las excepciones se comprueban con `Action` / `Func<Task>` y `Should().Throw*`.
+- Atributos `Category("Unit")` y `Category("Integration")` para ejecutar por filtros.
+- Nombres `Método_Escenario_ResultadoEsperado` y `#region` por método (convención del proyecto).
+- Dobles a mano (`FakeCacheStore`, `CacheStub`) sin Moq: no se mockea lo que se puede probar con objetos reales.
+
+**Cambios aplicados:**
+
+- `RedisCacheStoreTests` reescrito con **Testcontainers** (`Testcontainers.Redis` 4.17.0, imagen `redis:7.4-alpine`): el contenedor se arranca en `OneTimeSetUp` y se libera en `OneTimeTearDown`. Se retira el `Assert.Ignore` que omitía las pruebas sin Redis: si falta Docker, el bloqueo queda a la vista y no se oculta.
+- Tests nuevos: `CacheConfigTests` (registro en DI y enlace de opciones), `CachePruneServiceTests` (poda periódica, resiliencia ante fallos y cancelación limpia al detener, RF-40) y casos nuevos de `LruCacheService` (Remove, deadline agotado con valor físico vivo, vida máxima propia, factory null, dependencias null).
+- `CachePolicyTests` y `LruCacheServiceTests` reescritos al nuevo estilo.
+- Código: eliminados `TagKey` y `TagsOfKey` de `RedisCacheStore` (helpers sin uso, detectados en la revisión) y `Microsoft.AspNetCore.OpenApi` actualizado a 10.0.15, que resuelve el aviso del apartado 7. Borrado `UnitTest1.cs` (template de Visual Studio sin uso).
+- Dependencias de pruebas nuevas: `FluentAssertions` 8.11.0 y `Testcontainers.Redis` 4.17.0 (módulo de Redis actual, con su constructor de imagen, que sustituye al obsoleto).
+
+**Resultados (`dotnet test`):**
+
+- Unitarias: **Total: 35 · OK: 35 · KO: 0**.
+- Suite completa con integración (Redis de verdad en contenedor): **Total: 43 · OK: 43 · KO: 0 · Omitidas: 0**.
+- Cobertura del módulo `Cache/` (`dotnet test --collect:"XPlat Code Coverage"`): **181/181 líneas (100 %)**.
+
+**Resoluciones y nuevos pendientes:**
+
+- Resuelto: decisión D12 (FluentAssertions adoptado; Moq no hace falta) y el aviso de `Microsoft.OpenApi` (actualizado el paquete).
+- Siguen abiertos: tabla **evento → etiquetas invalidadas** (D4), servicio Redis en el `compose.yaml` (RNF-05) y la integración con el servicio de disponibilidad.
+- Nuevo pendiente: decidir si el contrato `ICacheService` mantiene sus adiciones (`ExistsAsync`, `GetOrSetAsync`, `RemoveByTagAsync`, `ClearAsync`, `PruneAsync` y `CancellationToken`) frente al contrato base (solo `Get`/`Set`/`Remove` sin token), y citar la decisión en la memoria.
