@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 
@@ -6,7 +7,7 @@ namespace Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 /// Repositorio de Concesionarios que implementa las operaciones CRUD
 /// utilizando Entity Framework Core.
 /// </summary>
-public class ConcesionarioRepository(AppDbContext context, ILogger<ConcesionarioRepository> logger) : IConcesionarioRepository
+public class ConcesionarioRepository(PostgreDbContext context, ILogger<ConcesionarioRepository> logger) : IConcesionarioRepository
 {
     /// <inheritdoc cref="IConcesionarioRepository.Create" />
     public async Task<ConcesionarioModel> Create(ConcesionarioModel item) {

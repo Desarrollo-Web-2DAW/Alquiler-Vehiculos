@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 
@@ -6,7 +7,7 @@ namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 /// Repositorio de Vehiculos que implementa las operaciones CRUD
 /// utilizando Entity Framework Core.
 /// </summary>
-public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository> logger) : IVehiculoRepository
+public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoRepository> logger) : IVehiculoRepository
 {
     /// <inheritdoc cref="IVehiculoRepository.Create" />
     public async Task<VehiculoModel> Create(VehiculoModel item) {
@@ -22,7 +23,7 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
         return await context.Vehiculos
             .Where(f => f.Id == key)
             .ExecuteUpdateAsync(setters => setters
-                .SetProperty(f => f.IsDeleted, true)
+                .SetProperty(f => f.Activo, true)
                 .SetProperty(f => f.UpdatedAt, DateTime.UtcNow)) > 0;
     }
 
@@ -31,7 +32,7 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
         logger.LogDebug("Obteniendo Vehiculo por ID: {Key}", key);
         return await context.Vehiculos
             .AsNoTracking()
-            .Include(f => f.Categoria)
+            .Include(f => f.Foto)
             .FirstOrDefaultAsync(f => f.Id == key);
     }
 
@@ -76,9 +77,9 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
     /// <inheritdoc cref="IVehiculoRepository.GetAll" />
     public async Task<IEnumerable<VehiculoModel>> GetAll() {
         logger.LogDebug("Obteniendo todos los Vehiculos");
-        return await context.Vehiculos.OrderBy(f => f.matricula)
+        return await context.Vehiculos.OrderBy(f => f.Matrícula)
             .AsNoTracking()
-            .Include(f => f.Categoria)
+            .Include(f => f.Foto)
             .ToListAsync();
     }
 
@@ -87,8 +88,8 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
         logger.LogDebug("Obteniendo página {Page} de Vehiculos con tamaño {PageSize}", page, pageSize);
         var query = context.Vehiculos
             .AsNoTracking()
-            .Include(f => f.Categoria)
-            .OrderBy(f => f.matricula);
+            .Include(f => f.Foto)
+            .OrderBy(f => f.Matrícula);
 
         var total = await query.CountAsync();
         var items = await query
@@ -104,8 +105,8 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
         logger.LogDebug("Obteniendo Vehiculo por matricula: {matricula}", matricula);
         return await context.Vehiculos
             .AsNoTracking()
-            .Include(f => f.Categoria)
-            .FirstOrDefaultAsync(f => f.matricula == matricula);
+            .Include(f => f.Foto)
+            .FirstOrDefaultAsync(f => f.Matrícula == matricula);
     }
 
     /// <inheritdoc cref="IVehiculoRepository.ExistByMatricula" />
@@ -115,7 +116,7 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
             // El índice único reserva también los nombres de los eliminados.
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .AnyAsync(f => f.matricula == matricula);
+            .AnyAsync(f => f.Matrícula == matricula);
     }
 
     /// <inheritdoc cref="IVehiculoRepository.ExistById" />
@@ -126,15 +127,15 @@ public class VehiculoRepository(AppDbContext context, ILogger<VehiculoRepository
             // El índice único reserva también los nombres de los eliminados.
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .AnyAsync(f => f.matricula == key);
+            .AnyAsync(f => f.Id == key);
     }
     
     /// <inheritdoc cref="IVehiculoRepository.Restore" />
-    public async Task<VehiculoModel?> Restore(string name)
+    public async Task<VehiculoModel?> Restore(string key)
     {
-        logger.LogDebug("Restaurando Foto por Id: {Id}", name);
+        logger.LogDebug("Restaurando Foto por Id: {Id}", key);
         
-        VehiculoModel existente = await context.Set<VehiculoModel>().FirstOrDefaultAsync(f => f.Nombre == name);
+        VehiculoModel? existente = await context.Set<VehiculoModel>().FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null) return null;
         
         var actualizado = existente with {
