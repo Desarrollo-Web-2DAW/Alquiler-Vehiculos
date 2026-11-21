@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
@@ -27,7 +28,7 @@ public static class VehiculoSeeder {
             return;
         }
 
-        var vehiculos = BuildVehiculos();
+        var vehiculos = BuildVehiculos(DateTime.UtcNow);
         var uploadPath = configuration["Storage:UploadPath"] ?? "uploads";
         var rutasFotos = vehiculos.Select(v => $"/{uploadPath}/vehiculos/seed-{v.Matrícula}.jpg").ToArray();
         var fotos = await context.Fotos.Where(f => rutasFotos.Contains(f.Ruta) && f.Activo).ToListAsync();
@@ -38,6 +39,18 @@ public static class VehiculoSeeder {
         // Se consultan los IDs reales: no se supone que PostgreSQL haya generado del 1 al 5.
         var concesionarios = await context.Concesionarios.IgnoreQueryFilters().ToListAsync();
         var marcas = await mongoContext.Marcas.Find(FilterDefinition<MarcaModel>.Empty).ToListAsync();
+
+        vehiculos = PrepararVehiculos(vehiculos, marcas, concesionarios, fotos, uploadPath);
+        context.Vehiculos.AddRange(vehiculos);
+        await context.SaveChangesAsync();
+        Log.Information("Insertados {Count} vehículos de semilla.", vehiculos.Length);
+    }
+
+    // Separar las asociaciones del guardado permite comprobar el catálogo sin bases de datos.
+    internal static VehiculoModel[] PrepararVehiculos(VehiculoModel[] vehiculos,
+        IReadOnlyCollection<MarcaModel> marcas, IReadOnlyCollection<ConcesionarioModel> concesionarios,
+        IReadOnlyCollection<Foto> fotos, string uploadPath) {
+        var preparados = new VehiculoModel[vehiculos.Length];
         string[] nombresConcesionarios = [
             "Motor Leganés", "Motor Leganés", "Automóviles Madrid Centro", "Motor Getafe",
             "Vehículos Alcorcón", "Automóviles Madrid Centro", "Motor Fuenlabrada",
@@ -55,23 +68,18 @@ public static class VehiculoSeeder {
                     $"Faltan datos de catálogo coherentes para {vehiculo.Marca} {vehiculo.Modelo}. Ejecuta primero las semillas de marcas y concesionarios.");
             }
 
-            vehiculos[i] = vehiculo with {
-                ConesionarioFk = concesionario.Id
-            };
+            var rutaFoto = $"/{uploadPath}/vehiculos/seed-{vehiculo.Matrícula}.jpg";
+            var foto = fotos.SingleOrDefault(f => f.Ruta == rutaFoto && f.Activo);
+            if (foto is null) {
+                throw new InvalidOperationException($"Falta la foto activa de la flota para {vehiculo.Matrícula}.");
+            }
+            preparados[i] = vehiculo with { ConesionarioFk = concesionario.Id, FotoFk = foto.Ruta, Foto = foto };
         }
 
-        for (var i = 0; i < vehiculos.Length; i++) {
-            var foto = fotos.Single(f => f.Ruta == rutasFotos[i]);
-            vehiculos[i] = vehiculos[i] with { FotoFk = foto.Ruta, Foto = foto };
-        }
-
-        context.Vehiculos.AddRange(vehiculos);
-        await context.SaveChangesAsync();
-        Log.Information("Insertados {Count} vehículos de semilla.", vehiculos.Length);
+        return preparados;
     }
 
-    private static VehiculoModel[] BuildVehiculos() {
-        var fecha = DateTime.UtcNow;
+    internal static VehiculoModel[] BuildVehiculos(DateTime fecha) {
         // Cifras orientativas para desarrollo: no son fichas técnicas de fabricantes.
         var corolla = new VehiculoModel {
             Matrícula = "1234BCD", Marca = "Toyota", Modelo = "Corolla Sedán", Acriss = "ILAH",

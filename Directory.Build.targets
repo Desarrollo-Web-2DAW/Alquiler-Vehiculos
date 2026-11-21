@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup Condition="'$(NETCoreSdkVersion)' == '10.0.100'">
+    <!-- El lector Git de este SDK no admite repositorios con referencias reftable.
+         Omitir solo la consulta de metadatos Source Link; no modifica Git ni las pruebas.
+         Al usar otro SDK esta excepción deja de aplicarse. -->
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+  </PropertyGroup>
+</Project>

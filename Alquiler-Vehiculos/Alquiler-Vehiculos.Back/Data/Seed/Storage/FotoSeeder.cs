@@ -1,6 +1,7 @@
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Storage;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Serilog;
 
 namespace Alquiler_Vehiculos.Data.Seed.Storage;
@@ -24,23 +25,22 @@ public static class FotoSeeder {
             return;
         }
 
-        var fotos = BuildFotos(configuration, env);
+        var uploadPath = configuration["Storage:UploadPath"] ?? "uploads";
+        var archivos = env.WebRootPath is null ? env.ContentRootFileProvider : env.WebRootFileProvider;
+        var fotos = BuildFotos(archivos, uploadPath, DateTime.UtcNow);
         context.Fotos.AddRange(fotos);
         await context.SaveChangesAsync();
         Log.Information("Insertadas {Count} fotos de semilla.", fotos.Length);
     }
 
-    private static Foto[] BuildFotos(IConfiguration configuration, IWebHostEnvironment env) {
-        var uploadPath = configuration["Storage:UploadPath"] ?? "uploads";
-        var rootPath = env.WebRootPath ?? env.ContentRootPath;
-        var fecha = DateTime.UtcNow;
+    internal static Foto[] BuildFotos(IFileProvider archivos, string uploadPath, DateTime fecha) {
         var fotos = new List<Foto>();
 
         // Las imágenes las prepara el almacenamiento, no este seeder.
         // Solo se lee su tamaño real para no inventar los metadatos de Foto.
         foreach (var matricula in Matriculas) {
             var nombre = $"seed-{matricula}.jpg";
-            var archivo = new FileInfo(Path.Combine(rootPath, uploadPath, "vehiculos", nombre));
+            var archivo = archivos.GetFileInfo($"{uploadPath}/vehiculos/{nombre}");
             if (!archivo.Exists || archivo.Length == 0) {
                 throw new InvalidOperationException($"Falta la imagen de semilla {nombre} o está vacía. Prepara primero el almacenamiento.");
             }

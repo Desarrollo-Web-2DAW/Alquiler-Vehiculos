@@ -16,13 +16,12 @@ public static class MarcaSeeder {
             return;
         }
 
-        var marcas = BuildMarcas();
+        var marcas = BuildMarcas(DateTime.UtcNow);
         await context.Marcas.InsertManyAsync(marcas);
         Log.Information("Insertadas {Count} marcas de semilla.", marcas.Length);
     }
 
-    private static MarcaModel[] BuildMarcas() {
-        var fecha = DateTime.UtcNow;
+    internal static MarcaModel[] BuildMarcas(DateTime fecha) {
 
         // Identificadores estables de la semilla. VehiculoSeeder consulta las marcas por nombre.
         return [

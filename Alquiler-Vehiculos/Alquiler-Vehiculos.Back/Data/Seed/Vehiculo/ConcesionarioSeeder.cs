@@ -18,14 +18,13 @@ public static class ConcesionarioSeeder {
             return;
         }
 
-        var concesionarios = BuildConcesionarios();
+        var concesionarios = BuildConcesionarios(DateTime.UtcNow);
         context.Concesionarios.AddRange(concesionarios);
         await context.SaveChangesAsync();
         Log.Information("Insertados {Count} concesionarios de semilla.", concesionarios.Length);
     }
 
-    private static ConcesionarioModel[] BuildConcesionarios() {
-        var fecha = DateTime.UtcNow;
+    internal static ConcesionarioModel[] BuildConcesionarios(DateTime fecha) {
 
         // Id = 0: PostgreSQL genera el identificador de cada concesionario.
         // Los nombres y los datos de contacto son ficticios.
