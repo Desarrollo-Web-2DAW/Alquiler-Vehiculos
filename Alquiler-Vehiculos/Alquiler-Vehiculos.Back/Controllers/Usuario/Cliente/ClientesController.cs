@@ -9,9 +9,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Alquiler_Vehiculos.Controllers.Usuario.Cliente;
+
 /// <summary>
 /// Gestión de clientes (RF-13, RF-14, RF-46). El personal gestiona a cualquier cliente;
-/// un cliente solo consulta y modifica sus propios datos; la baja es solo del administrador.
+/// un cliente solo consulta, modifica y da de baja sus propios datos (CU-19);
+/// el administrador también puede dar de baja a cualquiera.
 /// </summary>
 [ApiController]
 [Route("api/clientes")]
@@ -80,13 +82,17 @@ public class ClientesController(IClienteService servicio) : ControllerBase {
             : result.Error.ToHttpResult<ClienteResponseDto>();
     }
 
-    /// <summary>Da de baja lógica a un cliente. Solo el administrador.</summary>
+    /// <summary>
+    /// Da de baja lógica a un cliente (CU-19). Lo puede pedir el administrador o el propio cliente.
+    /// </summary>
     /// <param name="id">Identificador del cliente.</param>
     /// <param name="ct">Token de cancelación.</param>
-    /// <returns>204 si se da de baja, o 404 si no existe.</returns>
-    [Authorize(Policy = PolicyNames.Admin)]
+    /// <returns>204 si se da de baja, 403 si no es suyo, o 404 si no existe.</returns>
+    [Authorize]
     [HttpDelete("{id:guid}")]
     public async Task<ActionResult> Delete(Guid id, CancellationToken ct) {
+        if (!EsAdmin() && !await EsPropietarioAsync(id, ct)) return Forbid();
+
         var result = await servicio.DeleteAsync(id, ct);
         return result.IsSuccess
             ? NoContent()
@@ -106,6 +112,10 @@ public class ClientesController(IClienteService servicio) : ControllerBase {
     private async Task<bool> PuedeAccederAsync(Guid clienteId, CancellationToken ct) {
         if (EsPersonal()) return true;
 
+        return await EsPropietarioAsync(clienteId, ct);
+    }
+
+    private async Task<bool> EsPropietarioAsync(Guid clienteId, CancellationToken ct) {
         var claim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!Guid.TryParse(claim, out Guid usuarioId)) return false;
 
