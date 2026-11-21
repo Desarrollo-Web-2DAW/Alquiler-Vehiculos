@@ -4,7 +4,6 @@
 /// Valida el NIE español: letra inicial X, Y o Z, siete dígitos y una letra de control (RF-16).
 /// </summary>
 public static class NieValidator {
-    private const string LetrasInicio = "XYZ";
     private const int LongitudNie = 9;
     private const int DigitosNie = 7;
 
@@ -19,14 +18,15 @@ public static class NieValidator {
         var texto = nie.Trim().ToUpperInvariant();
         if (texto.Length != LongitudNie) return false;
 
-        var prefijo = LetrasInicio.IndexOf(texto[0]);
-        if (prefijo < 0) return false;
+        string prefijo;
+        if (texto[0] == 'X') prefijo = "0";
+        else if (texto[0] == 'Y') prefijo = "1";
+        else if (texto[0] == 'Z') prefijo = "2";
+        else return false;
 
-        var numero = prefijo;
-        for (var i = 1; i <= DigitosNie; i++) {
-            if (texto[i] is < '0' or > '9') return false;
-            numero = numero * 10 + (texto[i] - '0');
-        }
+        var digitos = texto.Substring(1, DigitosNie);
+        if (!digitos.All(char.IsDigit)) return false;
+        if (!int.TryParse(prefijo + digitos, out int numero)) return false;
 
         return texto[LongitudNie - 1] == DniValidator.CalcularLetra(numero);
     }

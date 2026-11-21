@@ -17,6 +17,7 @@
 /// </para>
 /// </remarks>
 public static class PasaporteValidator {
+    private const string Alfabeto = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static readonly int[] Pesos = [7, 3, 1];
     private const int CaracteresNumero = 9;
     private const int LongitudConControl = CaracteresNumero + 1;
@@ -37,11 +38,8 @@ public static class PasaporteValidator {
         var texto = pasaporte.Trim().ToUpperInvariant();
         if (texto.Length != LongitudConControl) return false;
 
-        var control = texto[CaracteresNumero];
-        if (control is < '0' or > '9') return false;
-
         var esperado = CalcularDigitoControl(texto[..CaracteresNumero]);
-        return esperado is not null && esperado.Value == control - '0';
+        return esperado is not null && esperado.ToString() == texto[CaracteresNumero..];
     }
 
     /// <summary>
@@ -66,11 +64,12 @@ public static class PasaporteValidator {
     }
 
     private static int? ValorDelCaracter(char c) {
-        return c switch {
-            >= '0' and <= '9' => c - '0',
-            '<' => 0,
-            >= 'A' and <= 'Z' => c - 'A' + 10,
-            _ => null
-        };
+        if (c == '<') return 0;
+
+        for (var i = 0; i < Alfabeto.Length; i++) {
+            if (Alfabeto[i] == c) return i;
+        }
+
+        return null;
     }
 }

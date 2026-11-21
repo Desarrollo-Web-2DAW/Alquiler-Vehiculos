@@ -19,11 +19,9 @@ public static class DniValidator {
         var texto = dni.Trim().ToUpperInvariant();
         if (texto.Length != LongitudDni) return false;
 
-        var numero = 0;
-        for (var i = 0; i < DigitosDni; i++) {
-            if (texto[i] is < '0' or > '9') return false;
-            numero = numero * 10 + (texto[i] - '0');
-        }
+        var digitos = texto[..DigitosDni];
+        if (!digitos.All(char.IsDigit)) return false;
+        if (!int.TryParse(digitos, out int numero)) return false;
 
         return texto[DigitosDni] == CalcularLetra(numero);
     }
