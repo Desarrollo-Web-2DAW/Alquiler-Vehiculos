@@ -23,6 +23,12 @@ public interface IClienteService {
     Task<Result<ClienteResponseDto, DomainError>> GetByIdAsync(
         Guid id, bool incluirBajas = false, CancellationToken ct = default);
 
+
+    /// <summary>Devuelve el cliente al que pertenece una cuenta de usuario.</summary>
+    /// <param name="usuarioId">Identificador de la cuenta.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>El identificador del cliente, o null si la cuenta no existe o no es de un cliente.</returns>
+    Task<Guid?> GetClienteIdDeUsuarioAsync(Guid usuarioId, CancellationToken ct = default);
     /// <summary>Da de alta un cliente de mostrador.</summary>
     /// <param name="dto">Datos del alta.</param>
     /// <param name="ct">Token de cancelación.</param>

@@ -64,6 +64,10 @@ public class ClienteService(
 
         return Result.Success<ClienteResponseDto, DomainError>(cliente.ToDto());
     }
+    /// <inheritdoc />
+    public async Task<Guid?> GetClienteIdDeUsuarioAsync(Guid usuarioId, CancellationToken ct = default) {
+        return await repositorio.GetClienteIdDeUsuarioAsync(usuarioId, ct);
+    }
 
     /// <inheritdoc />
     public async Task<Result<ClienteResponseDto, DomainError>> CreateAsync(
