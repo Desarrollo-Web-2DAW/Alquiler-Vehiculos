@@ -5,7 +5,7 @@ namespace Alquiler_Vehiculos.Tests.Unit.Validators.Documentos;
 
 /// <summary>
 /// Tests unitarios del validador de DNI español.
-/// Requisito cubierto: RF-16.
+/// Requisito cubierto: RF-16, con los ejemplos del enunciado (restos 0, 14 y 22).
 /// </summary>
 [Category("Unit")]
 public class DniValidatorTests {
@@ -17,6 +17,7 @@ public class DniValidatorTests {
         /// </summary>
         [TestCase("12345678Z")]
         [TestCase("00000000T")]
+        [TestCase("00000022E")]
         [TestCase("87654321X")]
         [TestCase("99999999R")]
         public void EsValido_DniCorrecto_DevuelveTrue(string dni) {
@@ -51,6 +52,7 @@ public class DniValidatorTests {
         /// </summary>
         [TestCase(12345678, 'Z')]
         [TestCase(0, 'T')]
+        [TestCase(22, 'E')]
         [TestCase(23, 'T')]
         [TestCase(99999999, 'R')]
         public void CalcularLetra_NumeroConocido_DevuelveSuLetra(int numero, char esperada) {
