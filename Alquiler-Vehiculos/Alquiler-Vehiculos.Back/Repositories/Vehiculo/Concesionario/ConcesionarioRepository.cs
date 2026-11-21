@@ -44,10 +44,6 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
         if (existente == null || existente.IsDeleted) return null;
         
         var actualizado = existente with {
-            Nombre = item.Nombre,
-            Ciudad = item.Ciudad,
-            Telefono = item.Telefono,
-            Email = item.Email,
             UpdatedAt = DateTime.UtcNow,
             DeletedAt = item.DeletedAt
         };
