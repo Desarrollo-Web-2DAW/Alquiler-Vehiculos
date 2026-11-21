@@ -240,4 +240,148 @@ public class MarcaRepositoryTests {
         // Assert
         resultado.Should().Be(esperado);
     }
+
+    [Test]
+    public async Task Create_MarcaConBajaYAuditoriaDeEntrada_NaceActivaConAuditoriaNueva() {
+        // Arrange
+        var marca = CrearMarca(eliminada: true) with { UpdatedAt = Fecha };
+        var antes = DateTime.UtcNow;
+
+        // Act
+        var resultado = await _repository.Create(marca);
+
+        // Assert
+        resultado.IsDeleted.Should().BeFalse();
+        resultado.CreatedAt.Should().BeOnOrAfter(antes).And.BeOnOrBefore(DateTime.UtcNow);
+        resultado.UpdatedAt.Should().BeNull();
+        resultado.DeletedAt.Should().BeNull();
+        var lectura = new MongoDbContext(_database);
+        var guardada = await lectura.Marcas.Find(m => m.Id == marca.Id).SingleAsync();
+        guardada.IsDeleted.Should().BeFalse();
+        guardada.UpdatedAt.Should().BeNull();
+        guardada.DeletedAt.Should().BeNull();
+        guardada.CreatedAt.Should().BeCloseTo(resultado.CreatedAt, TimeSpan.FromMilliseconds(1));
+        guardada.ModelosDisponibles.Should().Equal(marca.ModelosDisponibles);
+    }
+
+    [Test]
+    public async Task Create_IdDuplicado_RechazaElAltaYConservaLaMarcaOriginal() {
+        // Arrange
+        var original = CrearMarca();
+        await _context.Marcas.InsertOneAsync(original);
+        var repetida = CrearMarca(nombre: "No guardar");
+
+        // Act
+        Func<Task> act = () => _repository.Create(repetida);
+
+        // Assert
+        var error = await act.Should().ThrowAsync<MongoWriteException>();
+        error.Which.WriteError.Category.Should().Be(ServerErrorCategory.DuplicateKey);
+        var lectura = new MongoDbContext(_database);
+        var guardadas = await lectura.Marcas.Find(_ => true).ToListAsync();
+        guardadas.Should().ContainSingle().Which.Should().BeEquivalentTo(original);
+    }
+
+    [Test]
+    public async Task Create_NombreRepetidoConIdsDistintos_ConservaAmbasMarcas() {
+        // Arrange
+        await _context.Marcas.InsertOneAsync(CrearMarca());
+        var otra = CrearMarca(OtroId);
+
+        // Act
+        var resultado = await _repository.Create(otra);
+
+        // Assert
+        resultado.Id.Should().Be(OtroId);
+        var lectura = new MongoDbContext(_database);
+        var guardadas = await lectura.Marcas.Find(m => m.Nombre == "Toyota").ToListAsync();
+        guardadas.Select(m => m.Id).Should().BeEquivalentTo(new[] { Id, OtroId });
+    }
+
+    [Test]
+    public async Task GetById_IdentificadorValidoInexistente_DevuelveNullSinModificarOtrasMarcas() {
+        // Arrange
+        var original = CrearMarca();
+        await _context.Marcas.InsertOneAsync(original);
+
+        // Act
+        var resultado = await _repository.GetById(OtroId.ToString());
+
+        // Assert
+        resultado.Should().BeNull();
+        var lectura = new MongoDbContext(_database);
+        var guardadas = await lectura.Marcas.Find(_ => true).ToListAsync();
+        guardadas.Should().ContainSingle().Which.Should().BeEquivalentTo(original);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task GetAll_SinMarcasActivas_DevuelveColeccionVaciaYConservaHistorico(bool hayEliminada) {
+        // Arrange
+        var eliminada = CrearMarca(eliminada: true);
+        if (hayEliminada) await _context.Marcas.InsertOneAsync(eliminada);
+
+        // Act
+        var resultado = await _repository.GetAll();
+
+        // Assert
+        resultado.Should().BeEmpty();
+        var lectura = new MongoDbContext(_database);
+        var guardadas = await lectura.Marcas.Find(_ => true).ToListAsync();
+        guardadas.Should().HaveCount(hayEliminada ? 1 : 0);
+        if (hayEliminada) guardadas.Single().Should().BeEquivalentTo(eliminada);
+    }
+
+    [Test]
+    public async Task Update_DosMarcasExistentes_ModificaSoloLaIdentificadaPorLaClave() {
+        // Arrange
+        var original = CrearMarca();
+        var otra = CrearMarca(OtroId, "Honda");
+        await _context.Marcas.InsertManyAsync(new[] { original, otra });
+        // El Id del cuerpo no debe cambiar cuál es el documento actualizado.
+        var cambios = CrearMarca(OtroId, "Toyota renovada") with {
+            ModelosDisponibles = new List<string> { "Prius", "RAV4" }
+        };
+
+        // Act
+        var resultado = await _repository.Update(Id.ToString(), cambios);
+
+        // Assert
+        resultado.Should().NotBeNull();
+        resultado!.Id.Should().Be(Id);
+        var lectura = new MongoDbContext(_database);
+        var guardada = await lectura.Marcas.Find(m => m.Id == Id).SingleAsync();
+        guardada.Nombre.Should().Be(cambios.Nombre);
+        guardada.ModelosDisponibles.Should().Equal("Prius", "RAV4");
+        guardada.CreatedAt.Should().Be(original.CreatedAt);
+        guardada.UpdatedAt.Should().NotBeNull();
+        var intacta = await lectura.Marcas.Find(m => m.Id == OtroId).SingleAsync();
+        intacta.Should().BeEquivalentTo(otra);
+        (await lectura.Marcas.CountDocumentsAsync(_ => true)).Should().Be(2);
+    }
+
+    [Test]
+    public async Task SoftDelete_DosMarcasActivas_DesactivaSoloLaIndicadaYLaOcultaDeLasConsultas() {
+        // Arrange
+        var marca = CrearMarca();
+        var otra = CrearMarca(OtroId, "Honda");
+        await _context.Marcas.InsertManyAsync(new[] { marca, otra });
+
+        // Act
+        var resultado = await _repository.SoftDelete(Id.ToString());
+
+        // Assert
+        resultado.Should().BeTrue();
+        var lectura = new MongoDbContext(_database);
+        (await lectura.Marcas.CountDocumentsAsync(_ => true)).Should().Be(2);
+        var guardada = await lectura.Marcas.Find(m => m.Id == Id).SingleAsync();
+        guardada.IsDeleted.Should().BeTrue();
+        guardada.DeletedAt.Should().NotBeNull();
+        guardada.UpdatedAt.Should().Be(guardada.DeletedAt);
+        var intacta = await lectura.Marcas.Find(m => m.Id == OtroId).SingleAsync();
+        intacta.Should().BeEquivalentTo(otra);
+        (await _repository.GetById(Id.ToString())).Should().BeNull();
+        (await _repository.ExistById(Id.ToString())).Should().BeFalse();
+        (await _repository.GetAll()).Should().ContainSingle().Which.Id.Should().Be(OtroId);
+    }
 }
