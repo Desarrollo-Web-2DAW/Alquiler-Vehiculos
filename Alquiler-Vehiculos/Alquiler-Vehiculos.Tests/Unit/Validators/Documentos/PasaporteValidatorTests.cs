@@ -86,17 +86,30 @@ public class PasaporteValidatorTests {
         }
 
         /// <summary>
-        /// Dado un texto vacío, en blanco o nulo, cuando se valida,
+        /// Dado un texto vacío o en blanco, cuando se valida,
         /// entonces no es válido.
         /// </summary>
-        [TestCase(null)]
         [TestCase("")]
         [TestCase("   ")]
-        public void EsValido_VacioOEnBlanco_DevuelveFalse(string? pasaporte) {
+        public void EsValido_VacioOEnBlanco_DevuelveFalse(string pasaporte) {
             // Arrange
 
             // Act
             var resultado = PasaporteValidator.EsValido(pasaporte);
+
+            // Assert
+            resultado.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Dado un pasaporte nulo, cuando se valida, entonces no es válido.
+        /// </summary>
+        [Test]
+        public void EsValido_Nulo_DevuelveFalse() {
+            // Arrange
+
+            // Act
+            var resultado = PasaporteValidator.EsValido(null);
 
             // Assert
             resultado.Should().BeFalse();
@@ -152,18 +165,32 @@ public class PasaporteValidatorTests {
         }
 
         /// <summary>
-        /// Dada una cadena nula, vacía o con caracteres no permitidos,
+        /// Dada una cadena vacía o con caracteres no permitidos,
         /// cuando se calcula su dígito de control, entonces no se puede calcular y devuelve nulo.
         /// </summary>
-        [TestCase(null)]
         [TestCase("")]
         [TestCase("AB@1")]
         [TestCase("ab1")]
-        public void CalcularDigitoControl_CadenaNoCalculable_DevuelveNull(string? campo) {
+        public void CalcularDigitoControl_CadenaNoCalculable_DevuelveNull(string campo) {
             // Arrange
 
             // Act
             var digito = PasaporteValidator.CalcularDigitoControl(campo);
+
+            // Assert
+            digito.Should().BeNull();
+        }
+
+        /// <summary>
+        /// Dada una cadena nula, cuando se calcula su dígito de control,
+        /// entonces no se puede calcular y devuelve nulo.
+        /// </summary>
+        [Test]
+        public void CalcularDigitoControl_Nulo_DevuelveNull() {
+            // Arrange
+
+            // Act
+            var digito = PasaporteValidator.CalcularDigitoControl(null);
 
             // Assert
             digito.Should().BeNull();

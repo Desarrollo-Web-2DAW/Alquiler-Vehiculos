@@ -84,17 +84,30 @@ public class NieValidatorTests {
         }
 
         /// <summary>
-        /// Dado un texto vacío, en blanco o nulo, cuando se valida,
+        /// Dado un texto vacío o en blanco, cuando se valida,
         /// entonces no es válido.
         /// </summary>
-        [TestCase(null)]
         [TestCase("")]
         [TestCase("   ")]
-        public void EsValido_VacioOEnBlanco_DevuelveFalse(string? nie) {
+        public void EsValido_VacioOEnBlanco_DevuelveFalse(string nie) {
             // Arrange
 
             // Act
             var resultado = NieValidator.EsValido(nie);
+
+            // Assert
+            resultado.Should().BeFalse();
+        }
+
+        /// <summary>
+        /// Dado un NIE nulo, cuando se valida, entonces no es válido.
+        /// </summary>
+        [Test]
+        public void EsValido_Nulo_DevuelveFalse() {
+            // Arrange
+
+            // Act
+            var resultado = NieValidator.EsValido(null);
 
             // Assert
             resultado.Should().BeFalse();
