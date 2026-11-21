@@ -60,7 +60,7 @@ public class VehiculoService(
             return BadRequestError.ValidationError.WithFieldErrors(errorsDictionary);
         }
         
-        if (await repository.ExistsByMatricula(item.Matricula)) {
+        if (await repository.ExistByMatricula(item.Matricula)) {
             return Result.Failure<VehiculoDto, DomainError>(VehiculoError.VehiculoYaExiste(item.Matricula));
         }
 
@@ -95,7 +95,7 @@ public class VehiculoService(
             return Result.Failure<VehiculoDto, DomainError>(VehiculoError.NotFoundVehiculo(key));
         }
         
-        if (item.Matricula != existente.Matrícula && await repository.ExistsByMatricula(item.Matricula)) {
+        if (item.Matricula != existente.Matrícula && await repository.ExistByMatricula(item.Matricula)) {
             return Result.Failure<VehiculoDto, DomainError>(VehiculoError.VehiculoYaExiste(item.Matricula));
         }
         
