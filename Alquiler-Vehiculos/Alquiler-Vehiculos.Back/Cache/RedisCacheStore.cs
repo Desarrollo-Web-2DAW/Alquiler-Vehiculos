@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore.Storage;
 using StackExchange.Redis;
 
 namespace Alquiler_Vehiculos.Cache;
