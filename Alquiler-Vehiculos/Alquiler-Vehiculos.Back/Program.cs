@@ -7,6 +7,7 @@ using Alquiler_Vehiculos.Services.Usuarios.Auth;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Alquiler_Vehiculos.Cache;
 using Serilog;
 using Serilog.Events;
 
