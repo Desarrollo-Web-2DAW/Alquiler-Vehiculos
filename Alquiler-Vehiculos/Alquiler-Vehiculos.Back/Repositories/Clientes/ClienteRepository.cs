@@ -30,6 +30,12 @@ public interface IClienteRepository {
     /// <returns>El cliente, o null si no existe o está de baja y no se admiten bajas.</returns>
     Task<Cliente?> GetByIdAsync(Guid id, bool incluirBajas = false, CancellationToken ct = default);
 
+    /// <summary>Devuelve el cliente al que pertenece una cuenta de usuario.</summary>
+    /// <param name="usuarioId">Identificador de la cuenta.</param>
+    /// <param name="ct">Token de cancelación.</param>
+    /// <returns>El identificador del cliente, o null si la cuenta no existe o no es de un cliente.</returns>
+    Task<Guid?> GetClienteIdDeUsuarioAsync(Guid usuarioId, CancellationToken ct = default);
+
     /// <summary>Indica si el correo ya pertenece a algún cliente, incluidos los dados de baja.</summary>
     /// <param name="email">Correo ya normalizado.</param>
     /// <param name="ct">Token de cancelación.</param>
@@ -104,6 +110,14 @@ public class ClienteRepository(AppDbContextUsuarios db) : IClienteRepository {
         return await db.Clientes
             .AsNoTracking()
             .Where(c => c.Id == id && (incluirBajas || !c.IsDeleted))
+            .FirstOrDefaultAsync(ct);
+    }
+
+    public async Task<Guid?> GetClienteIdDeUsuarioAsync(Guid usuarioId, CancellationToken ct = default) {
+        return await db.Users
+            .AsNoTracking()
+            .Where(u => u.Id == usuarioId)
+            .Select(u => u.ClienteId)
             .FirstOrDefaultAsync(ct);
     }
 
