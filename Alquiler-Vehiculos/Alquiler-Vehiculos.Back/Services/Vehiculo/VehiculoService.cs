@@ -61,7 +61,7 @@ public class VehiculoService(
         }
         
         if (await repository.ExistsByMatricula(item.Matricula)) {
-            return Result.Failure<VehiculoDto, DomainError>(VehiculoError.VehiculoYaExiste(item.Matrícula));
+            return Result.Failure<VehiculoDto, DomainError>(VehiculoError.VehiculoYaExiste(item.Matricula));
         }
 
         var foto = await fotoRepository.GetById(item.Foto);
