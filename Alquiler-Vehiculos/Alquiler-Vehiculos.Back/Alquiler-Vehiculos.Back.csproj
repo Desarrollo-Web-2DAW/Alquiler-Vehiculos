@@ -26,12 +26,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Controllers\Cliente\" />
       <Folder Include="Controllers\Pago\" />
       <Folder Include="Controllers\Reserva\" />
-      <Folder Include="Controllers\Trabajador\" />
       <Folder Include="Controllers\Vehiculo\" />
-      <Folder Include="Data\Seed\" />
+      <Folder Include="Data\Seed\Storage\" />
+      <Folder Include="Data\Seed\Vehiculo\" />
       <Folder Include="Errors\Cliente\" />
       <Folder Include="Errors\Pago\" />
       <Folder Include="Errors\Reserva\" />
