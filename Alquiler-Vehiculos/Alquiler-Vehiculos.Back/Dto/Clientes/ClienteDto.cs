@@ -53,3 +53,18 @@ public record ClienteResponseDto(
     DateTime? FechaBaja,
     DateTime CreatedAt,
     DateTime UpdatedAt);
+
+/// <summary>
+/// Búsqueda y paginación del listado de clientes.
+/// </summary>
+/// <param name="Texto">Texto a buscar en nombre, apellidos, correo o documentos, o null.</param>
+/// <param name="Activo">Si se indica, solo los clientes activos o solo los inactivos.</param>
+/// <param name="IncluirBajas">Si se incluyen los clientes dados de baja. Solo lo permite el administrador.</param>
+/// <param name="Page">Página, empezando en 1.</param>
+/// <param name="PageSize">Elementos por página, de 1 a 100.</param>
+public record ClienteFiltroDto(
+    string? Texto = null,
+    bool? Activo = null,
+    bool IncluirBajas = false,
+    int Page = 1,
+    int PageSize = 10);
