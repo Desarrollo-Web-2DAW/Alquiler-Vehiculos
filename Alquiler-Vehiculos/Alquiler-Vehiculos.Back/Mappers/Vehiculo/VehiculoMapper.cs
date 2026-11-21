@@ -61,6 +61,51 @@ public static class VehiculoMapper
     }
     
     /// <summary>
+    /// Parte de un <see cref="UpdateRequestVehiculoDto"/> para crear un nuevo <see cref="VehiculoModel"/>
+    /// </summary>
+    /// <param name="dto">Datos proporcionados por el cliente</param>
+    /// <param name="foto">El modelo de foto opcional asociado al vehículo</param>
+    /// <returns><see cref="VehiculoModel"/> o <see cref="DomainError"/></returns>
+    public static Result<VehiculoModel, DomainError> ToVehiculoModel(this UpdateVehiculoDto dto, Foto foto)
+    {
+        var carroceria = ObtenerTipoCarroceria(dto.Acriss[0]);
+        if (carroceria.IsFailure) return carroceria.Error;
+        
+        var combustible = ObtenerTipoCombustible(dto.Acriss[2]);
+        if (combustible.IsFailure) return combustible.Error;
+        
+        var transmision = ObtenerTipoTransmision(dto.Acriss[3]);
+        if (transmision.IsFailure) return transmision.Error;
+
+        var estado = dto.IsActivo ? EstadoVehiculo.Disponible : EstadoVehiculo.Retirado;
+
+        var vehiculo = new VehiculoModel
+        {
+            FotoFk = dto.Foto,
+            Foto = foto,
+            Matrícula = dto.Matricula,
+            Acriss = dto.Acriss,
+            Carroceria = carroceria.Value,
+            Combustible = combustible.Value,
+            Transmision = transmision.Value,
+            Color = (TipoColor)Enum.Parse(typeof(TipoColor), dto.Color, ignoreCase: true),
+            PrecioBaseDia = dto.PrecioBaseDia,
+            Plazas = dto.Plazas,
+            MaleteroLitros = dto.MaleteroLitros,
+            AutonomiaKm = dto.AutonomiaKm,
+            Kilometraje = dto.Kilometraje,
+            FechaUltimaRevision = DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) ? fecha : DateTime.UtcNow,
+            Activo = dto.IsActivo,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = null,
+            DeletedAt = null
+        };
+        
+        vehiculo.CambiarEstadoMapper(estado);
+        return vehiculo;
+    }
+    
+    /// <summary>
     /// Parte de un <see cref="Vehiculo"/> para crear un <see cref="VehiculoDto"/>
     /// </summary>
     /// <param name="vehiculoModel">El modelo de vehículo</param>
