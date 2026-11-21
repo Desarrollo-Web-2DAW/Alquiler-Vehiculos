@@ -50,7 +50,6 @@
       <Folder Include="Services\Pago\" />
       <Folder Include="Services\Reserva\" />
       <Folder Include="Services\Vehiculo\" />
-      <Folder Include="Validators\" />
     </ItemGroup>
 
 </Project>
