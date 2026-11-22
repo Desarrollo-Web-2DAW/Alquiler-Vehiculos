@@ -1,4 +1,29 @@
-using Alquiler_Vehiculos.Cache;
+using System.Text;
+using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Entities;
+using Alquiler_Vehiculos.Infrastructure;
+using Alquiler_Vehiculos.Repositories.Clientes;
+using Alquiler_Vehiculos.Services.Usuarios.Auth;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+using Serilog;
+using Serilog.Events;
+
+Console.OutputEncoding = Encoding.UTF8;
+
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("System", LogEventLevel.Warning)
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        "logs/api-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 7,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 
