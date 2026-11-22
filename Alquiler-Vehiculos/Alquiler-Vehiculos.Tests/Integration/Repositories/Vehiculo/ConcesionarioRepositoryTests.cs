@@ -48,7 +48,8 @@ public class ConcesionarioRepositoryTests : RepositoryTestBase {
         // Arrange
         if (conDatos) {
             await using var preparacion = CrearContexto();
-            preparacion.Concesionarios.AddRange(CrearConcesionario("Zeta"), CrearConcesionario("Alfa"));
+            preparacion.Concesionarios.AddRange(CrearConcesionario("Zeta"),
+                CrearConcesionario("Alfa") with { Telefono = "910000112" });
             await preparacion.SaveChangesAsync();
         }
         await using var db = CrearContexto();

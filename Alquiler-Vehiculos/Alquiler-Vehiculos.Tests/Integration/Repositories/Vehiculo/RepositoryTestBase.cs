@@ -58,7 +58,10 @@ public abstract class RepositoryTestBase {
 
     protected async Task<ConcesionarioModel> GuardarConcesionario(bool eliminado = false) {
         await using var db = CrearContexto();
-        var concesionario = CrearConcesionario(eliminado: eliminado);
+        var cantidad = await db.Concesionarios.CountAsync();
+        var concesionario = CrearConcesionario(eliminado: eliminado) with {
+            Telefono = (910000111 + cantidad).ToString()
+        };
         db.Concesionarios.Add(concesionario);
         await db.SaveChangesAsync();
         return concesionario;
