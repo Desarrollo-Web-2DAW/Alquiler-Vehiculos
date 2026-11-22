@@ -1,0 +1,35 @@
+meta {
+  name: [016] USERS - Desactivar ultimo Admin (409)
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/api/users/{{adminUserId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Desactivar ultimo Admin - Status 409 Conflict", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("Desactivar ultimo Admin - Código ULTIMO_ADMIN", function () {
+    const body = res.getBody();
+    expect(body.code).to.equal("ULTIMO_ADMIN");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Protección de integridad: impide dejar el sistema sin ningún administrador activo.
+}

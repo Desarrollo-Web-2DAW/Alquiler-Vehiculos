@@ -1,0 +1,30 @@
+meta {
+  name: [013] USERS - Listar como Cliente (403)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/users
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+script:post-response {
+  test("Users como Cliente - Status 403 Forbidden", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: un Cliente autenticado no puede acceder a la administración de cuentas.
+}
