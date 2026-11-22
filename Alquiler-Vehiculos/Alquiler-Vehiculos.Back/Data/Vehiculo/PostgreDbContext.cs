@@ -3,6 +3,7 @@ using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Microsoft.EntityFrameworkCore;
 
+public class PostgreDbContext : DbContext {
 namespace Alquiler_Vehiculos.Data.Vehiculo;
 
 /// <summary>
@@ -40,6 +41,8 @@ public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbC
             entity.Property(v => v.Matrícula)
                 .HasMaxLength(7)
                 .IsRequired();
+            
+            entity.HasIndex(v => v.Matrícula).IsUnique();
             
             entity.Property(v => v.Marca).IsRequired();
             entity.Property(v => v.Modelo).IsRequired();
@@ -88,6 +91,7 @@ public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbC
             entity.Property(c => c.Nombre).IsRequired();
             entity.Property(c => c.Ciudad).IsRequired();
             entity.Property(c => c.Telefono).IsRequired();
+            entity.HasIndex(v => v.Telefono).IsUnique();
             entity.Property(c => c.Email).IsRequired();
         });
     }

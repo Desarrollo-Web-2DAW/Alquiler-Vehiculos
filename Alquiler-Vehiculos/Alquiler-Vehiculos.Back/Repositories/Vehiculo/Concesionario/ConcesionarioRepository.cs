@@ -1,6 +1,5 @@
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
-using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 
@@ -45,10 +44,6 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
         if (existente == null || existente.IsDeleted) return null;
         
         var actualizado = existente with {
-            Nombre = item.Nombre,
-            Ciudad = item.Ciudad,
-            Telefono = item.Telefono,
-            Email = item.Email,
             UpdatedAt = DateTime.UtcNow,
             DeletedAt = item.DeletedAt
         };
@@ -76,5 +71,31 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
             .IgnoreQueryFilters()
             .AsNoTracking()
             .AnyAsync(f => f.Id == key);
+    }
+
+    public async Task<IEnumerable<VehiculoModel>> GetVehiculos(long key)
+    {
+        logger.LogDebug("Obteniendo todos los Vehiculos relacionados al concesionario {Key}", key);
+        return await context.Vehiculos
+            .Where(v => v.ConesionarioFk == key)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+    public async Task<bool> HasVehiculos(long key)
+    {
+        logger.LogDebug("Comprobando si existe algun vehiculo relacionado al concesionario {Key}", key);
+        return await context.Vehiculos
+            .AnyAsync(v => v.ConesionarioFk == key);
+    }
+
+    /// <inheritdoc cref="IConcesionarioRepository.ExistsByTelefono" />
+    public async Task<bool> ExistsByTelefono(string telefono)
+    {
+        logger.LogDebug("Verificando existencia de Concesionario por Telefono: {Telefono}", telefono);
+        return await context.Concesionarios
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .AnyAsync(f => f.Telefono == telefono);
     }
 }

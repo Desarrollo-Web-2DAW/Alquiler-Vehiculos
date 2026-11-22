@@ -7,6 +7,7 @@ using Alquiler_Vehiculos.Repositories.Clientes;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Usuarios.Auth;
 using FluentValidation;
+using Alquiler_Vehiculos.Cache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -30,6 +31,7 @@ Log.Logger = new LoggerConfiguration()
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddOpenApi();
 builder.Logging.AddSerilog(Log.Logger);
 builder.Host.UseSerilog(Log.Logger);
 
@@ -44,6 +46,7 @@ try {
     // Fail-fast: sin cadena de conexión la API no debe arrancar.
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     if (string.IsNullOrWhiteSpace(connectionString)) {
         throw new InvalidOperationException(
             "Falta la cadena de conexión 'ConnectionStrings:DefaultConnection'. " +
@@ -92,6 +95,9 @@ try {
     builder.Services.AddHttpContextAccessor(); // SignInManager lo necesita
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+builder.Services.AddCache(builder.Configuration);
+
+var app = builder.Build();
     // ── SERVICIOS ─────────────────────────────────────────────────────────────
     builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
     builder.Services.AddScoped<IMarcaRepository, MarcaRepository>();
@@ -100,6 +106,10 @@ try {
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
     var app = builder.Build();
 
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment()) {
+    app.MapOpenApi();
+}
     // Crear el índice de marcas al arrancar, sin borrar datos de MongoDB.
     var mongoContext = app.Services.GetRequiredService<MongoDbContext>();
     mongoContext.CrearIndices();

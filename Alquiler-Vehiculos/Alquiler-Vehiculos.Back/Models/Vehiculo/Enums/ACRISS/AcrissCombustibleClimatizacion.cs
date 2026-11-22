@@ -25,7 +25,8 @@ public enum AcrissCombustibleClimatizacion
     HidrogenoConAire = 'A',
     HidrogenoSinAire = 'B',
     MulticomustibleConAire = 'M',
-    EtanolConAire = 'F',
+    MulticombustibleSinAire = 'F',
+    EtanolConAire = 'U',
     GasolinaConAire = 'V',
     GasolinaSinAire = 'Z',
     EtanolSinAire = 'X'

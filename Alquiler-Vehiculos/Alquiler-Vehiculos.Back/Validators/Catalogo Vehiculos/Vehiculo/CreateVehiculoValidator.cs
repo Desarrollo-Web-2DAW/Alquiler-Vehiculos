@@ -19,9 +19,7 @@ public class CreateVehiculoValidator : AbstractValidator<CreateVehiculoDto>
     public CreateVehiculoValidator() 
     {
         RuleFor(v => v.Foto)
-            .Must(url => string.IsNullOrEmpty(url) || Uri.TryCreate(url, UriKind.Absolute, out _))
-            .When(v => !string.IsNullOrEmpty(v.Foto))
-            .WithMessage("La imagen debe ser una URL válida.");
+            .NotEmpty().WithMessage("La foto es obligatoria.");
         
         RuleFor(m => m.Matricula)
             .NotEmpty().WithMessage("La matrícula no puede estar vacía.")
@@ -37,15 +35,12 @@ public class CreateVehiculoValidator : AbstractValidator<CreateVehiculoDto>
             .MaximumLength(100).WithMessage("El modelo no puede tener más de 100 caracteres.")
             .MinimumLength(2).WithMessage("El modelo no puede tener menos de 2 caracteres.");
 
+        // Cascade Stop: si la longitud o el formato fallan, no tiene sentido evaluar letra a letra.
         RuleFor(v => v.Acriss)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("El código ACRISS no puede estar vacío.")
             .Matches(_patronAcriss).WithMessage("El código ACRISS debe constar exactamente de 4 letras.")
             .Must(ValidarCodigoAcriss).WithMessage("El código ACRISS contiene valores no válidos en sus letras.");
-            
-        RuleFor(v => v.Estado)
-            .NotEmpty().WithMessage("El estado no puede estar vacío.")
-            .Must(e => Enum.TryParse<EstadoVehiculo>(e, true, out _))
-            .WithMessage("El estado del vehículo no es válido.");
 
         RuleFor(v => v.Color)
             .NotEmpty().WithMessage("El color no puede estar vacío.")

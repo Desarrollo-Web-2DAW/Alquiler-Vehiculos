@@ -3,7 +3,7 @@ using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using FluentAssertions;
 
-namespace Alquiler_Vehiculos.Tests.Unit.Models;
+namespace Alquiler_Vehiculos.Tests.Unit.Models.Vehiculo;
 
 /// <summary>
 /// Tests unitarios de la entidad <see cref="VehiculoModel"/>.
@@ -14,25 +14,31 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models;
 [Category("Unit")]
 public class VehiculoModelTests
 {
-    private static VehiculoModel CrearVehiculoCompleto() => new()
+    private static VehiculoModel CrearVehiculoCompleto()
     {
-        Id = "AbCdEf123_-",
-        Marca = "Toyota",
-        Modelo = "Corolla",
-        Acriss = "ILAH",
-        Carroceria = TipoCarroceria.Sedan,
-        Combustible = TipoCombustible.Hibrido,
-        Transmision = TipoTransmision.Automatica,
-        Estado = EstadoVehiculo.EnAlquiler,
-        Color = TipoColor.Azul,
-        PrecioBaseDia = 12.45m,
-        Plazas = 5,
-        MaleteroLitros = 5,
-        AutonomiaKm = 780,
-        Kilometraje = 12500,
-        FechaUltimaRevision = new DateTime(2026, 10, 1),
-        Activo = true
-    };
+        var vehiculo = new VehiculoModel
+        {
+            FotoFk = "/uploads/vehiculos/delantera.jpg",
+            Matrícula = "1234BCD",
+            Marca = "Toyota",
+            Modelo = "Corolla",
+            Acriss = "CXVA",
+            Carroceria = TipoCarroceria.Sedan,
+            Combustible = TipoCombustible.Hibrido,
+            Transmision = TipoTransmision.Automatica,
+            Color = TipoColor.Rojo,
+            PrecioBaseDia = 45.90m,
+            Plazas = 5,
+            MaleteroLitros = 361,
+            AutonomiaKm = 780,
+            Kilometraje = 12_500,
+            FechaUltimaRevision = new DateTime(2026, 10, 1),
+            ConesionarioFk = 10L,
+            Activo = true
+        };
+        vehiculo.CambiarEstadoMapper(EstadoVehiculo.EnAlquiler);
+        return vehiculo;
+    }
 
     [Test]
     public void Constructor_PorDefecto_EstadoEsDisponible()
@@ -144,21 +150,23 @@ public class VehiculoModelTests
         // Assert
         vehiculo.Should().BeEquivalentTo(new
         {
-            Id = "AbCdEf123_-",
+            FotoFk = "/uploads/vehiculos/delantera.jpg",
+            Matrícula = "1234BCD",
             Marca = "Toyota",
             Modelo = "Corolla",
-            Acriss = "ILAH",
+            Acriss = "CXVA",
             Carroceria = TipoCarroceria.Sedan,
             Combustible = TipoCombustible.Hibrido,
             Transmision = TipoTransmision.Automatica,
             Estado = EstadoVehiculo.EnAlquiler,
-            Color = TipoColor.Azul,
-            PrecioBaseDia = 12.45m,
+            Color = TipoColor.Rojo,
+            PrecioBaseDia = 45.90m,
             Plazas = 5,
-            MaleteroLitros = 5,
+            MaleteroLitros = 361,
             AutonomiaKm = 780,
-            Kilometraje = 12500,
+            Kilometraje = 12_500,
             FechaUltimaRevision = new DateTime(2026, 10, 1),
+            ConesionarioFk = 10L,
             Activo = true
         });
     }
@@ -170,7 +178,8 @@ public class VehiculoModelTests
         const EstadoVehiculo estado = EstadoVehiculo.Retirado;
 
         // Act
-        var vehiculo = new VehiculoModel { Estado = estado };
+        var vehiculo = new VehiculoModel();
+        vehiculo.CambiarEstadoMapper(estado);
 
         // Assert
         vehiculo.Estado.Should().Be(EstadoVehiculo.Retirado);

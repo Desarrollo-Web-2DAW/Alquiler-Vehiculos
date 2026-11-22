@@ -22,16 +22,17 @@ public static class VehiculoMapper
     /// <returns><see cref="Vehiculo"/></returns>
     public static Result<VehiculoModel, DomainError> ToVehiculo(this CreateVehiculoDto dto, Foto foto)
     {
-        var carroceria = ObtenerTipoCarroceria(dto.Acriss[0]);
+        var carroceria = ObtenerTipoCarroceria(dto.Acriss[1]);
         if (carroceria.IsFailure) return carroceria.Error;
-        var combustible = ObtenerTipoCombustible(dto.Acriss[2]);
+        var combustible = ObtenerTipoCombustible(dto.Acriss[3]);
         if (combustible.IsFailure) return combustible.Error;
-        var transmision = ObtenerTipoTransmision(dto.Acriss[3]);
+        var transmision = ObtenerTipoTransmision(dto.Acriss[2]);
         if (transmision.IsFailure) return transmision.Error;
-        
+
+        // RF-01: un vehículo nuevo nace siempre Disponible (valor por defecto del modelo) y activo.
         return new VehiculoModel()
         {
-            FotoFk = dto.Foto,
+            FotoFk = foto.Nombre,
             Foto = foto,
             Matrícula = dto.Matricula,
             Marca = dto.Marca,
@@ -40,7 +41,51 @@ public static class VehiculoMapper
             Carroceria = carroceria.Value,
             Combustible = combustible.Value,
             Transmision = transmision.Value,
-            Estado = dto.IsActivo ? EstadoVehiculo.Disponible : EstadoVehiculo.Retirado,
+            Color = (TipoColor)Enum.Parse(typeof(TipoColor), dto.Color, ignoreCase: true),
+            PrecioBaseDia = dto.PrecioBaseDia,
+            Plazas = dto.Plazas,
+            MaleteroLitros = dto.MaleteroLitros,
+            AutonomiaKm = dto.AutonomiaKm,
+            Kilometraje = dto.Kilometraje,
+            FechaUltimaRevision = DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) ? fecha : DateTime.UtcNow,
+            ConesionarioFk = dto.Concesionario,
+            Activo = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = null,
+            DeletedAt = null
+        };
+    }
+
+    /// <summary>
+    /// Parte de un <see cref="UpdateVehiculoDto"/> para crear un nuevo <see cref="VehiculoModel"/>
+    /// </summary>
+    /// <param name="dto">Datos proporcionados por el cliente</param>
+    /// <param name="foto">El modelo de foto opcional asociado al vehículo</param>
+    /// <returns><see cref="VehiculoModel"/> o <see cref="DomainError"/></returns>
+    public static Result<VehiculoModel, DomainError> ToVehiculoModel(this UpdateVehiculoDto dto, Foto foto)
+    {
+        var carroceria = ObtenerTipoCarroceria(dto.Acriss[1]);
+        if (carroceria.IsFailure) return carroceria.Error;
+        
+        var combustible = ObtenerTipoCombustible(dto.Acriss[3]);
+        if (combustible.IsFailure) return combustible.Error;
+        
+        var transmision = ObtenerTipoTransmision(dto.Acriss[2]);
+        if (transmision.IsFailure) return transmision.Error;
+
+        var estado = Enum.Parse<EstadoVehiculo>(dto.Estado, ignoreCase: true);
+
+        var vehiculo = new VehiculoModel
+        {
+            FotoFk = foto.Nombre,
+            Foto = foto,
+            Matrícula = dto.Matricula,
+            Marca = dto.Marca,
+            Modelo = dto.Modelo,
+            Acriss = dto.Acriss,
+            Carroceria = carroceria.Value,
+            Combustible = combustible.Value,
+            Transmision = transmision.Value,
             Color = (TipoColor)Enum.Parse(typeof(TipoColor), dto.Color, ignoreCase: true),
             PrecioBaseDia = dto.PrecioBaseDia,
             Plazas = dto.Plazas,
@@ -54,6 +99,9 @@ public static class VehiculoMapper
             UpdatedAt = null,
             DeletedAt = null
         };
+        
+        vehiculo.CambiarEstadoMapper(estado);
+        return vehiculo;
     }
     
     /// <summary>
@@ -87,7 +135,7 @@ public static class VehiculoMapper
     }
     
     /// <summary>
-    /// Obtiene <see cref="TipoCarroceria"/> a partir de la primera letra del ACRISS,
+    /// Obtiene <see cref="TipoCarroceria"/> a partir de la segunda letra del ACRISS,
     /// que se interpreta como <see cref="AcrissTipo"/>.
     /// </summary>
     /// <remarks>
@@ -97,7 +145,7 @@ public static class VehiculoMapper
     /// recreativos y los códigos comerciales <c>Especial</c>/<c>OfertaEspecial</c>)
     /// devuelven error de carrocería.
     /// </remarks>
-    /// <param name="letraTipo">Primera letra del ACRISS (catálogo <see cref="AcrissTipo"/>).</param>
+    /// <param name="letraTipo">Segunda letra del ACRISS (catálogo <see cref="AcrissTipo"/>).</param>
     /// <returns><see cref="TipoCarroceria"/> o <see cref="BadRequestError"/></returns>
     private static Result<TipoCarroceria, DomainError> ObtenerTipoCarroceria(char letraTipo)
     {
@@ -120,7 +168,7 @@ public static class VehiculoMapper
     }
     
     /// <summary>
-    /// Obtiene <see cref="TipoCombustible"/> según la tercera letra del ACRISS
+    /// Obtiene <see cref="TipoCombustible"/> según la cuarta letra del ACRISS
     /// </summary>
     /// <param name="letraCombustible">AcrissCombustible</param>
     /// <returns><see cref="TipoCombustible"/> o <see cref="BadRequestError"/></returns>
@@ -140,7 +188,7 @@ public static class VehiculoMapper
     
     
     /// <summary>
-    /// Obtiene <see cref="TipoTransmision"/> según la cuarta letra del ACRISS
+    /// Obtiene <see cref="TipoTransmision"/> según la tercera letra del ACRISS
     /// </summary>
     /// <param name="letraTransmision">AcrissTransmision</param>
     /// <returns><see cref="TipoTransmision"/> o <see cref="BadRequestError"/></returns>

@@ -15,8 +15,6 @@ public record CreateVehiculoDto {
     public string Modelo { get; set; } = string.Empty;
     /// <summary>Código ACRISS que clasifica el vehículo.</summary>
     public string Acriss { get; set; } = string.Empty;
-    /// <summary>Categoría del vehículo.</summary>
-    public string Estado { get; set; } = string.Empty;
     /// <summary>Color del vehículo.</summary>
     public string Color { get; set; } = string.Empty;
     /// <summary>Precio base de alquiler por día.</summary>
@@ -33,6 +31,4 @@ public record CreateVehiculoDto {
     public string FechaUltimaRevision { get; set; } = string.Empty;
     /// <summary>Identificador del concesionario en el que se adquirió el vehículo.</summary>
     public long Concesionario { get; set; }
-    /// <summary>Indica si el vehículo está activo en el catálogo.</summary>
-    public bool IsActivo { get; set; }
 }

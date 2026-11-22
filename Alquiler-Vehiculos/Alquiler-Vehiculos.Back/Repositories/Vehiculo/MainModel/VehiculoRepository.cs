@@ -1,5 +1,8 @@
+using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
+using CSharpFunctionalExtensions;
 using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
@@ -11,25 +14,42 @@ namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoRepository> logger) : IVehiculoRepository
 {
     /// <inheritdoc cref="IVehiculoRepository.Create" />
-    public async Task<VehiculoModel> Create(VehiculoModel item) {
+    public async Task<VehiculoModel> Create(VehiculoModel item)
+    {
         logger.LogInformation("Creando Vehiculo: {matricula}", item.Matrícula);
         await context.Vehiculos.AddAsync(item);
         await context.SaveChangesAsync();
         return item;
     }
-    
+
     /// <inheritdoc cref="IVehiculoRepository.SoftDelete" />
-    public async Task<bool> SoftDelete(string key) {
+    public async Task<bool> SoftDelete(string key)
+    {
         logger.LogInformation("Realizando borrado lógico de Vehiculo ID: {Id}", key);
-        return await context.Vehiculos
-            .Where(f => f.Id == key)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(f => f.Activo, true)
-                .SetProperty(f => f.UpdatedAt, DateTime.UtcNow)) > 0;
+
+        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
+        if (existente == null) return false;
+
+        // Se actualiza la instancia rastreada (no ExecuteUpdate) para que los cambios
+        // queden reflejados también en el DbContext y en la transacción en curso.
+        var actualizado = existente with
+        {
+            Activo = false,
+            UpdatedAt = DateTime.UtcNow,
+            DeletedAt = DateTime.UtcNow
+        };
+        // RF-01: la baja lógica deja el vehículo Retirado y con Activo = false a la vez.
+        actualizado.CambiarEstadoMapper(EstadoVehiculo.Retirado);
+
+        context.Entry(existente).CurrentValues.SetValues(actualizado);
+        await context.SaveChangesAsync();
+
+        return true;
     }
 
     /// <inheritdoc cref="IVehiculoRepository.GetById" />
-    public async Task<VehiculoModel?> GetById(string key) {
+    public async Task<VehiculoModel?> GetById(string key)
+    {
         logger.LogDebug("Obteniendo Vehiculo por ID: {Key}", key);
         return await context.Vehiculos
             .AsNoTracking()
@@ -38,9 +58,15 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     }
 
     /// <inheritdoc cref="IVehiculoRepository.Update" />
-    public async Task<VehiculoModel?> Update(string key, VehiculoModel item) 
+    public async Task<VehiculoModel?> Update(string key, VehiculoModel item)
     {
         logger.LogInformation("Actualizando Vehiculo ID: {Id}", key);
+
+        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
+        if (existente == null || !existente.Activo) return null;
+
+        var actualizado = existente with
+        {
     
         VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null || existente.Activo) return null;
@@ -55,7 +81,6 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             Carroceria = item.Carroceria,
             Combustible = item.Combustible,
             Transmision = item.Transmision,
-            Estado = item.Estado,
             Color = item.Color,
             PrecioBaseDia = item.PrecioBaseDia,
             Plazas = item.Plazas,
@@ -68,15 +93,18 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             UpdatedAt = DateTime.UtcNow,
             DeletedAt = item.DeletedAt
         };
-        
+
+        actualizado.CambiarEstadoMapper(item.Estado);
+
         context.Entry(existente).CurrentValues.SetValues(actualizado);
         await context.SaveChangesAsync();
-    
+
         return actualizado;
     }
 
     /// <inheritdoc cref="IVehiculoRepository.GetAll" />
-    public async Task<IEnumerable<VehiculoModel>> GetAll() {
+    public async Task<IEnumerable<VehiculoModel>> GetAll()
+    {
         logger.LogDebug("Obteniendo todos los Vehiculos");
         return await context.Vehiculos.OrderBy(f => f.Matrícula)
             .AsNoTracking()
@@ -85,7 +113,8 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     }
 
     /// <summary>Recupera una página de Vehiculos con su categoría y el total de registros.</summary>
-    public async Task<(IEnumerable<VehiculoModel> Items, int TotalItems)> GetPaged(int page, int pageSize) {
+    public async Task<(IEnumerable<VehiculoModel> Items, int TotalItems)> GetPaged(int page, int pageSize)
+    {
         logger.LogDebug("Obteniendo página {Page} de Vehiculos con tamaño {PageSize}", page, pageSize);
         var query = context.Vehiculos
             .AsNoTracking()
@@ -102,7 +131,8 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     }
 
     /// <inheritdoc cref="IVehiculoRepository.GetByMatricula" />
-    public async Task<VehiculoModel?> GetByMatricula(string matricula) {
+    public async Task<VehiculoModel?> GetByMatricula(string matricula)
+    {
         logger.LogDebug("Obteniendo Vehiculo por matricula: {matricula}", matricula);
         return await context.Vehiculos
             .AsNoTracking()
@@ -111,7 +141,8 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     }
 
     /// <inheritdoc cref="IVehiculoRepository.ExistByMatricula" />
-    public async Task<bool> ExistByMatricula(string matricula) {
+    public async Task<bool> ExistByMatricula(string matricula)
+    {
         logger.LogDebug("Verificando existencia de Vehiculo por matricula: {Matricula}", matricula);
         return await context.Vehiculos
             // El índice único reserva también los nombres de los eliminados.
@@ -130,24 +161,27 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             .AsNoTracking()
             .AnyAsync(f => f.Id == key);
     }
-    
+
     /// <inheritdoc cref="IVehiculoRepository.Restore" />
     public async Task<VehiculoModel?> Restore(string key)
     {
-        logger.LogDebug("Restaurando Foto por Id: {Id}", key);
-        
+        logger.LogDebug("Restaurando vehiculo por Id: {Id}", key);
+
         VehiculoModel? existente = await context.Set<VehiculoModel>().FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null) return null;
-        
-        var actualizado = existente with {
+
+        var actualizado = existente with
+        {
             Activo = true,
             UpdatedAt = DateTime.UtcNow,
             DeletedAt = null
         };
-        
+        // Simétrico a SoftDelete: al reactivarlo vuelve a estar Disponible.
+        actualizado.CambiarEstadoMapper(EstadoVehiculo.Disponible);
+
         context.Entry(existente).CurrentValues.SetValues(actualizado);
         await context.SaveChangesAsync();
-    
+
         return actualizado;
     }
 }
