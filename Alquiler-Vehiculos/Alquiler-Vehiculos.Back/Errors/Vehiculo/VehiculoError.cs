@@ -15,7 +15,7 @@ public static class VehiculoError
     /// <returns>Una instancia de <see cref="NotFoundError"/> (HTTP 404).</returns>
     public static NotFoundError NotFoundVehiculo(object id)
     {
-        return NotFoundError.FromObjectId(id.ToString() ?? string.Empty, "Vehículo");
+        return new NotFoundError("VEHICULO_NO_ENCONTRADO", $"Vehículo con ID '{id}' no encontrado");
     }
 
     /// <summary>
@@ -25,25 +25,23 @@ public static class VehiculoError
     /// <returns>Una instancia de <see cref="ConflictError"/> (HTTP 409).</returns>
     public static ConflictError VehiculoYaExiste(string matricula)
     {
-        return ConflictError.Duplicate("Vehículo", matricula);
+        return new ConflictError("MATRICULA_DUPLICADA", $"Ya existe un vehículo con matrícula '{matricula}'");
     }
 
     /// <summary>
     /// Crea un error de tipo <see cref="BadRequestError"/> cuando la primera letra del código ACRISS no corresponde a una categoría válida.
     /// </summary>
     /// <returns>Una instancia de <see cref="BadRequestError"/> (HTTP 400).</returns>
-    public static BadRequestError TipoDeCarroceria()
     public static ValidationError TipoDeCarroceria()
     {
         return ValidationError.Create("El Acriss dado no es correcto respecto al catálogo, tipo de Categoría no válido");
     }
     
-    public static ValidationError TipoCombustible()
     /// <summary>
     /// Crea un error de tipo <see cref="BadRequestError"/> cuando la tercera letra del código ACRISS no corresponde a un combustible válido.
     /// </summary>
     /// <returns>Una instancia de <see cref="BadRequestError"/> (HTTP 400).</returns>
-    public static BadRequestError TipoCombustible()
+    public static ValidationError TipoCombustible()
     {
         return ValidationError.Create("El Acriss dado no es correcto respecto al catálogo, tipo de Combustible no válido");
     }
@@ -52,7 +50,6 @@ public static class VehiculoError
     /// Crea un error de tipo <see cref="BadRequestError"/> cuando la cuarta letra del código ACRISS no corresponde a una transmisión válida.
     /// </summary>
     /// <returns>Una instancia de <see cref="BadRequestError"/> (HTTP 400).</returns>
-    public static BadRequestError TipoDeTransmision()
     public static ValidationError TipoDeTransmision()
     {
         return ValidationError.Create("El Acriss dado no es correcto respecto al catálogo, tipo de Transmision no válido");
@@ -62,9 +59,9 @@ public static class VehiculoError
     /// Crea un error de tipo <see cref="BadRequestError"/> cuando el color especificado no coincide con un tipo de color permitido.
     /// </summary>
     /// <returns>Una instancia de <see cref="BadRequestError"/> (HTTP 400).</returns>
-    public static BadRequestError TipoColorInvalido()
+    public static ValidationError TipoColorInvalido()
     {
-        return new BadRequestError("El color especificado no es válido en el catálogo.");
+        return ValidationError.Create("El color especificado no es válido en el catálogo.");
     }
 
     /// <summary>
@@ -76,6 +73,7 @@ public static class VehiculoError
     public static ConflictError CambiarDeEstado(string actual, string pedido)
     {
         return new ConflictError(
+            "ESTADO_VEHICULO_INVALIDO",
             $"No se puede cambiar el estado del vehiculo debido a restricciones de negocio: EstadoActual:{actual}-EstadoPedido:{pedido}");
     }
 
@@ -87,7 +85,7 @@ public static class VehiculoError
     /// <returns>Una instancia de <see cref="ConflictError"/> (HTTP 409).</returns>
     public static ConflictError NoDisponibleParaBaja(EstadoVehiculo estado)
     {
-        return new ConflictError($"Solo se puede dar de baja un vehículo Disponible. Estado actual: {estado}.");
+        return new ConflictError("VEHICULO_NO_DISPONIBLE", $"Solo se puede dar de baja un vehículo Disponible. Estado actual: {estado}.");
     }
 
     /// <summary>
@@ -96,6 +94,6 @@ public static class VehiculoError
     /// <returns>Una instancia de <see cref="BusinessRuleError"/> (HTTP 400/422).</returns>
     public static BusinessRuleError BorradoError()
     {
-        return new BusinessRuleError("No se ha podido completar la operación de borrado del vehículo.");
+        return new BusinessRuleError("BORRADO_VEHICULO", "No se ha podido completar la operación de borrado del vehículo.");
     }
 }

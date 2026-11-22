@@ -14,6 +14,6 @@ public static class FotoError
     /// <returns>Error de tipo <see cref="NotFoundError"/>.</returns>
     public static NotFoundError FotoNotFound(string nombre)
     {
-        return new NotFoundError($"No se ha encontrado la foto con el nombre:{nombre}");
+        return new NotFoundError("FOTO_NO_ENCONTRADA", $"No se ha encontrado la foto con el nombre:{nombre}");
     }
 }

@@ -13,7 +13,7 @@ namespace Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 /// <summary>
 /// Casos de uso transaccionales de Vehículo.
 /// No conoce EF Core: delega el límite transaccional en <see cref="ITransactionManager"/>.
-/// Los repositorios NO llaman a SaveChangesAsync; solo mutan el grafo.
+    /// Los repositorios guardan cambios dentro del límite transaccional compartido.
 /// </summary>
 public sealed class VehiculoTransactionsService(
     IVehiculoRepository vehiculoRepository,
@@ -50,7 +50,7 @@ public sealed class VehiculoTransactionsService(
                 if (!fotoEliminada)
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
-                        new BusinessRuleError("No se pudo eliminar la foto asociada al vehículo."));
+                        new BusinessRuleError("BORRADO_FOTO", "No se pudo eliminar la foto asociada al vehículo."));
                 }
             }
 
@@ -85,6 +85,7 @@ public sealed class VehiculoTransactionsService(
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
                         new BusinessRuleError(
+                            "ACTUALIZACION_FOTO",
                             "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
                 }
             }
@@ -110,7 +111,7 @@ public sealed class VehiculoTransactionsService(
                 if (fotoRestaurada == null)
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
-                        new BusinessRuleError("No se pudo restaurar la foto asociada al vehículo."));
+                        new BusinessRuleError("RESTAURACION_FOTO", "No se pudo restaurar la foto asociada al vehículo."));
                 }
             }
 

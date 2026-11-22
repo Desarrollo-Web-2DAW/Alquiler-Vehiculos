@@ -290,7 +290,7 @@ public class VehiculoServiceTests
         var resultado = await _service.Create(dto);
 
         // Assert
-        var error = resultado.Error.Should().BeOfType<BadRequestError.ValidationError>().Subject;
+        var error = resultado.Error.Should().BeOfType<ValidationError>().Subject;
         error.ValidationErrors.Should().ContainKey("Matricula");
 
         _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
@@ -426,7 +426,7 @@ public class VehiculoServiceTests
         var resultado = await _service.Update(dto, VehiculoId);
 
         // Assert
-        var error = resultado.Error.Should().BeOfType<BadRequestError.ValidationError>().Subject;
+        var error = resultado.Error.Should().BeOfType<ValidationError>().Subject;
         error.ValidationErrors.Should().ContainKey("Acriss");
 
         _repository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
@@ -531,7 +531,7 @@ public class VehiculoServiceTests
     public async Task Update_CuandoLaTransaccionFalla_PropagaElErrorSinTocarLaCache()
     {
         // Arrange
-        var error = new BusinessRuleError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior.");
+        var error = new BusinessRuleError("ACTUALIZACION_FOTO", "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior.");
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
@@ -610,7 +610,7 @@ public class VehiculoServiceTests
         var resultado = await _service.Update(dto, VehiculoId);
 
         // Assert
-        var error = resultado.Error.Should().BeOfType<BadRequestError.ValidationError>().Subject;
+        var error = resultado.Error.Should().BeOfType<ValidationError>().Subject;
         error.ValidationErrors.Should().ContainKey("Estado");
 
         _transactionsService.Verify(
@@ -652,7 +652,7 @@ public class VehiculoServiceTests
     public async Task SoftDelete_CuandoLaTransaccionFalla_PropagaElErrorSinTocarLaCache()
     {
         // Arrange
-        var error = new BusinessRuleError("No se pudo eliminar la foto asociada al vehículo.");
+        var error = new BusinessRuleError("BORRADO_FOTO", "No se pudo eliminar la foto asociada al vehículo.");
         _transactionsService
             .Setup(t => t.DeleteAsync(VehiculoId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<VehiculoModel, DomainError>(error));

@@ -76,7 +76,7 @@ public class VehiculoService(
         {
             Log.Information("El vehículo contiene datos no válidos");
             var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
-            return BadRequestError.ValidationError.WithFieldErrors(errorsDictionary);
+            return ValidationError.WithFieldErrors(errorsDictionary);
         }
 
         if (await repository.ExistByMatricula(item.Matricula))
@@ -107,7 +107,7 @@ public class VehiculoService(
         {
             Log.Information("El vehículo contiene datos no válidos");
             var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
-            return BadRequestError.ValidationError.WithFieldErrors(errorsDictionary);
+            return ValidationError.WithFieldErrors(errorsDictionary);
         }
 
         var existente = await repository.GetById(key);

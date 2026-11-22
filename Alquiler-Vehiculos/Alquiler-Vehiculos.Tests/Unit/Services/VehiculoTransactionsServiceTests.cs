@@ -159,7 +159,7 @@ public class VehiculoTransactionsServiceTests
 
         // Assert
         resultado.Error.Should().Be(
-            new BusinessRuleError("No se pudo eliminar la foto asociada al vehículo."));
+            new BusinessRuleError("BORRADO_FOTO", "No se pudo eliminar la foto asociada al vehículo."));
 
         _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
         _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
@@ -296,7 +296,7 @@ public class VehiculoTransactionsServiceTests
 
         // Assert
         resultado.Error.Should().Be(
-            new BusinessRuleError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
+            new BusinessRuleError("ACTUALIZACION_FOTO", "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
 
         _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
     }
@@ -360,7 +360,7 @@ public class VehiculoTransactionsServiceTests
 
         // Assert
         resultado.Error.Should().Be(
-            new BusinessRuleError("No se pudo restaurar la foto asociada al vehículo."));
+            new BusinessRuleError("RESTAURACION_FOTO", "No se pudo restaurar la foto asociada al vehículo."));
 
         _fotoRepository.Verify(r => r.Restore(FotoId), Times.Once);
     }

@@ -181,7 +181,7 @@ public class ConcesionarioServiceTests
         var resultado = await _service.Create(dto);
 
         // Assert
-        var error = resultado.Error.Should().BeOfType<BadRequestError.ValidationError>().Subject;
+        var error = resultado.Error.Should().BeOfType<ValidationError>().Subject;
         error.ValidationErrors.Should().ContainKey("Telefono")
             .WhoseValue.Should().Contain("El teléfono debe tener 9 cifras y empezar por 6, 7 o 9");
 
@@ -235,7 +235,7 @@ public class ConcesionarioServiceTests
         var resultado = await _service.Update(dto, IdExistente);
 
         // Assert
-        var error = resultado.Error.Should().BeOfType<BadRequestError.ValidationError>().Subject;
+        var error = resultado.Error.Should().BeOfType<ValidationError>().Subject;
         error.ValidationErrors.Should().ContainKey("Email");
 
         _repository.Verify(r => r.GetById(It.IsAny<long>()), Times.Never);
@@ -382,7 +382,7 @@ public class ConcesionarioServiceTests
 
         // Assert
         resultado.Error.Should().Be(
-            new BusinessRuleError("No se puede borrar un concesionario con vehiculos asociados"));
+            new BusinessRuleError("CONCESIONARIO_CON_VEHICULOS", "No se puede borrar un concesionario con vehiculos asociados"));
 
         _repository.Verify(r => r.SoftDelete(It.IsAny<long>()), Times.Never);
     }

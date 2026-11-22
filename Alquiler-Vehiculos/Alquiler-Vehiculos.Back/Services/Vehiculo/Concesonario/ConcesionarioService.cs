@@ -48,7 +48,7 @@ public class ConcesionarioService(
         if (!validationResult.IsValid) {
             Log.Information("El concesionario contiene datos no validos");
             var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
-            return BadRequestError.ValidationError.WithFieldErrors(errorsDictionary);
+            return ValidationError.WithFieldErrors(errorsDictionary);
         }
         if (await repository.ExistsByTelefono(item.Telefono)) return Result.Failure<ConcesionarioDto, DomainError>(ConcesionarioError.ConcesionarioYaExiste(item.Telefono));
 
@@ -66,7 +66,7 @@ public class ConcesionarioService(
         if (!validationResult.IsValid) {
             Log.Information("El concesionario contiene datos no validos");
             var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
-            return BadRequestError.ValidationError.WithFieldErrors(errorsDictionary);
+            return ValidationError.WithFieldErrors(errorsDictionary);
         }
         
         var existente = await repository.GetById(key);
@@ -100,7 +100,7 @@ public class ConcesionarioService(
         Log.Debug("Borrado lógico de concesionario con ID {Id}", key);
         
         if(!await repository.ExistById(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.NotFoundConcesionario(key));
-        if(await repository.HasVehiculos(key)) return Result.Failure<bool, DomainError>(new BusinessRuleError("No se puede borrar un concesionario con vehiculos asociados"));
+        if(await repository.HasVehiculos(key)) return Result.Failure<bool, DomainError>(new BusinessRuleError("CONCESIONARIO_CON_VEHICULOS", "No se puede borrar un concesionario con vehiculos asociados"));
         
         if(!await repository.SoftDelete(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.BorradoError());
         
