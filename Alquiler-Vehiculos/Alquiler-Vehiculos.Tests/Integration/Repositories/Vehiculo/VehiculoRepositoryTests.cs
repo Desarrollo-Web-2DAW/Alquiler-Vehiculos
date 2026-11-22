@@ -10,6 +10,29 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [Category("Integration")]
 [NonParallelizable]
 public class VehiculoRepositoryTests : RepositoryTestBase {
+    [Test]
+    public async Task Create_MatriculaDeVehiculoDeBaja_ContinuaReservada()
+    {
+        // Arrange
+        var baja = await GuardarVehiculo(activo: false);
+        await using var db = CrearContexto();
+        var repository = new VehiculoRepository(db, NullLogger<VehiculoRepository>.Instance);
+        var repetido = CrearVehiculo(CrearFoto("otra.jpg"), baja.ConesionarioFk);
+
+        // Act
+        var existe = await repository.ExistByMatricula(baja.Matrícula);
+        var existeId = await repository.ExistById(baja.Id);
+        var resultado = await repository.Create(repetido);
+
+        // Assert
+        existe.Should().BeTrue();
+        existeId.Should().BeTrue();
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(Alquiler_Vehiculos.Errors.Vehiculo.VehiculoError.VehiculoYaExiste(baja.Matrícula));
+        await using var lectura = CrearContexto();
+        (await lectura.Vehiculos.SingleAsync()).Activo.Should().BeFalse();
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public async Task Listar_ConVehiculosDeBaja_SoloDevuelveYCuentaActivos(bool conActivo)

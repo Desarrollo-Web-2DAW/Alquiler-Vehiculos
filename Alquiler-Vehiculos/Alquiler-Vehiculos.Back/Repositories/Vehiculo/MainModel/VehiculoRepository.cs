@@ -151,8 +151,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     {
         logger.LogDebug("Verificando existencia de Vehiculo por matricula: {Matricula}", matricula);
         return await context.Vehiculos
-            // El índice único reserva también los nombres de los eliminados.
-            .IgnoreQueryFilters()
+            // Se incluye el histórico: una matrícula de baja sigue reservada por el índice único.
             .AsNoTracking()
             .AnyAsync(f => f.Matrícula == matricula);
     }
@@ -162,8 +161,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     {
         logger.LogDebug("Verificando existencia de Vehiculo por Id: {Id}", key);
         return await context.Vehiculos
-            // El índice único reserva también los nombres de los eliminados.
-            .IgnoreQueryFilters()
+            // Comprueba existencia física, incluidos los vehículos dados de baja.
             .AsNoTracking()
             .AnyAsync(f => f.Id == key);
     }
