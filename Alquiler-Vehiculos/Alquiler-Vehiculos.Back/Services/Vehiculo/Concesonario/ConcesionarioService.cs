@@ -99,8 +99,9 @@ public class ConcesionarioService(
     public async Task<Result<bool, DomainError>> SoftDelete(long key) {
         Log.Debug("Borrado lógico de concesionario con ID {Id}", key);
         
-        if(!await repository.ExistById(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.NotFoundConcesionario(key));
-        if(await repository.HasVehiculos(key)) return Result.Failure<bool, DomainError>(new BusinessRuleError("CONCESIONARIO_CON_VEHICULOS", "No se puede borrar un concesionario con vehiculos asociados"));
+        var existente = await repository.GetById(key);
+        if (existente is null || existente.IsDeleted) return ConcesionarioError.NotFoundConcesionario(key);
+        // RF-10: baja lógica, también si conserva vehículos asociados.
         
         if(!await repository.SoftDelete(key)) return Result.Failure<bool, DomainError>(ConcesionarioError.BorradoError());
         

@@ -19,6 +19,7 @@ public static class StorageConfig {
         
         services.Configure<StorageSettings>(configuration.GetSection(StorageSettings.SectionName));
         
+        services.AddScoped<IFotoService, FotoService>();
         return services.AddScoped<IStorageService, StorageService>();
     }
 }

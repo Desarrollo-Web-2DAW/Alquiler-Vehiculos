@@ -70,13 +70,6 @@ public class GlobalExceptionHandler(
                 "BusinessRuleError"
             ),
 
-            UnauthorizedAccessException => (
-                401,
-                "No autorizado",
-                null,
-                "UnauthorizedError"
-            ),
-
             ArgumentException argument => (
                 400,
                 argument.Message,
@@ -91,6 +84,8 @@ public class GlobalExceptionHandler(
                 "InternalError"
             ),
 
+            // Los fallos de permisos del servidor (UnauthorizedAccessException)
+            // también son internos. Los 401/403 de la API los gestionan JWT y las políticas.
             _ => (
                 500,
                 "Ha ocurrido un error interno",

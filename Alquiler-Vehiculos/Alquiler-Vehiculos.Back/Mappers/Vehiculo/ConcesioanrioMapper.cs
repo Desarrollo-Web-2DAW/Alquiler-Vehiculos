@@ -38,6 +38,7 @@ public static class ConcesionarioMapper
     {
         return new ConcesionarioDto
         {
+            Id = concesionarioModel.Id,
             Nombre = concesionarioModel.Nombre,
             Ciudad = concesionarioModel.Ciudad,
             Telefono = concesionarioModel.Telefono,

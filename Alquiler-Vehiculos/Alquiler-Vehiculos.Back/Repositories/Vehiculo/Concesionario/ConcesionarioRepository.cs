@@ -22,9 +22,10 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
     public async Task<bool> SoftDelete(long key) {
         logger.LogInformation("Realizando borrado lógico de Concesionario ID: {Id}", key);
         return await context.Concesionarios
-            .Where(f => f.Id == key)
+            .Where(f => f.Id == key && !f.IsDeleted)
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(f => f.IsDeleted, true)
+                .SetProperty(f => f.DeletedAt, DateTime.UtcNow)
                 .SetProperty(f => f.UpdatedAt, DateTime.UtcNow)) > 0;
     }
 
@@ -33,7 +34,7 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
         logger.LogDebug("Obteniendo Concesionario por ID: {Key}", key);
         return await context.Concesionarios
             .AsNoTracking()
-            .FirstOrDefaultAsync(f => f.Id == key);
+            .FirstOrDefaultAsync(f => f.Id == key && !f.IsDeleted);
     }
 
     /// <inheritdoc cref="IConcesionarioRepository.Update" />
@@ -63,6 +64,7 @@ public class ConcesionarioRepository(PostgreDbContext context, ILogger<Concesion
     public async Task<IEnumerable<ConcesionarioModel>> GetAll() {
         logger.LogDebug("Obteniendo todos los Concesionarios");
         return await context.Concesionarios
+            .Where(f => !f.IsDeleted)
             .OrderBy(f => f.Nombre)
             .AsNoTracking()
             .ToListAsync();

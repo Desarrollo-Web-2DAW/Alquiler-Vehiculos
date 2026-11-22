@@ -103,7 +103,7 @@ de 24 caracteres. Los identificadores de vehículos y concesionarios no cambian.
 
 `MarcaRepository` consulta solo marcas activas y realiza bajas lógicas, conservando
 el documento, sus datos y las fechas de auditoría. No ofrece borrado físico.
-Los permisos de RF-46 deberán aplicarse en los endpoints cuando se implementen.
+Los endpoints independientes de marcas y concesionarios aplican la política Admin de RF-46.
 
 `IMarcaService` está registrado y ofrece alta, listado, consulta por ObjectId,
 modificación completa y baja lógica con `Result` y errores de validación por campo.
@@ -116,6 +116,15 @@ en las altas/modificaciones de vehículos no está implementada por este servici
 
 Pruebas de servicio de RF-09: `MarcaServiceTests` (CRUD, validación de modelos,
 errores y caché). No sustituyen las pruebas de endpoints y permisos pendientes.
+
+## Controladores de catálogo y fotos
+
+Implementados `MarcaController`, `ConcesionarioController` y `FotosController`.
+Rutas, permisos, errores, referencias de clase y límites de la conservación de fotos:
+[docs/controllers-catalogo.md](docs/controllers-catalogo.md).
+
+Las bajas son lógicas. El nuevo endpoint de fotos conserva el fichero físico;
+la subida independiente no lo asigna automáticamente a un vehículo.
 
 Este cambio no convierte documentos antiguos cuyo `_id` sea numérico. Si ya hay
 marcas guardadas con ese formato, requieren una migración de datos antes de leerlas

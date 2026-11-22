@@ -4,6 +4,8 @@
 /// Datos de un concesionario devueltos por la API.
 /// </summary>
 public record ConcesionarioDto {
+    /// <summary>Identificador del concesionario.</summary>
+    public long Id { get; set; }
     /// <summary>Nombre del concesionario.</summary>
     public string Nombre { get; set; } = string.Empty;
     /// <summary>Ciudad donde se encuentra el concesionario.</summary>
