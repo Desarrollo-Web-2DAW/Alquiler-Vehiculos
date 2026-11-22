@@ -8,6 +8,7 @@ using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
+using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Services.Vehiculo;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
@@ -26,6 +27,33 @@ namespace Alquiler_Vehiculos.Tests.Unit.Services;
 [Category("Unit")]
 public class VehiculoServiceTests
 {
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Guardar_ConcesionarioInexistente_Devuelve400SinPersistir(bool actualizar)
+    {
+        // Arrange
+        _concesionarioRepository.Setup(r => r.ExistById(1)).ReturnsAsync(false);
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+
+        // Act
+        var resultado = actualizar
+            ? await _service.Update(CrearUpdateValido(), VehiculoId)
+            : await _service.Create(CrearCreateValido());
+
+        // Assert
+        resultado.Error.Should().BeOfType<ValidationError>().Which.Message.Should().Contain("concesionario").And.Contain("no existe");
+        Alquiler_Vehiculos.Extensions.DomainErrorExtensions.ToHttpResult(resultado.Error)
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
+        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
+        _repository.Verify(r => r.GetById(VehiculoId), actualizar ? Times.Once() : Times.Never());
+        _repository.Verify(r => r.ExistByMatricula(Matricula), actualizar ? Times.Never() : Times.Once());
+        _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
+        _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
+        _transactionsService.Verify(t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cache.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Test]
     public async Task Create_MatriculaInsertadaTrasLaComprobacion_Devuelve409SinCachear()
     {
@@ -90,6 +118,7 @@ public class VehiculoServiceTests
     private Mock<IFotoRepository> _fotoRepository = null!;
     private Mock<IVehiculoTransactionsService> _transactionsService = null!;
     private Mock<ICacheService> _cache = null!;
+    private Mock<IConcesionarioRepository> _concesionarioRepository = null!;
     private VehiculoService _service = null!;
 
     [SetUp]
@@ -99,6 +128,8 @@ public class VehiculoServiceTests
         _fotoRepository = new Mock<IFotoRepository>();
         _transactionsService = new Mock<IVehiculoTransactionsService>();
         _cache = new Mock<ICacheService>();
+        _concesionarioRepository = new Mock<IConcesionarioRepository>();
+        _concesionarioRepository.Setup(r => r.ExistById(It.IsAny<long>())).ReturnsAsync(true);
 
         // Por defecto no hay nada en caché: cada test que la necesite lo sobreescribe.
         _cache.Setup(c => c.GetAsync<VehiculoDto>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -110,7 +141,8 @@ public class VehiculoServiceTests
             _transactionsService.Object,
             _cache.Object,
             new CreateVehiculoValidator(),
-            new UpdateVehiculoValidator());
+            new UpdateVehiculoValidator(),
+            _concesionarioRepository.Object);
     }
 
     private static CreateVehiculoDto CrearCreateValido() => new()

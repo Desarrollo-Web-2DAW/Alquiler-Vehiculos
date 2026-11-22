@@ -7,6 +7,7 @@ using Alquiler_Vehiculos.Mappers.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
+using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using CSharpFunctionalExtensions;
@@ -25,7 +26,8 @@ public class VehiculoService(
     IVehiculoTransactionsService transactionsService,
     ICacheService cache,
     CreateVehiculoValidator createVehiculoValidator,
-    UpdateVehiculoValidator updateVehiculoValidator) : IVehiculoService
+    UpdateVehiculoValidator updateVehiculoValidator,
+    IConcesionarioRepository concesionarioRepository) : IVehiculoService
 {
     private const string ClaveVehiculo = "vehiculo:";
 
@@ -84,6 +86,9 @@ public class VehiculoService(
             return Result.Failure<VehiculoDto, DomainError>(VehiculoError.VehiculoYaExiste(item.Matricula));
         }
 
+        if (!await concesionarioRepository.ExistById(item.Concesionario))
+            return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
+
         var foto = await fotoRepository.GetById(item.Foto);
         if (foto is null) return FotoError.FotoNotFound(item.Foto);
 
@@ -121,6 +126,9 @@ public class VehiculoService(
         {
             return Result.Failure<VehiculoDto, DomainError>(VehiculoError.VehiculoYaExiste(item.Matricula));
         }
+
+        if (!await concesionarioRepository.ExistById(item.Concesionario))
+            return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
 
         var foto = await fotoRepository.GetById(item.Foto);
         if (foto is null) return FotoError.FotoNotFound(item.Foto);
