@@ -264,4 +264,95 @@ public class TrabajadorRepositoryTests {
         emailEnUso.Should().BeTrue();
         dniEnUsoOtro.Should().BeTrue();
     }
+        [Test]
+    public async Task GetByNombre_TrabajadorExistente_LoDevuelve() {
+        // Arrange
+        var trabajador = CrearTrabajador(nombre: "María", email: "maria@empresa.es", dni: "12345678Z");
+        await using (var dbSeed = CrearContexto()) {
+            dbSeed.Trabajadores.Add(trabajador);
+            await dbSeed.SaveChangesAsync();
+        }
+
+        await using var db = CrearContexto();
+        var repo = new TrabajadorRepository(db, NullLogger<TrabajadorRepository>.Instance);
+
+        // Act
+        var encontrado = await repo.GetByNombre("María");
+
+        // Assert
+        encontrado.Should().NotBeNull();
+        encontrado!.Id.Should().Be(trabajador.Id);
+        encontrado.Nombre.Should().Be("María");
+    }
+
+    [Test]
+    public async Task GetByNombre_InexistenteODadoDeBaja_DevuelveNull() {
+        // Arrange
+        var borrado = CrearTrabajador(nombre: "Borrado", email: "borrado@empresa.es", dni: "00000000T");
+        borrado.Activo = false;
+        borrado.IsDeleted = true;
+        borrado.DeletedAt = DateTime.UtcNow;
+
+        await using (var dbSeed = CrearContexto()) {
+            dbSeed.Trabajadores.Add(borrado);
+            await dbSeed.SaveChangesAsync();
+        }
+
+        await using var db = CrearContexto();
+        var repo = new TrabajadorRepository(db, NullLogger<TrabajadorRepository>.Instance);
+
+        // Act
+        var porNombreBorrado = await repo.GetByNombre("Borrado");
+        var porNombreInexistente = await repo.GetByNombre("NoExiste");
+
+        // Assert
+        porNombreBorrado.Should().BeNull();
+        porNombreInexistente.Should().BeNull();
+    }
+
+    [Test]
+    public async Task GetByEmail_TrabajadorExistente_LoDevuelve() {
+        // Arrange
+        var trabajador = CrearTrabajador(email: "ana.lopez@empresa.es", dni: "11111111H");
+        await using (var dbSeed = CrearContexto()) {
+            dbSeed.Trabajadores.Add(trabajador);
+            await dbSeed.SaveChangesAsync();
+        }
+
+        await using var db = CrearContexto();
+        var repo = new TrabajadorRepository(db, NullLogger<TrabajadorRepository>.Instance);
+
+        // Act
+        var encontrado = await repo.GetByEmail("ana.lopez@empresa.es");
+
+        // Assert
+        encontrado.Should().NotBeNull();
+        encontrado!.Id.Should().Be(trabajador.Id);
+        encontrado.Email.Should().Be("ana.lopez@empresa.es");
+    }
+
+    [Test]
+    public async Task GetByEmail_InexistenteODadoDeBaja_DevuelveNull() {
+        // Arrange
+        var borrado = CrearTrabajador(email: "baja@empresa.es", dni: "00000022E");
+        borrado.Activo = false;
+        borrado.IsDeleted = true;
+        borrado.DeletedAt = DateTime.UtcNow;
+
+        await using (var dbSeed = CrearContexto()) {
+            dbSeed.Trabajadores.Add(borrado);
+            await dbSeed.SaveChangesAsync();
+        }
+
+        await using var db = CrearContexto();
+        var repo = new TrabajadorRepository(db, NullLogger<TrabajadorRepository>.Instance);
+
+        // Act
+        var porEmailBorrado = await repo.GetByEmail("baja@empresa.es");
+        var porEmailInexistente = await repo.GetByEmail("noexiste@empresa.es");
+
+        // Assert
+        porEmailBorrado.Should().BeNull();
+        porEmailInexistente.Should().BeNull();
+    }
 }
