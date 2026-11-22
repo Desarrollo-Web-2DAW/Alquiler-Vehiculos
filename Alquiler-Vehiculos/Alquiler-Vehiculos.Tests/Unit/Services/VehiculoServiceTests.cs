@@ -9,6 +9,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Services.Vehiculo;
+using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
@@ -25,12 +26,17 @@ namespace Alquiler_Vehiculos.Tests.Unit.Services;
 [Category("Unit")]
 public class VehiculoServiceTests
 {
+    // Id no numérico a propósito: las claves de vehículo son string (antes NotFoundVehiculo lanzaba FormatException).
     private const string VehiculoId = "veh-1";
     private const string Matricula = "1234BBB";
     private const string MatriculaNueva = "5678CCC";
+    // La foto se referencia por su Nombre, que es la clave de IFotoRepository.
     private const string FotoId = "foto-1";
-    private const string FotoUrl = "https://cdn.example.com/foto.jpg";
     private const string ClaveVehiculo = "vehiculo:";
+    // C compacto · C 2/4 puertas (Hatchback) · M manual · D diésel con aire.
+    private const string AcrissValido = "CCMD";
+    // S en 2ª posición = deportivo: existe en ACRISS (pasa el validador) pero no tiene Categoria.
+    private const string AcrissQueFallaEnElMapper = "ISMD";
 
     private Mock<IVehiculoRepository> _repository = null!;
     private Mock<IFotoRepository> _fotoRepository = null!;
@@ -61,12 +67,11 @@ public class VehiculoServiceTests
 
     private static CreateVehiculoDto CrearCreateValido() => new()
     {
-        Foto = FotoUrl,
+        Foto = FotoId,
         Matricula = Matricula,
         Marca = "Toyota",
         Modelo = "Corolla",
-        Acriss = "CCDM",
-        Estado = "Disponible",
+        Acriss = AcrissValido,
         Color = "Rojo",
         PrecioBaseDia = 50m,
         Plazas = 5,
@@ -74,17 +79,16 @@ public class VehiculoServiceTests
         AutonomiaKm = 600,
         Kilometraje = 1500,
         FechaUltimaRevision = "2025-01-01",
-        Concesionario = 1,
-        IsActivo = true
+        Concesionario = 1
     };
 
     private static UpdateVehiculoDto CrearUpdateValido(string matricula = Matricula) => new()
     {
-        Foto = FotoUrl,
+        Foto = FotoId,
         Matricula = matricula,
         Marca = "Toyota",
         Modelo = "Corolla",
-        Acriss = "CCDM",
+        Acriss = AcrissValido,
         Estado = "Disponible",
         Color = "Rojo",
         PrecioBaseDia = 50m,
@@ -97,9 +101,7 @@ public class VehiculoServiceTests
         IsActivo = true
     };
 
-    private static VehiculoModel CrearModelo(
-        string matricula = Matricula,
-        string fotoFk = FotoId) => new()
+    private static VehiculoModel CrearModelo(string matricula = Matricula, string fotoFk = FotoId) => new()
     {
         Id = VehiculoId,
         FotoFk = fotoFk,
@@ -107,7 +109,7 @@ public class VehiculoServiceTests
         Matrícula = matricula,
         Marca = "Toyota",
         Modelo = "Corolla",
-        Acriss = "CCDM",
+        Acriss = AcrissValido,
         Carroceria = TipoCarroceria.Hatchback,
         Combustible = TipoCombustible.Diesel,
         Transmision = TipoTransmision.Manual,
@@ -119,7 +121,8 @@ public class VehiculoServiceTests
         Kilometraje = 1500,
         FechaUltimaRevision = new DateTime(2025, 1, 1),
         ConesionarioFk = 1,
-        Activo = true
+        Activo = true,
+        CreatedAt = new DateTime(2025, 1, 1)
     };
 
     private static Foto CrearFoto(string id = FotoId) => new()
@@ -136,7 +139,7 @@ public class VehiculoServiceTests
         Matricula = matricula,
         Marca = "Toyota",
         Modelo = "Corolla",
-        Acriss = "CCDM",
+        Acriss = AcrissValido,
         Categoria = "Hatchback",
         Combustible = "Diesel",
         Transmision = "Manual",
@@ -151,6 +154,70 @@ public class VehiculoServiceTests
         Concesionario = 1,
         IsActivo = true
     };
+
+    [Test]
+    public async Task GetAll_ConVehiculos_DevuelveTodosMapeados()
+    {
+        // Arrange
+        _repository.Setup(r => r.GetAll())
+            .ReturnsAsync([CrearModelo(), CrearModelo(MatriculaNueva)]);
+
+        // Act
+        var resultado = await _service.GetAll();
+
+        // Assert
+        resultado.Should().BeEquivalentTo([CrearDto(), CrearDto(MatriculaNueva)]);
+
+        _repository.Verify(r => r.GetAll(), Times.Once);
+    }
+
+    [Test]
+    public async Task GetAll_SinVehiculos_DevuelveColeccionVacia()
+    {
+        // Arrange
+        _repository.Setup(r => r.GetAll()).ReturnsAsync([]);
+
+        // Act
+        var resultado = await _service.GetAll();
+
+        // Assert
+        resultado.Should().BeEmpty();
+
+        _repository.Verify(r => r.GetAll(), Times.Once);
+    }
+
+    [Test]
+    public async Task GetPaged_ConVehiculos_DevuelveLaPaginaMapeadaYElTotal()
+    {
+        // Arrange
+        _repository.Setup(r => r.GetPaged(2, 1))
+            .ReturnsAsync(([CrearModelo(MatriculaNueva)], 2));
+
+        // Act
+        var (items, total) = await _service.GetPaged(2, 1);
+
+        // Assert
+        (items.ToList(), total).Should().BeEquivalentTo((new List<VehiculoDto> { CrearDto(MatriculaNueva) }, 2));
+
+        _repository.Verify(r => r.GetPaged(2, 1), Times.Once);
+        _repository.Verify(r => r.GetAll(), Times.Never);
+    }
+
+    [Test]
+    public async Task GetPaged_SinVehiculos_DevuelvePaginaVaciaYTotalCero()
+    {
+        // Arrange
+        _repository.Setup(r => r.GetPaged(1, 10))
+            .ReturnsAsync((Enumerable.Empty<VehiculoModel>(), 0));
+
+        // Act
+        var (items, total) = await _service.GetPaged(1, 10);
+
+        // Assert
+        (items.Any(), total).Should().Be((false, 0));
+
+        _repository.Verify(r => r.GetPaged(1, 10), Times.Once);
+    }
 
     [Test]
     public async Task GetById_CuandoEstaEnCache_DevuelveElDtoSinConsultarElRepositorio()
@@ -251,23 +318,41 @@ public class VehiculoServiceTests
     {
         // Arrange
         _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
-        _fotoRepository.Setup(r => r.GetById(FotoUrl)).ReturnsAsync((Foto?)null);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync((Foto?)null);
 
         // Act
         var resultado = await _service.Create(CrearCreateValido());
 
         // Assert
-        resultado.Error.Should().Be(StorageError.FotoNoEncontrada(FotoUrl));
+        resultado.Error.Should().Be(FotoError.FotoNotFound(FotoId));
 
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
     }
 
     [Test]
-    public async Task Create_CuandoTodoEsCorrecto_CreaElVehiculoYDevuelveElDto()
+    public async Task Create_CuandoElAcrissPasaElValidadorPeroNoElMapper_DevuelveErrorDeCarroceria()
+    {
+        // Arrange
+        var dto = CrearCreateValido();
+        dto.Acriss = AcrissQueFallaEnElMapper;
+        _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+
+        // Act
+        var resultado = await _service.Create(dto);
+
+        // Assert
+        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
+
+        _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Create_CuandoTodoEsCorrecto_MapeaYCreaElVehiculo()
     {
         // Arrange
         _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
-        _fotoRepository.Setup(r => r.GetById(FotoUrl)).ReturnsAsync(CrearFoto());
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
             .ReturnsAsync((VehiculoModel m) => m);
 
@@ -278,7 +363,56 @@ public class VehiculoServiceTests
         resultado.Value.Matricula.Should().Be(Matricula);
 
         _repository.Verify(r => r.Create(It.Is<VehiculoModel>(m =>
-            m.Matrícula == Matricula && m.FotoFk == FotoUrl && m.Marca == "Toyota")), Times.Once);
+            m.Matrícula == Matricula
+            && m.FotoFk == FotoId
+            && m.Marca == "Toyota"
+            && m.Carroceria == TipoCarroceria.Hatchback
+            && m.Combustible == TipoCombustible.Diesel
+            && m.Transmision == TipoTransmision.Manual)), Times.Once);
+    }
+
+    [Test]
+    public async Task Create_CuandoTodoEsCorrecto_ElVehiculoNaceDisponibleYActivo()
+    {
+        // Arrange
+        _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
+            .ReturnsAsync((VehiculoModel m) => m);
+
+        // Act
+        var resultado = await _service.Create(CrearCreateValido());
+
+        // Assert
+        (resultado.Value.Estado, resultado.Value.IsActivo).Should().Be(("Disponible", true));
+
+        _repository.Verify(r => r.Create(It.Is<VehiculoModel>(m =>
+            m.Estado == EstadoVehiculo.Disponible && m.Activo)), Times.Once);
+    }
+
+    [Test]
+    public async Task Create_CuandoTodoEsCorrecto_GuardaEnCachePorIdYMatricula()
+    {
+        // Arrange
+        _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
+            .ReturnsAsync((VehiculoModel m) => m with { Id = VehiculoId });
+
+        // Act
+        var resultado = await _service.Create(CrearCreateValido());
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+
+        _cache.Verify(
+            c => c.SetAsync(ClaveVehiculo + VehiculoId, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+                It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
+        _cache.Verify(
+            c => c.SetAsync(ClaveVehiculo + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+                It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Test]
@@ -337,17 +471,56 @@ public class VehiculoServiceTests
     }
 
     [Test]
-    public async Task Update_CuandoLaFotoNoExiste_DevuelveNotFound()
+    public async Task Update_CuandoLaMatriculaNoCambia_NoConsultaDuplicados()
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoRepository.Setup(r => r.GetById(FotoUrl)).ReturnsAsync((Foto?)null);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _transactionsService
+            .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
 
         // Assert
-        resultado.Error.Should().Be(StorageError.FotoNoEncontrada(FotoUrl));
+        resultado.IsSuccess.Should().BeTrue();
+
+        _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Update_CuandoLaFotoNoExiste_DevuelveNotFound()
+    {
+        // Arrange
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync((Foto?)null);
+
+        // Act
+        var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
+
+        // Assert
+        resultado.Error.Should().Be(FotoError.FotoNotFound(FotoId));
+
+        _transactionsService.Verify(
+            t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
+    public async Task Update_CuandoElAcrissPasaElValidadorPeroNoElMapper_DevuelveErrorDeCarroceria()
+    {
+        // Arrange
+        var dto = CrearUpdateValido();
+        dto.Acriss = AcrissQueFallaEnElMapper;
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+
+        // Act
+        var resultado = await _service.Update(dto, VehiculoId);
+
+        // Assert
+        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
 
         _transactionsService.Verify(
             t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
@@ -358,9 +531,9 @@ public class VehiculoServiceTests
     public async Task Update_CuandoLaTransaccionFalla_PropagaElErrorSinTocarLaCache()
     {
         // Arrange
-        var error = new BusinessRuleError("No se pudo eliminar la foto asociada al vehículo");
+        var error = new BusinessRuleError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior.");
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoRepository.Setup(r => r.GetById(FotoUrl)).ReturnsAsync(CrearFoto());
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<VehiculoModel, DomainError>(error));
@@ -379,12 +552,79 @@ public class VehiculoServiceTests
     }
 
     [Test]
+    public async Task Update_CuandoTodoEsCorrecto_ConservaElIdYLaFechaDeCreacion()
+    {
+        // Arrange
+        var existente = CrearModelo();
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(existente);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _transactionsService
+            .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
+
+        // Act
+        await _service.Update(CrearUpdateValido(), VehiculoId);
+
+        // Assert
+        _transactionsService.Verify(t => t.UpdateAsync(VehiculoId, It.Is<VehiculoModel>(m =>
+            m.Id == existente.Id && m.CreatedAt == existente.CreatedAt)), Times.Once);
+    }
+
+    [Test]
+    public async Task Update_CuandoTodoEsCorrecto_AplicaEstadoMarcaModeloYConcesionarioDelDto()
+    {
+        // Arrange
+        var dto = CrearUpdateValido();
+        dto.Estado = "Mantenimiento";
+        dto.Marca = "Renault";
+        dto.Modelo = "Megane";
+        dto.Concesionario = 9;
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _transactionsService
+            .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
+
+        // Act
+        var resultado = await _service.Update(dto, VehiculoId);
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+
+        _transactionsService.Verify(t => t.UpdateAsync(VehiculoId, It.Is<VehiculoModel>(m =>
+            m.Estado == EstadoVehiculo.Mantenimiento
+            && m.Marca == "Renault"
+            && m.Modelo == "Megane"
+            && m.ConesionarioFk == 9
+            && m.FotoFk == FotoId), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task Update_ConEstadoRetirado_DevuelveValidationErrorSinTocarLaTransaccion()
+    {
+        // Arrange
+        var dto = CrearUpdateValido();
+        dto.Estado = "Retirado";
+
+        // Act
+        var resultado = await _service.Update(dto, VehiculoId);
+
+        // Assert
+        var error = resultado.Error.Should().BeOfType<BadRequestError.ValidationError>().Subject;
+        error.ValidationErrors.Should().ContainKey("Estado");
+
+        _transactionsService.Verify(
+            t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Test]
     public async Task Update_CuandoTodoEsCorrecto_InvalidaLaCacheAntiguaYGuardaLaNueva()
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
         _repository.Setup(r => r.ExistByMatricula(MatriculaNueva)).ReturnsAsync(false);
-        _fotoRepository.Setup(r => r.GetById(FotoUrl)).ReturnsAsync(CrearFoto());
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo(MatriculaNueva)));
@@ -412,7 +652,7 @@ public class VehiculoServiceTests
     public async Task SoftDelete_CuandoLaTransaccionFalla_PropagaElErrorSinTocarLaCache()
     {
         // Arrange
-        var error = VehiculoError.EnAlquiler();
+        var error = new BusinessRuleError("No se pudo eliminar la foto asociada al vehículo.");
         _transactionsService
             .Setup(t => t.DeleteAsync(VehiculoId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<VehiculoModel, DomainError>(error));
@@ -466,7 +706,7 @@ public class VehiculoServiceTests
     }
 
     [Test]
-    public async Task Restore_CuandoTodoEsCorrecto_GuardaElDtoEnCache()
+    public async Task Restore_CuandoTodoEsCorrecto_GuardaElDtoEnCachePorIdYMatricula()
     {
         // Arrange
         _transactionsService

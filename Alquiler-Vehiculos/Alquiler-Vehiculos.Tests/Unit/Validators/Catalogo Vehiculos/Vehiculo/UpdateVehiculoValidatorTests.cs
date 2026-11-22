@@ -13,19 +13,30 @@ public class UpdateVehiculoValidatorTests {
     public void SetUp() => _validator = new UpdateVehiculoValidator();
 
     private static UpdateVehiculoDto CrearDtoValido() => new() {
-        Foto = "https://example.com/coche.jpg", Matricula = "1234BCD",
+        // Foto es el Nombre de la foto (clave de IFotoRepository), no una URL.
+        Foto = "coche.jpg", Matricula = "1234BCD",
         Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH", Estado = "Disponible",
         Color = "Azul", PrecioBaseDia = 45.50m, Plazas = 5, MaleteroLitros = 361,
         AutonomiaKm = 700, Kilometraje = 12000, FechaUltimaRevision = "2026-11-01",
         Concesionario = 10L, IsActivo = true
     };
 
+    [Test]
+    public void Validate_DtoValido_NoDevuelveErrores() {
+        // Arrange
+        var dto = CrearDtoValido();
+
+        // Act
+        var resultado = _validator.Validate(dto);
+
+        // Assert
+        resultado.Errors.Should().BeEmpty();
+    }
+
     [TestCase(null)]
     [TestCase("")]
-    [TestCase("https://example.com/coche.jpg")]
-    [TestCase("http://example.com/coche.png?size=100")]
-    [TestCase("ftp://example.com/coche.jpg")]
-    public void Validate_FotoOpcionalOUrlAbsoluta_NoDevuelveErrores(string? foto) {
+    [TestCase("   ")]
+    public void Validate_SinFoto_DevuelveErrorDeFotoObligatoria(string? foto) {
         // Arrange
         var dto = CrearDtoValido();
         dto.Foto = foto!;
@@ -34,25 +45,39 @@ public class UpdateVehiculoValidatorTests {
         var resultado = _validator.Validate(dto);
 
         // Assert
-        resultado.IsValid.Should().BeTrue();
-        resultado.Errors.Should().BeEmpty();
+        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Foto"
+            && e.ErrorMessage == "La foto es obligatoria.");
     }
 
-    [TestCase("   ")]
-    [TestCase("coche.jpg")]
-    [TestCase("www.example.com/coche.jpg")]
-    public void Validate_FotoRelativaOInvalida_DevuelveErrorDeFoto(string foto) {
+    [TestCase("ILA")]
+    [TestCase("ILAHX")]
+    [TestCase("ilah")]
+    public void Validate_AcrissConFormatoIncorrecto_DevuelveUnUnicoErrorDeFormato(string acriss) {
         // Arrange
         var dto = CrearDtoValido();
-        dto.Foto = foto;
+        dto.Acriss = acriss;
+
+        // Act
+        var resultado = _validator.Validate(dto);
+
+        // Assert — CascadeMode.Stop: no se evalúan las letras si el formato ya falla.
+        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Acriss"
+            && e.ErrorMessage == "El código ACRISS debe constar exactamente de 4 letras.");
+    }
+
+    [TestCase("Retirado")]
+    [TestCase("retirado")]
+    public void Validate_EstadoRetirado_DevuelveErrorPorqueSoloSeRetiraConLaBaja(string estado) {
+        // Arrange
+        var dto = CrearDtoValido();
+        dto.Estado = estado;
 
         // Act
         var resultado = _validator.Validate(dto);
 
         // Assert
-        resultado.IsValid.Should().BeFalse();
-        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Foto"
-            && e.ErrorMessage == "La imagen debe ser una URL válida.");
+        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Estado"
+            && e.ErrorMessage == "El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
     }
 
     [TestCase("Matricula", "1234BCD", true)]
@@ -69,9 +94,11 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Acriss", "ZLAH", false)]
     [TestCase("Acriss", "IUAH", false)]
     [TestCase("Acriss", "ILZH", false)]
-    [TestCase("Acriss", "ILAU", false)]
+    [TestCase("Acriss", "ILAU", true)]  // U = etanol con aire (RF-03)
+    [TestCase("Acriss", "ILAK", false)]
     [TestCase("Estado", "Disponible", true)]
     [TestCase("Estado", "enAlquiler", true)]
+    [TestCase("Estado", "Mantenimiento", true)]
     [TestCase("Estado", "Desconocido", false)]
     [TestCase("Color", "Azul", true)]
     [TestCase("Color", "rojo", true)]

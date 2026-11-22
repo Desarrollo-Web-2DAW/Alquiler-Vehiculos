@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using CSharpFunctionalExtensions;
 using Microsoft.EntityFrameworkCore;
 
@@ -24,11 +25,25 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     public async Task<bool> SoftDelete(string key)
     {
         logger.LogInformation("Realizando borrado lógico de Vehiculo ID: {Id}", key);
-        return await context.Vehiculos
-            .Where(f => f.Id == key)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(f => f.Activo, true)
-                .SetProperty(f => f.UpdatedAt, DateTime.UtcNow)) > 0;
+
+        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
+        if (existente == null) return false;
+
+        // Se actualiza la instancia rastreada (no ExecuteUpdate) para que los cambios
+        // queden reflejados también en el DbContext y en la transacción en curso.
+        var actualizado = existente with
+        {
+            Activo = false,
+            UpdatedAt = DateTime.UtcNow,
+            DeletedAt = DateTime.UtcNow
+        };
+        // RF-01: la baja lógica deja el vehículo Retirado y con Activo = false a la vez.
+        actualizado.CambiarEstadoMapper(EstadoVehiculo.Retirado);
+
+        context.Entry(existente).CurrentValues.SetValues(actualizado);
+        await context.SaveChangesAsync();
+
+        return true;
     }
 
     /// <inheritdoc cref="IVehiculoRepository.GetById" />
@@ -47,7 +62,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
         logger.LogInformation("Actualizando Vehiculo ID: {Id}", key);
 
         VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
-        if (existente == null || existente.Activo) return null;
+        if (existente == null || !existente.Activo) return null;
 
         var actualizado = existente with
         {
@@ -155,6 +170,8 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             UpdatedAt = DateTime.UtcNow,
             DeletedAt = null
         };
+        // Simétrico a SoftDelete: al reactivarlo vuelve a estar Disponible.
+        actualizado.CambiarEstadoMapper(EstadoVehiculo.Disponible);
 
         context.Entry(existente).CurrentValues.SetValues(actualizado);
         await context.SaveChangesAsync();

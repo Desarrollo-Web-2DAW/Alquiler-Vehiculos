@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
-public class PostgreDbContext : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options) {
+public class PostgreDbContext : DbContext {
     
     public DbSet<VehiculoModel> Vehiculos =>  Set<VehiculoModel>();
     public DbSet<Foto> Fotos => Set<Foto>();

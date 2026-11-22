@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Errors.Common;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 
 namespace Alquiler_Vehiculos.Errors.Vehiculo;
 
@@ -10,11 +11,11 @@ public static class VehiculoError
     /// <summary>
     /// Crea un error de tipo <see cref="NotFoundError"/> cuando no se encuentra un vehículo por su identificador.
     /// </summary>
-    /// <param name="id">Identificador del vehículo (puede ser ID numérico o clave en formato string).</param>
+    /// <param name="id">Identificador del vehículo (clave en formato string).</param>
     /// <returns>Una instancia de <see cref="NotFoundError"/> (HTTP 404).</returns>
     public static NotFoundError NotFoundVehiculo(object id)
     {
-        return NotFoundError.FromId(Convert.ToInt64(id), "Vehículo");
+        return NotFoundError.FromObjectId(id.ToString() ?? string.Empty, "Vehículo");
     }
 
     /// <summary>
@@ -73,6 +74,17 @@ public static class VehiculoError
     {
         return new ConflictError(
             $"No se puede cambiar el estado del vehiculo debido a restricciones de negocio: EstadoActual:{actual}-EstadoPedido:{pedido}");
+    }
+
+    /// <summary>
+    /// Crea un error de tipo <see cref="ConflictError"/> cuando se intenta dar de baja un vehículo
+    /// que no está <see cref="EstadoVehiculo.Disponible"/> (RF-01).
+    /// </summary>
+    /// <param name="estado">Estado actual del vehículo.</param>
+    /// <returns>Una instancia de <see cref="ConflictError"/> (HTTP 409).</returns>
+    public static ConflictError NoDisponibleParaBaja(EstadoVehiculo estado)
+    {
+        return new ConflictError($"Solo se puede dar de baja un vehículo Disponible. Estado actual: {estado}.");
     }
 
     /// <summary>

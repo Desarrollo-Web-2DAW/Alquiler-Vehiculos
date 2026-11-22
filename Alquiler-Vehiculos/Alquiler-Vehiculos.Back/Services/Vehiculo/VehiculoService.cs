@@ -37,6 +37,14 @@ public class VehiculoService(
         return lista.Select(v => v.ToDto());
     }
 
+    /// <inheritdoc cref="IVehiculoService.GetPaged" />
+    public async Task<(IEnumerable<VehiculoDto> Items, int TotalItems)> GetPaged(int page, int pageSize)
+    {
+        Log.Debug("Consultando vehículos página {Page} con tamaño {PageSize}", page, pageSize);
+        var (items, totalItems) = await repository.GetPaged(page, pageSize);
+        return (items.Select(v => v.ToDto()), totalItems);
+    }
+
     /// <inheritdoc cref="IVehiculoService.GetById" />
     public async Task<Result<VehiculoDto, DomainError>> GetById(string key)
     {
@@ -83,7 +91,10 @@ public class VehiculoService(
         if (vehiculo.IsFailure) return vehiculo.Error;
 
         var creado = await repository.Create(vehiculo.Value);
-        return Result.Success<VehiculoDto, DomainError>(creado.ToDto());
+        var dto = creado.ToDto();
+        await cache.SetAsync(ClaveVehiculo + creado.Id, dto);
+        await cache.SetAsync(ClaveVehiculo + creado.Matrícula, dto);
+        return Result.Success<VehiculoDto, DomainError>(dto);
     }
 
     /// <inheritdoc cref="IVehiculoService.Update" />
@@ -125,6 +136,8 @@ public class VehiculoService(
         var vehiculo = existente with
         {
             Matrícula = mapeado.Matrícula,
+            Marca = mapeado.Marca,
+            Modelo = mapeado.Modelo,
             Acriss = mapeado.Acriss,
             Carroceria = mapeado.Carroceria,
             Combustible = mapeado.Combustible,
@@ -136,10 +149,14 @@ public class VehiculoService(
             AutonomiaKm = mapeado.AutonomiaKm,
             Kilometraje = mapeado.Kilometraje,
             FechaUltimaRevision = mapeado.FechaUltimaRevision,
+            ConesionarioFk = mapeado.ConesionarioFk,
             UpdatedAt = DateTime.UtcNow,
             Foto = mapeado.Foto,
             FotoFk = mapeado.FotoFk
         };
+
+        // Estado tiene setter privado: el "with" copia el del existente, así que se aplica el del DTO.
+        vehiculo.CambiarEstadoMapper(mapeado.Estado);
 
         var result = await transactionsService.UpdateAsync(key, vehiculo);
         if (result.IsFailure)
@@ -170,7 +187,7 @@ public class VehiculoService(
         }
 
         await cache.RemoveAsync(ClaveVehiculo + key);
-        await cache.RemoveAsync(ClaveVehiculo + result.Value.);
+        await cache.RemoveAsync(ClaveVehiculo + result.Value.Matrícula);
 
         return Result.Success<bool, DomainError>(true);
     }

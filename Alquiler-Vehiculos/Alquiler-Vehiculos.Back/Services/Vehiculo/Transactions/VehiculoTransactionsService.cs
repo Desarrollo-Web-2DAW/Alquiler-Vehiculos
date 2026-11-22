@@ -1,5 +1,7 @@
 using Alquiler_Vehiculos.Errors.Common;
+using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Services.Common;
@@ -28,11 +30,19 @@ public sealed class VehiculoTransactionsService(
             var vehiculo = await vehiculoRepository.GetById(id);
             if (vehiculo is null)
             {
-                return Result.Failure<VehiculoModel, DomainError>(
-                    new NotFoundError($"Vehículo con ID {id} no encontrado"));
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
 
-            await vehiculoRepository.SoftDelete(id);
+            // RF-01: solo se da de baja un vehículo Disponible (sin reservas vivas ni partes abiertos).
+            if (vehiculo.Estado != EstadoVehiculo.Disponible)
+            {
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NoDisponibleParaBaja(vehiculo.Estado));
+            }
+
+            if (!await vehiculoRepository.SoftDelete(id))
+            {
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.BorradoError());
+            }
 
             if (!string.IsNullOrEmpty(vehiculo.FotoFk))
             {
@@ -57,8 +67,7 @@ public sealed class VehiculoTransactionsService(
             var actual = await vehiculoRepository.GetById(id);
             if (actual is null)
             {
-                return Result.Failure<VehiculoModel, DomainError>(
-                    new NotFoundError($"Vehículo con ID {id} no encontrado"));
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
             
             var fotoAnterior = actual.FotoFk;
@@ -66,8 +75,7 @@ public sealed class VehiculoTransactionsService(
             var actualizado = await vehiculoRepository.Update(id, datos);
             if (actualizado is null)
             {
-                return Result.Failure<VehiculoModel, DomainError>(
-                    new NotFoundError($"Vehículo con ID {id} no encontrado"));
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
 
             if (!string.IsNullOrEmpty(fotoAnterior) && fotoAnterior != datos.FotoFk)
@@ -93,8 +101,7 @@ public sealed class VehiculoTransactionsService(
             var restaurado = await vehiculoRepository.Restore(id);
             if (restaurado is null)
             {
-                return Result.Failure<VehiculoModel, DomainError>(
-                    new NotFoundError($"Vehículo con ID {id} no encontrado"));
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
 
             if (!string.IsNullOrEmpty(restaurado.FotoFk))

@@ -16,17 +16,36 @@ namespace Alquiler_Vehiculos.Tests.Unit.Mappers;
 /// cubriendo cada letra del catálogo, las letras desconocidas y los tres errores de dominio.
 /// </summary>
 /// <remarks>
-/// Convención del mapper: el código llega como "TVFA", donde
-/// <c>[0]</c> es la letra de tipo, <c>[1]</c> la de categoría (no se usa),
-/// <c>[2]</c> la de combustible y <c>[3]</c> la de transmisión.
+/// Convención ACRISS estándar: <c>[0]</c> categoría (no se mapea), <c>[1]</c> tipo
+/// de vehículo, <c>[2]</c> transmisión y tracción, <c>[3]</c> combustible y climatización.
 /// </remarks>
+[TestFixture]
+[Category("Unit")]
 public class VehiculoMapperTests
 {
-    private const string AcrissValido = "CXVA";
+    // C = Compacto, L = Berlina, D = Automática AWD, H = Híbrido.
+    private const string AcrissValido = "CLDH";
 
     private static CreateVehiculoDto CrearDto(string acriss = AcrissValido) => new()
     {
-        Foto = "/uploads/vehiculos/delantera.jpg",
+        Foto = "delantera.jpg",
+        Matricula = "1234BCD",
+        Marca = "Toyota",
+        Modelo = "Corolla",
+        Acriss = acriss,
+        Color = "Azul",
+        PrecioBaseDia = 45.90m,
+        Plazas = 5,
+        MaleteroLitros = 361,
+        AutonomiaKm = 780,
+        Kilometraje = 12_500,
+        FechaUltimaRevision = "2026-10-01",
+        Concesionario = 10L
+    };
+
+    private static UpdateVehiculoDto CrearUpdateDto(string acriss = AcrissValido) => new()
+    {
+        Foto = "delantera.jpg",
         Matricula = "1234BCD",
         Marca = "Toyota",
         Modelo = "Corolla",
@@ -55,7 +74,7 @@ public class VehiculoMapperTests
     {
         var vehiculo = new VehiculoModel
         {
-            FotoFk = "/uploads/vehiculos/delantera.jpg",
+            FotoFk = "delantera.jpg",
             Matrícula = "1234BCD",
             Marca = "Toyota",
             Modelo = "Corolla",
@@ -78,12 +97,12 @@ public class VehiculoMapperTests
     }
 
     /// <summary>
-    /// Construye un ACRISS de cuatro letras fijando la letra que se quiere probar
-    /// y dejando el resto en valores válidos para que el fallo esperado sea el del
-    /// enum bajo test y no el de un paso anterior.
+    /// Construye un ACRISS de cuatro letras colocando la letra bajo test en la posición
+    /// que corresponde y dejando el resto en valores válidos, para que el fallo esperado
+    /// sea siempre el del paso que se está probando.
     /// </summary>
-    private static string CrearAcriss(char tipo, char combustible = 'V', char transmision = 'A') =>
-        $"{tipo}X{combustible}{transmision}";
+    private static string CrearAcriss(char tipo, char transmision = 'A', char combustible = 'H') =>
+        $"C{tipo}{transmision}{combustible}";
 
     [Test]
     public void ToVehiculo_ConAcrissValido_DevuelveExito()
@@ -111,7 +130,7 @@ public class VehiculoMapperTests
         // Assert
         resultado.Value.Should().BeEquivalentTo(new
         {
-            FotoFk = "/uploads/vehiculos/delantera.jpg",
+            FotoFk = "delantera.jpg",
             Foto = foto,
             Matrícula = "1234BCD",
             Marca = "Toyota",
@@ -129,7 +148,7 @@ public class VehiculoMapperTests
     }
 
     [Test]
-    public void ToVehiculo_ConFoto_ConservaLaMismaReferencia()
+    public void ToVehiculo_ConFoto_UsaElNombreComoClaveForaneaYConservaLaReferencia()
     {
         // Arrange
         var foto = CrearFoto();
@@ -138,35 +157,39 @@ public class VehiculoMapperTests
         var resultado = CrearDto().ToVehiculo(foto);
 
         // Assert
+        resultado.Value.FotoFk.Should().Be(foto.Nombre);
         resultado.Value.Foto.Should().BeSameAs(foto);
     }
 
     [Test]
-    public void ToVehiculo_ConIsActivoTrue_AsignaEstadoDisponible()
+    public void ToVehiculo_CuandoSeCrea_NaceDisponibleYActivo()
     {
         // Arrange
         var dto = CrearDto();
-        dto.IsActivo = true;
 
         // Act
         var resultado = dto.ToVehiculo(CrearFoto());
 
-        // Assert
-        resultado.Value.Estado.Should().Be(EstadoVehiculo.Disponible);
+        // Assert — RF-01: un vehículo nuevo nace siempre Disponible.
+        (resultado.Value.Estado, resultado.Value.Activo).Should().Be((EstadoVehiculo.Disponible, true));
     }
 
-    [Test]
-    public void ToVehiculo_ConIsActivoFalse_AsignaEstadoRetirado()
+    [TestCase("Disponible", EstadoVehiculo.Disponible)]
+    [TestCase("Reservado", EstadoVehiculo.Reservado)]
+    [TestCase("EnAlquiler", EstadoVehiculo.EnAlquiler)]
+    [TestCase("Mantenimiento", EstadoVehiculo.Mantenimiento)]
+    [TestCase("enAlquiler", EstadoVehiculo.EnAlquiler)]
+    public void ToVehiculoModel_ConEstadoDelCatalogo_MapeaElEstado(string estado, EstadoVehiculo esperado)
     {
         // Arrange
-        var dto = CrearDto();
-        dto.IsActivo = false;
+        var dto = CrearUpdateDto();
+        dto.Estado = estado;
 
         // Act
-        var resultado = dto.ToVehiculo(CrearFoto());
+        var resultado = dto.ToVehiculoModel(CrearFoto());
 
         // Assert
-        resultado.Value.Estado.Should().Be(EstadoVehiculo.Retirado);
+        resultado.Value.Estado.Should().Be(esperado);
     }
 
     [TestCase("Azul", TipoColor.Azul)]
@@ -254,7 +277,6 @@ public class VehiculoMapperTests
         // Assert
         mapear.Should().Throw<IndexOutOfRangeException>();
     }
-    
 
     [TestCase('B', TipoCarroceria.Hatchback)]
     [TestCase('C', TipoCarroceria.Hatchback)]
@@ -268,7 +290,7 @@ public class VehiculoMapperTests
     [TestCase('E', TipoCarroceria.Coupe)]
     [TestCase('M', TipoCarroceria.Monovolumen)]
     [TestCase('L', TipoCarroceria.Sedan)]
-    public void ToVehiculo_ConPrimeraLetraDelCatalogo_MapeaLaCarroceria(
+    public void ToVehiculo_ConSegundaLetraDelCatalogo_MapeaLaCarroceria(
         char letra, TipoCarroceria esperada)
     {
         // Arrange
@@ -302,7 +324,7 @@ public class VehiculoMapperTests
     [TestCase('Y')]
     [TestCase('Z')]
     [TestCase('c')]
-    public void ToVehiculo_ConPrimeraLetraNoMapeable_DevuelveErrorDeCarroceria(char letra)
+    public void ToVehiculo_ConSegundaLetraNoMapeable_DevuelveErrorDeCarroceria(char letra)
     {
         // Arrange
         var dto = CrearDto(CrearAcriss(letra));
@@ -336,59 +358,16 @@ public class VehiculoMapperTests
     [TestCase('E')]
     [TestCase('S')]
     [TestCase('X')]
-    public void ToVehiculo_AlCambiarLaSegundaLetra_MantieneLaCarroceria(char segundaLetra)
+    public void ToVehiculo_AlCambiarLaPrimeraLetra_MantieneLaCarroceria(char categoria)
     {
         // Arrange
-        var dto = CrearDto($"C{segundaLetra}VA");
+        var dto = CrearDto($"{categoria}LDH");
 
         // Act
         var resultado = dto.ToVehiculo(CrearFoto());
 
         // Assert
-        resultado.Value.Carroceria.Should().Be(TipoCarroceria.Hatchback);
-    }
-
-    [TestCase('D', TipoCombustible.Diesel)]   // DieselConAire
-    [TestCase('Q', TipoCombustible.Diesel)]   // DieselSinAire
-    [TestCase('V', TipoCombustible.Gasolina)] // GasolinaConAire
-    [TestCase('Z', TipoCombustible.Gasolina)] // GasolinaSinAire
-    [TestCase('H', TipoCombustible.Hibrido)]  // Hibrido
-    [TestCase('I', TipoCombustible.Hibrido)]  // HibridoEnchufable
-    [TestCase('E', TipoCombustible.Electrico)] // ElectricoE
-    [TestCase('C', TipoCombustible.Electrico)] // ElectricoC
-    public void ToVehiculo_ConTerceraLetraDelCatalogo_MapeaElCombustible(
-        char letra, TipoCombustible esperado)
-    {
-        // Arrange
-        var dto = CrearDto(CrearAcriss('C', letra));
-
-        // Act
-        var resultado = dto.ToVehiculo(CrearFoto());
-
-        // Assert
-        resultado.Value.Combustible.Should().Be(esperado);
-    }
-
-    [TestCase('A')] // HidrogenoConAire
-    [TestCase('B')] // HidrogenoSinAire
-    [TestCase('F')] // EtanolConAire
-    [TestCase('L')] // GlpConAire
-    [TestCase('M')] // MulticomustibleConAire
-    [TestCase('N')] // SinEspecificarSinAire
-    [TestCase('R')] // SinEspecificarConAire
-    [TestCase('S')] // GlpSinAire
-    [TestCase('X')] // EtanolSinAire
-    [TestCase('K')] // letra fuera del catálogo
-    public void ToVehiculo_ConTerceraLetraSinEquivalente_DevuelveErrorDeCombustible(char letra)
-    {
-        // Arrange
-        var dto = CrearDto(CrearAcriss('C', letra));
-
-        // Act
-        var resultado = dto.ToVehiculo(CrearFoto());
-
-        // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoCombustible());
+        resultado.Value.Carroceria.Should().Be(TipoCarroceria.Sedan);
     }
 
     [TestCase('M', TipoTransmision.Manual)]          // ManualSinTraccionDefinida
@@ -397,11 +376,11 @@ public class VehiculoMapperTests
     [TestCase('A', TipoTransmision.Automatica)]      // AutomaticaSinTraccionDefinida
     [TestCase('B', TipoTransmision.Automatica)]      // Automatica4Wd
     [TestCase('D', TipoTransmision.Automatica)]      // AutomaticaAwd
-    public void ToVehiculo_ConCuartaLetraDelCatalogo_MapeaLaTransmision(
+    public void ToVehiculo_ConTerceraLetraDelCatalogo_MapeaLaTransmision(
         char letra, TipoTransmision esperada)
     {
         // Arrange
-        var dto = CrearDto(CrearAcriss('C', 'V', letra));
+        var dto = CrearDto(CrearAcriss('L', letra));
 
         // Act
         var resultado = dto.ToVehiculo(CrearFoto());
@@ -414,16 +393,122 @@ public class VehiculoMapperTests
     [TestCase('H')] // AutomatizacionNivel4
     [TestCase('Q')] // AutomatizacionNivel3
     [TestCase('V')] // letra fuera del catálogo
-    public void ToVehiculo_ConCuartaLetraSinEquivalente_DevuelveErrorDeTransmision(char letra)
+    public void ToVehiculo_ConTerceraLetraSinEquivalente_DevuelveErrorDeTransmision(char letra)
     {
         // Arrange
-        var dto = CrearDto(CrearAcriss('C', 'V', letra));
+        var dto = CrearDto(CrearAcriss('L', letra));
 
         // Act
         var resultado = dto.ToVehiculo(CrearFoto());
 
         // Assert
         resultado.Error.Should().Be(VehiculoError.TipoDeTransmision());
+    }
+
+    [Test]
+    public void ToVehiculo_ConCualquierTransmisionDelCatalogo_SoloFallaSiEstaFueraDelMapa()
+    {
+        // Arrange
+        var transmisiones = Enum.GetValues<AcrissTransmisionTraccion>();
+        char[] sinEquivalente = ['F', 'H', 'Q'];
+
+        // Act
+        var fallidas = transmisiones
+            .Select(transmision => (
+                Letra: (char)transmision,
+                Resultado: CrearDto(CrearAcriss('L', (char)transmision)).ToVehiculo(CrearFoto())))
+            .Where(x => x.Resultado.IsFailure && x.Resultado.Error == VehiculoError.TipoDeTransmision())
+            .Select(x => x.Letra)
+            .ToArray();
+
+        // Assert
+        fallidas.Should().BeEquivalentTo(sinEquivalente,
+            "solo las automatizaciones sin equivalente deben devolver error de transmisión");
+    }
+
+    [TestCase('D', TipoCombustible.Diesel)]    // DieselConAire
+    [TestCase('Q', TipoCombustible.Diesel)]    // DieselSinAire
+    [TestCase('V', TipoCombustible.Gasolina)]  // GasolinaConAire
+    [TestCase('Z', TipoCombustible.Gasolina)]  // GasolinaSinAire
+    [TestCase('H', TipoCombustible.Hibrido)]   // Hibrido
+    [TestCase('I', TipoCombustible.Hibrido)]   // HibridoEnchufable
+    [TestCase('E', TipoCombustible.Electrico)] // ElectricoE
+    [TestCase('C', TipoCombustible.Electrico)] // ElectricoC
+    public void ToVehiculo_ConCuartaLetraDelCatalogo_MapeaElCombustible(
+        char letra, TipoCombustible esperado)
+    {
+        // Arrange
+        var dto = CrearDto(CrearAcriss('L', 'A', letra));
+
+        // Act
+        var resultado = dto.ToVehiculo(CrearFoto());
+
+        // Assert
+        resultado.Value.Combustible.Should().Be(esperado);
+    }
+
+    [TestCase('A')] // HidrogenoConAire
+    [TestCase('B')] // HidrogenoSinAire
+    [TestCase('F')] // MulticombustibleSinAire
+    [TestCase('U')] // EtanolConAire
+    [TestCase('L')] // GlpConAire
+    [TestCase('M')] // MulticomustibleConAire
+    [TestCase('N')] // SinEspecificarSinAire
+    [TestCase('R')] // SinEspecificarConAire
+    [TestCase('S')] // GlpSinAire
+    [TestCase('X')] // EtanolSinAire
+    [TestCase('K')] // letra fuera del catálogo
+    public void ToVehiculo_ConCuartaLetraSinEquivalente_DevuelveErrorDeCombustible(char letra)
+    {
+        // Arrange
+        var dto = CrearDto(CrearAcriss('L', 'A', letra));
+
+        // Act
+        var resultado = dto.ToVehiculo(CrearFoto());
+
+        // Assert
+        resultado.Error.Should().Be(VehiculoError.TipoCombustible());
+    }
+
+    [Test]
+    public void ToVehiculoModel_ConDtoValido_MapeaMarcaModeloConcesionarioYFoto()
+    {
+        // Arrange
+        var dto = CrearUpdateDto();
+        var foto = CrearFoto();
+
+        // Act
+        var resultado = dto.ToVehiculoModel(foto);
+
+        // Assert
+        resultado.Value.Should().BeEquivalentTo(new
+        {
+            FotoFk = "delantera.jpg",
+            Foto = foto,
+            Matrícula = "1234BCD",
+            Marca = "Toyota",
+            Modelo = "Corolla",
+            Acriss = AcrissValido,
+            Carroceria = TipoCarroceria.Sedan,
+            Combustible = TipoCombustible.Hibrido,
+            Transmision = TipoTransmision.Automatica,
+            ConesionarioFk = 10L,
+            Estado = EstadoVehiculo.Disponible,
+            Activo = true
+        });
+    }
+
+    [Test]
+    public void ToVehiculoModel_ConSegundaLetraNoMapeable_DevuelveErrorDeCarroceria()
+    {
+        // Arrange
+        var dto = CrearUpdateDto(CrearAcriss('S'));
+
+        // Act
+        var resultado = dto.ToVehiculoModel(CrearFoto());
+
+        // Assert
+        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
     }
 
     [Test]
@@ -438,7 +523,7 @@ public class VehiculoMapperTests
         // Assert
         dto.Should().BeEquivalentTo(new
         {
-            Foto = "/uploads/vehiculos/delantera.jpg",
+            Foto = "delantera.jpg",
             Matricula = "1234BCD",
             Marca = "Toyota",
             Modelo = "Corolla",
