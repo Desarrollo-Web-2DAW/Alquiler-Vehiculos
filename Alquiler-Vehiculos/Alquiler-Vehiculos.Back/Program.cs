@@ -20,6 +20,7 @@ try {
     builder.Services.AddDatabase(builder.Configuration, builder.Environment);
     builder.Services.AddIdentityConfiguration(builder.Configuration, builder.Environment);
     builder.Services.AddControllers();
+    builder.Services.AddHealthChecks();
     builder.Services.AddHttpContextAccessor();
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -40,6 +41,7 @@ try {
 
     app.UseAuthentication();
     app.UseAuthorization();
+    app.MapHealthChecks("/health");
     app.MapControllers();
 
     await app.InitializeDatabaseAsync();
