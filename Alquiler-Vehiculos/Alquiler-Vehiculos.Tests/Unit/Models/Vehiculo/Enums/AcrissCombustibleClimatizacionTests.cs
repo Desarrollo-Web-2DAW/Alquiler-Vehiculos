@@ -22,7 +22,7 @@ public class AcrissCombustibleClimatizacionTests
     [TestCase(AcrissCombustibleClimatizacion.GlpSinAire, 'S')]
     [TestCase(AcrissCombustibleClimatizacion.HidrogenoConAire, 'A')]
     [TestCase(AcrissCombustibleClimatizacion.HidrogenoSinAire, 'B')]
-    [TestCase(AcrissCombustibleClimatizacion.MulticomustibleConAire, 'M')]
+    [TestCase(AcrissCombustibleClimatizacion.MulticombustibleConAire, 'M')]
     [TestCase(AcrissCombustibleClimatizacion.EtanolConAire, 'F')]
     [TestCase(AcrissCombustibleClimatizacion.GasolinaConAire, 'V')]
     [TestCase(AcrissCombustibleClimatizacion.GasolinaSinAire, 'Z')]
