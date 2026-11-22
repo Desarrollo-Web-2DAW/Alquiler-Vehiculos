@@ -202,12 +202,6 @@ public class CreateVehiculoValidatorTests {
         }
     }
 
-    [TestCase("Estado", "Disponible", true)]
-    [TestCase("Estado", "Reservado", true)]
-    [TestCase("Estado", "enAlquiler", true)]
-    [TestCase("Estado", "Mantenimiento", true)]
-    [TestCase("Estado", "Retirado", true)]
-    [TestCase("Estado", "Desconocido", false)]
     [TestCase("Color", "Rojo", true)]
     [TestCase("Color", "Verde", true)]
     [TestCase("Color", "Naranja", true)]
@@ -248,9 +242,6 @@ public class CreateVehiculoValidatorTests {
     [TestCase("Acriss", "El código ACRISS no puede estar vacío.", null)]
     [TestCase("Acriss", "El código ACRISS no puede estar vacío.", "")]
     [TestCase("Acriss", "El código ACRISS no puede estar vacío.", "   ")]
-    [TestCase("Estado", "El estado no puede estar vacío.", null)]
-    [TestCase("Estado", "El estado no puede estar vacío.", "")]
-    [TestCase("Estado", "El estado no puede estar vacío.", "   ")]
     [TestCase("Color", "El color no puede estar vacío.", null)]
     [TestCase("Color", "El color no puede estar vacío.", "")]
     [TestCase("Color", "El color no puede estar vacío.", "   ")]
@@ -354,19 +345,16 @@ public class CreateVehiculoValidatorTests {
         resultado.Errors.Should().BeEmpty();
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
-    public void Validate_IsActivo_NoRestringeElValor(bool activo) {
+    [Test]
+    public void CreateVehiculoDto_NoExponeEstadoNiIsActivo() {
         // Arrange
-        var dto = CrearDtoValido();
-        dto.IsActivo = activo;
+        var tipo = typeof(CreateVehiculoDto);
 
         // Act
-        var resultado = _validator.Validate(dto);
+        var propiedades = tipo.GetProperties().Select(p => p.Name);
 
         // Assert
-        resultado.IsValid.Should().BeTrue();
-        resultado.Errors.Should().BeEmpty();
+        propiedades.Should().NotContain(new[] { "Estado", "IsActivo" });
     }
 
     [Test]
@@ -390,7 +378,6 @@ public class CreateVehiculoValidatorTests {
             case "Marca": dto.Marca = valor; break;
             case "Modelo": dto.Modelo = valor; break;
             case "Acriss": dto.Acriss = valor; break;
-            case "Estado": dto.Estado = valor; break;
             case "Color": dto.Color = valor; break;
             case "FechaUltimaRevision": dto.FechaUltimaRevision = valor; break;
         }
