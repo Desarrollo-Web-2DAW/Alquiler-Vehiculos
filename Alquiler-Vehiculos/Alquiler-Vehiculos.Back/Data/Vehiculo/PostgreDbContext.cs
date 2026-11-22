@@ -3,7 +3,6 @@ using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Microsoft.EntityFrameworkCore;
 
-public class PostgreDbContext : DbContext {
 namespace Alquiler_Vehiculos.Data.Vehiculo;
 
 /// <summary>
