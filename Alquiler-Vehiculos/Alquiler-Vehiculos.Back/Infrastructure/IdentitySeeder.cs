@@ -1,4 +1,5 @@
-﻿using Alquiler_Vehiculos.Enums.Usuarios;
+using Alquiler_Vehiculos.Entities;
+using Alquiler_Vehiculos.Enums.Usuarios;
 using Alquiler_Vehiculos.Models.Usuarios;
 using Alquiler_Vehiculos.Models.Usuarios.Clientes;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
@@ -7,33 +8,70 @@ using Microsoft.AspNetCore.Identity;
 namespace Alquiler_Vehiculos.Infrastructure;
 
 /// <summary>
-/// Siembra los roles de Identity y cuentas de prueba.
+/// Siembra los roles de Identity y las cuentas iniciales de todos los perfiles (RF-46, RI-03).
 /// Es idempotente: si ya existen, no hace nada.
-/// Las credenciales se leen de la sección <c>Seed</c> y solo deben estar
-/// en <c>appsettings.Development.json</c> o en User Secrets.
+/// Las credenciales se leen de la sección <c>Seed</c> (appsettings.Development.json,
+/// User Secrets o variables de entorno).
 /// </summary>
 public static class IdentitySeeder {
     /// <summary>
     /// Crea los roles de <see cref="RolUsuario"/> y las cuentas configuradas.
     /// </summary>
-    /// <param name="serviceProvider">Proveedor de servicios de la aplicación.</param>
-    /// <param name="configuration">Configuración de la aplicación.</param>
     public static async Task SeedAsync(IServiceProvider serviceProvider, IConfiguration configuration) {
         using var scope = serviceProvider.CreateScope();
+        var sp = scope.ServiceProvider;
 
-        var logger = scope.ServiceProvider
-            .GetRequiredService<ILoggerFactory>()
-            .CreateLogger("IdentitySeeder");
+        var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("IdentitySeeder");
 
-        await SeedRolesAsync(scope.ServiceProvider, logger);
-        await SeedAdminUserAsync(scope.ServiceProvider, configuration, logger);
-        await SeedClienteUserAsync(scope.ServiceProvider, configuration, logger);
-        await SeedTrabajadorUserAsync(scope.ServiceProvider, configuration, logger);
+        await SeedRolesAsync(sp, logger);
+        await SeedAdminUserAsync(sp, configuration, logger);
+        await SeedClienteUserAsync(sp, configuration, logger);
+
+        // Trabajador de operaciones (RF-12, RF-46)
+        await SeedTrabajadorUserAsync(
+            sp, configuration, logger,
+            emailKey: "Seed:TrabajadorEmail",
+            passwordKey: "Seed:TrabajadorPassword",
+            nombre: "Carlos",
+            apellidos: "Martín López",
+            telefono: "611223344",
+            dni: "23456789D",
+            fechaNacimiento: new DateOnly(1992, 6, 1),
+            fechaIngreso: new DateOnly(2024, 2, 1),
+            tipo: TipoTrabajador.Operaciones,
+            rol: nameof(RolUsuario.Trabajador));
+
+        // Mecánico de taller (RF-08, RF-12, CU-07)
+        await SeedTrabajadorUserAsync(
+            sp, configuration, logger,
+            emailKey: "Seed:MecanicoEmail",
+            passwordKey: "Seed:MecanicoPassword",
+            nombre: "Laura",
+            apellidos: "Gómez Ruiz",
+            telefono: "622334455",
+            dni: "34567890V",
+            fechaNacimiento: new DateOnly(1989, 11, 15),
+            fechaIngreso: new DateOnly(2023, 5, 10),
+            tipo: TipoTrabajador.Mecanico,
+            rol: nameof(RolUsuario.Trabajador));
+
+        // Responsable de la oficina (RF-11, RF-46, CU-09, CU-18)
+        await SeedTrabajadorUserAsync(
+            sp, configuration, logger,
+            emailKey: "Seed:ResponsableEmail",
+            passwordKey: "Seed:ResponsablePassword",
+            nombre: "Elena",
+            apellidos: "Sánchez Navarro",
+            telefono: "633445566",
+            dni: "45678901G",
+            fechaNacimiento: new DateOnly(1985, 3, 20),
+            fechaIngreso: new DateOnly(2022, 1, 15),
+            tipo: TipoTrabajador.Operaciones,
+            rol: nameof(RolUsuario.Responsable));
     }
 
-    /// <summary>Crea los roles del enum <see cref="RolUsuario"/> que falten.</summary>
-    private static async Task SeedRolesAsync(IServiceProvider serviceProvider, ILogger logger) {
-        var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    private static async Task SeedRolesAsync(IServiceProvider sp, ILogger logger) {
+        var roleManager = sp.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
         foreach (var role in Enum.GetNames<RolUsuario>()) {
             if (await roleManager.RoleExistsAsync(role)) continue;
@@ -48,11 +86,8 @@ public static class IdentitySeeder {
         }
     }
 
-    /// <summary>
-    /// Crea el administrador. No se le asocia persona: solo administra.
-    /// </summary>
     private static async Task SeedAdminUserAsync(
-        IServiceProvider serviceProvider, IConfiguration configuration, ILogger logger) {
+        IServiceProvider sp, IConfiguration configuration, ILogger logger) {
         var email = configuration["Seed:AdminEmail"];
         var password = configuration["Seed:AdminPassword"];
 
@@ -61,34 +96,30 @@ public static class IdentitySeeder {
             return;
         }
 
-        var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
-        await EnsureUserAsync(
-            userManager, logger, email, password, nameof(RolUsuario.Admin));
+        var userManager = sp.GetRequiredService<UserManager<User>>();
+        await EnsureUserAsync(userManager, logger, email.Trim().ToLowerInvariant(), password, nameof(RolUsuario.Admin));
     }
 
-    /// <summary>
-    /// Crea un cliente de prueba con cuenta. El cliente y la cuenta se insertan
-    /// juntos porque <c>Cliente</c> va como navegación de <c>User</c>.
-    /// </summary>
     private static async Task SeedClienteUserAsync(
-        IServiceProvider serviceProvider, IConfiguration configuration, ILogger logger) {
-        var email = configuration["Seed:ClienteEmail"];
+        IServiceProvider sp, IConfiguration configuration, ILogger logger) {
+        var email = configuration["Seed:ClienteEmail"]?.Trim().ToLowerInvariant();
         var password = configuration["Seed:ClientePassword"];
 
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)) {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)) return;
 
-        var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
+        var userManager = sp.GetRequiredService<UserManager<User>>();
         if (await userManager.FindByEmailAsync(email) is not null) return;
 
+        var db = sp.GetRequiredService<AppDbContextUsuarios>();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         var cliente = new Cliente {
-            Nombre = "Cliente",
-            Apellidos = "De Prueba",
-            Email = email.Trim().ToLowerInvariant(),
-            Telefono = "600000000",
-            FechaNacimiento = new DateOnly(1995, 1, 1),
-            Dni = "00000000T"
+            Nombre = "Ana",
+            Apellidos = "García Pérez",
+            Email = email,
+            Telefono = "600112233",
+            FechaNacimiento = new DateOnly(1995, 4, 12),
+            Dni = "12345678Z"
         };
 
         var user = new User {
@@ -101,42 +132,56 @@ public static class IdentitySeeder {
 
         var creado = await userManager.CreateAsync(user, password);
         if (!creado.Succeeded) {
-            LogErrores(logger, $"crear el cliente {email}", creado.Errors);
+            await transaction.RollbackAsync();
+            LogErrores(logger, "crear el cliente semilla", creado.Errors);
             return;
         }
 
         var asignado = await userManager.AddToRoleAsync(user, nameof(RolUsuario.Cliente));
         if (!asignado.Succeeded) {
-            LogErrores(logger, $"asignar el rol Cliente a {email}", asignado.Errors);
-            await userManager.DeleteAsync(user);
+            await transaction.RollbackAsync();
+            LogErrores(logger, "asignar el rol Cliente", asignado.Errors);
             return;
         }
 
-        logger.LogInformation("Cliente sembrado: {Email}", email);
+        await transaction.CommitAsync();
+        logger.LogInformation("Cliente semilla creado: {ClienteId}", cliente.Id);
     }
 
-    /// <summary>Crea un trabajador de prueba con cuenta y rol Trabajador.</summary>
     private static async Task SeedTrabajadorUserAsync(
-        IServiceProvider serviceProvider, IConfiguration configuration, ILogger logger) {
-        var email = configuration["Seed:TrabajadorEmail"];
-        var password = configuration["Seed:TrabajadorPassword"];
+        IServiceProvider sp,
+        IConfiguration configuration,
+        ILogger logger,
+        string emailKey,
+        string passwordKey,
+        string nombre,
+        string apellidos,
+        string telefono,
+        string dni,
+        DateOnly fechaNacimiento,
+        DateOnly fechaIngreso,
+        TipoTrabajador tipo,
+        string rol) {
+        var email = configuration[emailKey]?.Trim().ToLowerInvariant();
+        var password = configuration[passwordKey];
 
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)) {
-            return;
-        }
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password)) return;
 
-        var userManager = serviceProvider.GetRequiredService<UserManager<User>>();
+        var userManager = sp.GetRequiredService<UserManager<User>>();
         if (await userManager.FindByEmailAsync(email) is not null) return;
 
+        var db = sp.GetRequiredService<AppDbContextUsuarios>();
+        await using var transaction = await db.Database.BeginTransactionAsync();
+
         var trabajador = new Trabajador {
-            Nombre = "Trabajador",
-            Apellidos = "De Prueba",
-            Email = email.Trim().ToLowerInvariant(),
-            Telefono = "611111111",
-            FechaNacimiento = new DateOnly(1992, 6, 1),
-            Dni = "11111111H",
-            FechaIngreso = new DateOnly(2024, 2, 1),
-            Tipo = TipoTrabajador.Operaciones
+            Nombre = nombre,
+            Apellidos = apellidos,
+            Email = email,
+            Telefono = telefono,
+            FechaNacimiento = fechaNacimiento,
+            Dni = dni,
+            FechaIngreso = fechaIngreso,
+            Tipo = tipo
         };
 
         var user = new User {
@@ -149,24 +194,23 @@ public static class IdentitySeeder {
 
         var creado = await userManager.CreateAsync(user, password);
         if (!creado.Succeeded) {
-            LogErrores(logger, $"crear el trabajador {email}", creado.Errors);
+            await transaction.RollbackAsync();
+            LogErrores(logger, $"crear trabajador semilla ({rol})", creado.Errors);
             return;
         }
 
-        var asignado = await userManager.AddToRoleAsync(user, nameof(RolUsuario.Trabajador));
+        var asignado = await userManager.AddToRoleAsync(user, rol);
         if (!asignado.Succeeded) {
-            LogErrores(logger, $"asignar el rol Trabajador a {email}", asignado.Errors);
-            await userManager.DeleteAsync(user);
+            await transaction.RollbackAsync();
+            LogErrores(logger, $"asignar rol {rol}", asignado.Errors);
             return;
         }
 
-        logger.LogInformation("Trabajador sembrado: {Email}", email);
+        await transaction.CommitAsync();
+        logger.LogInformation("Trabajador semilla creado: {TrabajadorId} ({Rol}/{Tipo})",
+            trabajador.Id, rol, tipo);
     }
 
-    /// <summary>
-    /// Crea una cuenta con un rol si no existe. Se usa para cuentas sin persona
-    /// (admin). Para personas hay que insertar además el cliente o el trabajador.
-    /// </summary>
     private static async Task EnsureUserAsync(
         UserManager<User> userManager, ILogger logger,
         string email, string password, string role) {
@@ -181,25 +225,24 @@ public static class IdentitySeeder {
 
             var creado = await userManager.CreateAsync(user, password);
             if (!creado.Succeeded) {
-                LogErrores(logger, $"crear la cuenta {email}", creado.Errors);
+                LogErrores(logger, $"crear la cuenta ({role})", creado.Errors);
                 return;
             }
 
-            logger.LogInformation("Cuenta sembrada: {Email}", email);
+            logger.LogInformation("Cuenta semilla creada: {UserId} ({Role})", user.Id, role);
         }
 
         if (await userManager.IsInRoleAsync(user, role)) return;
 
         var asignado = await userManager.AddToRoleAsync(user, role);
         if (!asignado.Succeeded) {
-            LogErrores(logger, $"asignar el rol {role} a {email}", asignado.Errors);
+            LogErrores(logger, $"asignar el rol {role}", asignado.Errors);
             return;
         }
 
-        logger.LogInformation("Rol {Role} asignado a {Email}", role, email);
+        logger.LogInformation("Rol {Role} asignado a {UserId}", role, user.Id);
     }
 
-    /// <summary>Escribe en el log los errores de Identity de forma legible.</summary>
     private static void LogErrores(ILogger logger, string contexto, IEnumerable<IdentityError> errores) {
         foreach (var error in errores) {
             logger.LogError("Error al {Contexto}: {Codigo} - {Descripcion}",
