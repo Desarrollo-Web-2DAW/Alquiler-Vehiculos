@@ -24,6 +24,51 @@ namespace Alquiler_Vehiculos.Tests.Unit.Mappers;
 [Category("Unit")]
 public class VehiculoMapperTests
 {
+    [TestCase("5")]
+    [TestCase("999")]
+    [TestCase("-1")]
+    [TestCase("Desconocido")]
+    public void Color_TextoNumericoOValorNoDefinido_SeRechazaSinLanzarExcepcion(string texto)
+    {
+        // Arrange
+        var create = CrearDto() with { Color = texto };
+        var update = CrearUpdateDto() with { Color = texto };
+
+        // Act
+        var alta = create.ToVehiculo(CrearFoto());
+        var modificacion = update.ToVehiculoModel(CrearFoto());
+        var validacionAlta = new CreateVehiculoValidator().Validate(create);
+        var validacionModificacion = new UpdateVehiculoValidator().Validate(update);
+
+        // Assert
+        alta.IsFailure.Should().BeTrue();
+        alta.Error.Should().BeEquivalentTo(VehiculoError.TipoColorInvalido());
+        modificacion.IsFailure.Should().BeTrue();
+        modificacion.Error.Should().BeEquivalentTo(VehiculoError.TipoColorInvalido());
+        validacionAlta.Errors.Should().ContainSingle(e => e.PropertyName == "Color");
+        validacionModificacion.Errors.Should().ContainSingle(e => e.PropertyName == "Color");
+    }
+
+    [TestCase("0")]
+    [TestCase("5")]
+    [TestCase("999")]
+    [TestCase("-1")]
+    [TestCase("Desconocido")]
+    public void Estado_TextoNumericoOValorNoDefinido_SeRechazaSinLanzarExcepcion(string texto)
+    {
+        // Arrange
+        var dto = CrearUpdateDto() with { Estado = texto };
+
+        // Act
+        var resultado = dto.ToVehiculoModel(CrearFoto());
+        var validacion = new UpdateVehiculoValidator().Validate(dto);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<Alquiler_Vehiculos.Errors.Common.ValidationError>();
+        validacion.Errors.Should().ContainSingle(e => e.PropertyName == "Estado");
+    }
+
     [TestCase(1, "BCDWVKFJTELM")]
     [TestCase(2, "MNCABD")]
     [TestCase(3, "DQVZHIEC")]

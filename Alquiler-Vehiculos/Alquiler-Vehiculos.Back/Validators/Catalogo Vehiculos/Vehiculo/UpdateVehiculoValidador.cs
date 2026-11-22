@@ -45,12 +45,14 @@ public class UpdateVehiculoValidator : AbstractValidator<UpdateVehiculoDto>
             
         RuleFor(v => v.Estado)
             .NotEmpty().WithMessage("El estado no puede estar vacío.")
-            .Must(e => Enum.TryParse<EstadoVehiculo>(e, true, out var estado) && estado != EstadoVehiculo.Retirado)
+            .Must(e => !int.TryParse(e, out _) && Enum.TryParse<EstadoVehiculo>(e, true, out var estado)
+                && Enum.IsDefined(estado) && estado != EstadoVehiculo.Retirado)
             .WithMessage("El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
 
         RuleFor(v => v.Color)
             .NotEmpty().WithMessage("El color no puede estar vacío.")
-            .Must(col => Enum.TryParse<TipoColor>(col, true, out _))
+            .Must(col => !int.TryParse(col, out _) && Enum.TryParse<TipoColor>(col, true, out var color)
+                && Enum.IsDefined(color))
             .WithMessage("El color seleccionado no es válido.");
 
         RuleFor(v => v.PrecioBaseDia)

@@ -29,6 +29,9 @@ public static class VehiculoMapper
         var transmision = ObtenerTipoTransmision(dto.Acriss[2]);
         if (transmision.IsFailure) return transmision.Error;
 
+        if (int.TryParse(dto.Color, out _) || !Enum.TryParse<TipoColor>(dto.Color, true, out var color)
+            || !Enum.IsDefined(color)) return VehiculoError.TipoColorInvalido();
+
         // RF-01: un vehículo nuevo nace siempre Disponible (valor por defecto del modelo) y activo.
         return new VehiculoModel()
         {
@@ -41,7 +44,7 @@ public static class VehiculoMapper
             Carroceria = carroceria.Value,
             Combustible = combustible.Value,
             Transmision = transmision.Value,
-            Color = (TipoColor)Enum.Parse(typeof(TipoColor), dto.Color, ignoreCase: true),
+            Color = color,
             PrecioBaseDia = dto.PrecioBaseDia,
             Plazas = dto.Plazas,
             MaleteroLitros = dto.MaleteroLitros,
@@ -73,7 +76,11 @@ public static class VehiculoMapper
         var transmision = ObtenerTipoTransmision(dto.Acriss[2]);
         if (transmision.IsFailure) return transmision.Error;
 
-        var estado = Enum.Parse<EstadoVehiculo>(dto.Estado, ignoreCase: true);
+        if (int.TryParse(dto.Color, out _) || !Enum.TryParse<TipoColor>(dto.Color, true, out var color)
+            || !Enum.IsDefined(color)) return VehiculoError.TipoColorInvalido();
+        if (int.TryParse(dto.Estado, out _) || !Enum.TryParse<EstadoVehiculo>(dto.Estado, true, out var estado)
+            || !Enum.IsDefined(estado) || estado == EstadoVehiculo.Retirado)
+            return ValidationError.Create("El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
 
         var vehiculo = new VehiculoModel
         {
@@ -86,7 +93,7 @@ public static class VehiculoMapper
             Carroceria = carroceria.Value,
             Combustible = combustible.Value,
             Transmision = transmision.Value,
-            Color = (TipoColor)Enum.Parse(typeof(TipoColor), dto.Color, ignoreCase: true),
+            Color = color,
             PrecioBaseDia = dto.PrecioBaseDia,
             Plazas = dto.Plazas,
             MaleteroLitros = dto.MaleteroLitros,

@@ -45,7 +45,8 @@ public class CreateVehiculoValidator : AbstractValidator<CreateVehiculoDto>
 
         RuleFor(v => v.Color)
             .NotEmpty().WithMessage("El color no puede estar vacío.")
-            .Must(col => Enum.TryParse<TipoColor>(col, true, out _))
+            .Must(col => !int.TryParse(col, out _) && Enum.TryParse<TipoColor>(col, true, out var color)
+                && Enum.IsDefined(color))
             .WithMessage("El color seleccionado no es válido.");
 
         RuleFor(v => v.PrecioBaseDia)
