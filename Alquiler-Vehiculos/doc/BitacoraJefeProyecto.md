@@ -35,6 +35,20 @@ Este bloque consolida el núcleo de identidad, seguridad e infraestructura comú
 - **Limpieza técnica:** eliminadas las 4 excepciones duplicadas en `Alquiler_Vehiculos.Exceptions.Usuario` (unificadas en `DomainExceptions.cs` para `GlobalExceptionHandler`) y alineados todos los paquetes NuGet de EF Core (`10.0.4`) y `Microsoft.IdentityModel.*` (`8.0.1`), dejando el build en **0 warnings**.
 - **Dockerización completa (`Dockerfile`, `.dockerignore`, `.env.example`, `compose.yaml`):** imagen multi-stage (`sdk:10.0` → `aspnet:10.0`) con usuario no-root (`USER app`), permisos en `/app/logs` para Serilog, endpoint `/health` nativo y 4 servicios orquestados en red interna `alquiler-network`: `postgres` (`5433`), `redis` (`6379`), `mailpit` (`1025`/`8025`) y `api` (`8080`), todos con `healthcheck`.
 
+#### Superficie REST implementada
+
+| Método | Ruta | Acceso / Política | Respuestas HTTP |
+|---|---|---|---|
+| `POST` | `/api/auth/signup` | Público | `201`, `400`, `409` |
+| `POST` | `/api/auth/login` | Público | `200`, `400`, `401`, `403` |
+| `GET` | `/api/auth/me` | Autenticado (`[Authorize]`) | `200`, `401`, `403`, `404` |
+| `GET` | `/api/users` | `PolicyNames.Admin` | `200`, `401`, `403` |
+| `GET` | `/api/users/{id:guid}` | `PolicyNames.Admin` | `200`, `401`, `403`, `404` |
+| `PATCH` | `/api/users/{id:guid}/role` | `PolicyNames.Admin` | `200`, `400`, `401`, `403`, `404`, `409` |
+| `DELETE` | `/api/users/{id:guid}` | `PolicyNames.Admin` | `204`, `401`, `403`, `404`, `409` |
+| `PATCH` | `/api/users/{id:guid}/reactivate` | `PolicyNames.Admin` | `200`, `401`, `403`, `404` |
+| `GET` | `/health` | Público (HEALTHCHECK) | `200` (`Healthy`) |
+
 ---
 
 ### 2. Flujo de autenticación y autorización
@@ -96,6 +110,22 @@ sequenceDiagram
 **D6 — Estrategia de pruebas siguiendo la pirámide de testing + entorno Docker reproducible (RNF-04, RNF-05).**
 - *Justificación:* cada capa cubre un nivel de riesgo con el coste adecuado: tests unitarios rápidos y baratos en la base (aislando servicios con `Moq`), integración en la capa intermedia contra **PostgreSQL real efímero con Testcontainers** y `WebApplicationFactory<Program>` (validando también el rechazo `403 Forbidden` entre roles reales), y E2E con **Bruno CLI** en la cúspide simulando a un usuario real tanto en `local` (`5216`) como en contenedor Docker `desarrollo` (`8080`). Los tests de Bruno generan email y DNI únicos por ejecución (`script:pre-request`) para ser repetibles sin reiniciar la BD.
 - *Alternativa descartada:* depender solo de pruebas manuales en Postman/Swagger o sustituir PostgreSQL por EF Core `InMemory`, que no valida migraciones ni transacciones reales.
+
+**D7 — Separación `AuthController` (sesión) vs `UsersController` (administración blindada a nivel de clase).**
+- *Justificación:* separar las operaciones de autenticación (`/api/auth`) de la administración de cuentas (`/api/users`) permite blindar todo `UsersController` a nivel de clase con `[Authorize(Policy = PolicyNames.Admin)]` (*secure by default*: cualquier endpoint administrativo futuro nace protegido automáticamente). Además, permite verificar en pruebas de integración y E2E el rechazo `403 Forbidden` para `Cliente`, `Trabajador`, `Mecanico` y `Responsable`.
+- *Alternativa descartada:* mezclar endpoints administrativos en `AuthController` repitiendo `[Authorize]` acción por acción, con mayor riesgo de olvidar una política.
+
+**D8 — Reglas de integridad en gestión de cuentas (`ROL_INCOMPATIBLE_CON_PERSONA` y `ULTIMO_ADMIN`, HTTP `409`).**
+- *Justificación:* en coherencia permanente con **D3**, una cuenta de `Trabajador` (`TrabajadorId != null`) **sí puede cambiar libremente entre `Trabajador` ↔ `Responsable` ↔ `Admin`** (el administrador puede ascender o reasignar roles internos del personal), pero nunca pasar a `Cliente`. En sentido inverso, una cuenta de `Cliente` (`ClienteId != null`) nunca puede convertirse en `Trabajador`/`Responsable`/`Admin`, ya que carece de entidad `Trabajador` (`FechaIngreso`, `TipoTrabajador`) y rompería los claims del JWT y reglas de taller/oficina; si un cliente entra a trabajar en la empresa, se le crea su cuenta corporativa aparte. Asimismo, tanto `CambiarRolAsync` como `DesactivarAsync` impiden dejar el sistema sin ningún `Admin` activo (`ULTIMO_ADMIN`). Se devuelve `409 Conflict` porque la petición es válida en formato pero entra en conflicto con el estado actual del dominio.
+- *Alternativa descartada:* permitir cambios de rol arbitrarios sin validar el perfil asociado o permitir desactivar al único administrador del sistema.
+
+**D9 — Baja lógica (`IsDeleted` / `DeletedAt`) y reactivación frente a borrado físico.**
+- *Justificación:* `DELETE /api/users/{id}` aplica *soft-delete* marcando `IsDeleted = true` y registrando `DeletedAt` en UTC, preservando integridad referencial y trazabilidad histórica de reservas, pagos o partes de taller vinculados a la persona. La cuenta queda bloqueada para iniciar sesión y puede recuperarse con `PATCH /api/users/{id}/reactivate`.
+- *Alternativa descartada:* borrado físico (`UserManager.DeleteAsync`), que destruye auditoría y rompe claves foráneas.
+
+**D10 — Listado de usuarios sin consultas N+1 (`RNF-02`) y Docker multi-stage no-root con `/health` (`RNF-05`).**
+- *Justificación:* en `UserService.GetAllAsync`, en lugar de invocar `userManager.GetRolesAsync(u)` dentro de un bucle (1 + N consultas a PostgreSQL), se resuelven todos los roles con una única consulta `JOIN` sobre `UserRoles` y `Roles` cruzada en memoria (2 consultas fijas, cumpliendo RNF-02). En Docker, la imagen multi-stage (`sdk:10.0` → `aspnet:10.0`) minimiza tamaño, ejecuta el proceso con usuario sin privilegios (`USER app`), asegura permisos en `/app/logs` para Serilog y expone `/health` para orquestar el arranque seguro con `depends_on` y `HEALTHCHECK`.
+- *Alternativa descartada:* iterar `GetRolesAsync` por usuario (N+1) o ejecutar el contenedor como `root` con el SDK completo y sin comprobación de salud.
 
 ---
 
