@@ -7,6 +7,26 @@ auth {
   mode: none
 }
 
+vars:pre-request {
+  baseUrl: http://localhost:5216
+  adminEmail: admin@alquiler.local
+  adminPassword: Admin12345!
+  clienteEmail: cliente@alquiler.local
+  clientePassword: Cliente12345!
+  trabajadorEmail: trabajador@alquiler.local
+  trabajadorPassword: Trabajador12345!
+  mecanicoEmail: mecanico@alquiler.local
+  mecanicoPassword: Mecanico12345!
+  responsableEmail: responsable@alquiler.local
+  responsablePassword: Responsable12345!
+  adminToken: 
+  clienteToken: 
+  trabajadorToken: 
+  mecanicoToken: 
+  responsableToken: 
+  nuevoClienteToken: 
+}
+
 script:post-response {
   if (res.getStatus() >= 500) {
     const requestName = bru.getRequestName ? bru.getRequestName() : 'Request';
@@ -16,10 +36,11 @@ script:post-response {
 }
 
 docs {
-  ## Ejecución desde PowerShell (con la API arrancada en local)
+  ## Ejecución desde PowerShell (con la API arrancada)
   ```powershell
   cd Alquiler-Vehiculos\Alquiler-Vehiculos.Tests.E2E\Bruno-Cli
   bru run --env local
+  bru run --env desarrollo
   ```
 
   ## Organización de la colección
