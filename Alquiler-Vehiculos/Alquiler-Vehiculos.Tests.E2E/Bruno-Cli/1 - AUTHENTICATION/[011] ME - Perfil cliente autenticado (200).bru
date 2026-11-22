@@ -21,7 +21,7 @@ script:post-response {
 
   test("GetMe autenticado - Devuelve datos del cliente recién registrado", function () {
     const body = res.getBody();
-    expect(body.email).to.equal("e2e.cliente@alquiler.local");
+    expect(body.email).to.equal(bru.getVar("nuevoClienteEmail"));
     expect(body.nombre).to.equal("Luis");
     expect(body.apellidos).to.equal("Vega Moreno");
     expect(body.role).to.equal("Cliente");

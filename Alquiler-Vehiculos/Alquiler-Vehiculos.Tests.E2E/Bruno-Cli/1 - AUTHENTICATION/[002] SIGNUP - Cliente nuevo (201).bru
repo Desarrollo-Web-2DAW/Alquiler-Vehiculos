@@ -16,14 +16,24 @@ headers {
 
 body:json {
   {
-    "email": "e2e.cliente@alquiler.local",
+    "email": "{{nuevoClienteEmail}}",
     "password": "Password123!",
     "nombre": "Luis",
     "apellidos": "Vega Moreno",
     "telefono": "655443322",
     "fechaNacimiento": "1996-08-20",
-    "dni": "87654321X"
+    "dni": "{{nuevoClienteDni}}"
   }
+}
+
+script:pre-request {
+  const timestamp = Date.now();
+  const numDni = String(10000000 + (timestamp % 89999999));
+  const letras = "TRWAGMYFPDXBNJZSQVHLCKE";
+  const letra = letras[parseInt(numDni, 10) % 23];
+
+  bru.setVar("nuevoClienteEmail", `e2e.${timestamp}@alquiler.local`);
+  bru.setVar("nuevoClienteDni", `${numDni}${letra}`);
 }
 
 script:post-response {
@@ -34,7 +44,7 @@ script:post-response {
   test("Signup Cliente - Devuelve token y rol Cliente", function () {
     const body = res.getBody();
     expect(body.token).to.be.a("string").and.not.be.empty;
-    expect(body.email).to.equal("e2e.cliente@alquiler.local");
+    expect(body.email).to.equal(bru.getVar("nuevoClienteEmail"));
     expect(body.role).to.equal("Cliente");
   });
 
