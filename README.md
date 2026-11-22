@@ -53,6 +53,22 @@ contraseñas fuera del repositorio: `Seed:AdminPassword`, `Seed:ClientePassword`
 `Seed:TrabajadorPassword` en User Secrets (o con `__` en variables de entorno).
 Las contraseñas de desarrollo que estuvieron versionadas también deben rotarse.
 
+### Módulos integrados desde dev
+
+Se conservan autenticación, notificaciones de correo, caché, middleware global y
+taller. El contrato de autenticación usa `IAuthService.Login`, como el controlador.
+Solo queda una declaración de `AppDbContextUsuarios`, en `Data/Users/`.
+
+El identificador de User Secrets sigue siendo `alquiler-vehiculos-back-local`.
+El correo mantiene la configuración SMTP de `dev`; su contraseña se configura
+fuera del repositorio mediante `Email:Password` o `Email__Password`.
+
+`compose.yaml` conserva PostgreSQL y MongoDB con sus volúmenes y añade Mailpit.
+Mailpit ofrece SMTP en `localhost:1025` y la bandeja en `http://localhost:8025`.
+Para usarlo hay que configurar `Email:Host=localhost`, `Email:Port=1025`,
+`Email:Security=None` y credenciales vacías en el entorno local; añadir el
+contenedor no cambia por sí solo la configuración SMTP de la aplicación.
+
 ## Pruebas
 
 ```powershell
@@ -71,8 +87,9 @@ dotnet test Alquiler-Vehiculos/Alquiler-Vehiculos.slnx --settings Alquiler-Vehic
 `coverage.runsettings` está junto a la solución `.slnx`. Excluye del informe el
 archivo generado `OpenApiXmlCommentSupport.generated.cs`, no el código del proyecto
 ni sus tests. Esta exclusión no corrige vulnerabilidades de paquetes NuGet:
-`Microsoft.OpenApi` se referencia explícitamente en la versión 2.7.5 para no
-resolver la dependencia vulnerable 2.0.0.
+`Microsoft.AspNetCore.OpenApi` utiliza la versión 10.0.15 de `dev` y exige
+`Microsoft.OpenApi` 2.13.0 o superior: se fija 2.13.0 para evitar la degradación
+que produciría conservar la referencia anterior 2.7.5.
 
 Las pruebas de integración crean y eliminan sus propios contenedores y datos aislados.
 No utilizan las bases habituales. Las de almacenamiento también usan PostgreSQL real

@@ -19,6 +19,7 @@ using Alquiler_Vehiculos.Cache;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
+using Alquiler_Vehiculos.Middleware;
 using Serilog;
 using Serilog.Events;
 
@@ -119,20 +120,23 @@ try {
     builder.Services.AddScoped<CreateConcesionarioValidator>();
     builder.Services.AddScoped<UpdateConcesionarioValidator>();
 
+    // Módulos incorporados desde dev, antes de construir el contenedor.
+    builder.Services.AddEmailNotifications(builder.Configuration);
+    builder.Services.AddTallerServices();
+
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
     var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()) {
-    app.MapOpenApi();
-}
+    app.UseGlobalExceptionHandler();
+
+    if (app.Environment.IsDevelopment()) {
+        app.MapOpenApi();
+    }
     // Crear el índice de marcas al arrancar, sin borrar datos de MongoDB.
     var mongoContext = app.Services.GetRequiredService<MongoDbContext>();
     mongoContext.CrearIndices();
 
     app.UseSerilogRequestLogging();
-
-    //app.UseGlobalExceptionHandler();
 
     app.UseAuthentication();
     app.UseAuthorization();

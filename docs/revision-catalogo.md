@@ -128,3 +128,30 @@ La revisión final detectó además la conexión de usuarios y contraseñas de c
 - `dotnet test Alquiler-Vehiculos/Alquiler-Vehiculos.slnx --logger "trx;LogFileName=catalogo-final.trx"`: **Total: 926 · OK: 926 · KO: 0 · Omitidas: 0**, repetido tras retirar las credenciales de desarrollo, duración final de tests 37 s. Informe local ignorado por Git: `Alquiler-Vehiculos/Alquiler-Vehiculos.Tests/TestResults/catalogo-final.trx`.
 - Sin KO finales. La omisión temporal de Redis en la primera ejecución no se cuenta como éxito; en la ejecución completa final no hubo omitidas.
 - No se ejecutaron E2E ni se crearon endpoints para hacerlos posibles. No se arrancó la API ni se escribieron datos en las bases habituales.
+
+## Integración posterior de origin/dev
+
+La responsable autorizó incorporar `origin/dev` (`d6c2027`) en `feature/Vehiculo/fixErrors` y aceptó las resoluciones propuestas. Se mantienen las correcciones del catálogo. Los componentes de otros módulos descritos aquí proceden de `dev`, no se han reimplementado en esta revisión.
+
+| Archivo o colisión | Resolución aplicada |
+| --- | --- |
+| Back.csproj | UserSecretsId local conservado; MailKit, Tokens y herramientas EF incorporados; plantillas de correo copiadas a salida. Se mantiene FluentValidation 12 y su registro por ensamblado; no se añade FluentValidation.AspNetCore 11 ni Moq a producción, porque el código incorporado no los usa. |
+| Versiones NuGet | OpenApi 10.0.15 de dev requiere Microsoft.OpenApi >= 2.13.0: se fija 2.13.0 tras comprobar NU1605. EF Core.Relational se fija a 10.0.8, igual que EF Core/Design, para eliminar MSB3277 entre Back y los proyectos de pruebas. Se conservan las demás versiones locales que funcionan, sin actualizaciones masivas. |
+| DomainError.cs | Se mantienen los errores tipados existentes y se incorpora ApiErrorResponse de dev. |
+| Program.cs | Se combinan los registros del catálogo/usuarios/storage/caché con AddEmailNotifications y AddTallerServices antes de un único Build. Se activa el middleware global incorporado desde dev. No se añaden migraciones ni llamadas a seeders del catálogo. |
+| AuthService/IAuthService | Se conserva Login de dev, coherente con el controlador incorporado. El cuerpo del servicio se mantiene. |
+| appsettings*.json | Se combinan opciones de correo con catálogo/usuarios, sin reintroducir clave JWT ni contraseñas de conexiones o cuentas iniciales. Se conserva el UserSecretsId local; Email:Password debe configurarse en ese almacén o en variables de entorno. |
+| Tests.csproj | Se conservan PostgreSQL, MongoDB, cobertura y proyecto auxiliar Storage; se incorpora Testcontainers.Redis. No se cambian tests para ocultar fallos. |
+| compose.yaml | Se mantienen PostgreSQL/MongoDB, puertos y volúmenes; se añade Mailpit de dev. No se arrancan ni recrean las bases habituales. Redis sigue pendiente, como antes. |
+| AppDbContextUsuarios duplicado | Ambas declaraciones tienen las mismas tablas, índices y propiedades; difieren en comentarios. Se conserva Data/Users/AppDbContextUsuarios.cs y se elimina la copia incorporada en Entities, sin perder configuración. |
+
+La activación del middleware global deja resuelto ese pendiente de integración; el resto de decisiones del equipo, en particular la implementación ausente de ITransactionManager, no se implementa por este merge.
+
+### Comprobaciones de la integración
+
+- Se reutilizaron los apartados de pruebas de los temas 06 y 07 leídos en esta sesión y se volvió a consultar el Program de ConfigLogging enlazado arriba como guía de orden de registros/pipeline.
+- `dotnet build Alquiler-Vehiculos/Alquiler-Vehiculos.slnx`: **0 errores, 0 advertencias**.
+- `dotnet test Alquiler-Vehiculos/Alquiler-Vehiculos.slnx --logger "trx;LogFileName=integracion-dev.trx"`: **Total: 1037 · OK: 1037 · KO: 0 · Omitidas: 0**, duración de tests 52 s. Incluye las pruebas incorporadas desde dev.
+- Docker disponible (29.9.2); las pruebas SMTP utilizan Mailpit aislado mediante Testcontainers, no el servidor de correo externo configurado para la aplicación.
+- Sin marcadores de conflicto en los archivos de trabajo, sin problemas en `git diff --check` y sin secretos detectados por la revisión de configuración. `docker compose config --quiet` válido con una variable temporal de validación, sin levantar servicios ni modificar volúmenes.
+- No se ha arrancado la API, realizado E2E ni enviado correo externo. La compilación y las pruebas no certifican el arranque mientras falte ITransactionManager.

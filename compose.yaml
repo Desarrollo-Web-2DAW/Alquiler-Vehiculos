@@ -22,6 +22,15 @@ services:
     volumes:
       - mongodb-data:/data/db
 
+  # SMTP local opcional y bandeja de captura de correo (RF-36).
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: alquiler-vehiculos-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   mongodb-data:

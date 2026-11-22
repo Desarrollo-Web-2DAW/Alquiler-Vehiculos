@@ -40,7 +40,7 @@ public class AuthService(
     /// y solo después el estado de la cuenta, para no revelar datos a quien
     /// no conoce las credenciales.
     /// </summary>
-    public async Task<Result<AuthResponseDto, DomainError>> SignInAsync(LoginDto loginDto) {
+    public async Task<Result<AuthResponseDto, DomainError>> Login(LoginDto loginDto) {
         logger.LogInformation("Intento de inicio de sesión: {Email}", loginDto.Email);
 
         var validacion = await loginValidator.ValidateAsync(loginDto);
