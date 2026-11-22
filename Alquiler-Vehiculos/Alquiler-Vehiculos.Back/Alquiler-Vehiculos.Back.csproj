@@ -39,7 +39,6 @@
     <ItemGroup>
         <Folder Include="Controllers\Pago\" />
         <Folder Include="Controllers\Reserva\" />
-        <Folder Include="Controllers\Vehiculo\" />
         <Folder Include="Data\Seed\Storage\" />
         <Folder Include="Data\Seed\Vehiculo\" />
         <Folder Include="Errors\Cliente\" />
@@ -60,5 +59,6 @@
         <Folder Include="Services\Pago\" />
         <Folder Include="Services\Reserva\" />
         <Folder Include="Services\Trabajador\" />
+        <Folder Include="Services\Vehiculo\Marca\" />
     </ItemGroup>
 </Project>

@@ -16,7 +16,7 @@ public class VehiculoDtoTests {
 
         // Assert
         dto.Should().BeEquivalentTo(new {
-            Foto = "", Matricula = "", Marca = "", Modelo = "", Acriss = "", Categoria = "",
+            Id = "", Foto = "", Matricula = "", Marca = "", Modelo = "", Acriss = "", Categoria = "",
             Combustible = "", Transmision = "", Estado = "", Color = "", PrecioBaseDia = 0m,
             Plazas = 0, MaleteroLitros = 0, AutonomiaKm = 0, Kilometraje = 0,
             FechaUltimaRevision = "", Concesionario = 0L, IsActivo = false
@@ -30,6 +30,7 @@ public class VehiculoDtoTests {
         var dto = new VehiculoDto();
 
         // Act
+        dto.Id = "abc12345678";
         dto.Foto = "foto-001";
         dto.Matricula = "1234BCD";
         dto.Marca = "Toyota";
@@ -51,6 +52,7 @@ public class VehiculoDtoTests {
 
         // Assert
         dto.Should().BeEquivalentTo(new {
+            Id = "abc12345678",
             Foto = "foto-001", Matricula = "1234BCD", Marca = "Toyota", Modelo = "Corolla",
             Acriss = "ILAH", Categoria = "Sedan", Combustible = "Hibrido", Transmision = "Automatica",
             Estado = "Disponible", Color = "Azul", PrecioBaseDia = 45.50m, Plazas = 5,

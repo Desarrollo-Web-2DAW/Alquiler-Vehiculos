@@ -49,29 +49,9 @@ public class VehiculoMapperTests
         validacionModificacion.Errors.Should().ContainSingle(e => e.PropertyName == "Color");
     }
 
-    [TestCase("0")]
-    [TestCase("5")]
-    [TestCase("999")]
-    [TestCase("-1")]
-    [TestCase("Desconocido")]
-    public void Estado_TextoNumericoOValorNoDefinido_SeRechazaSinLanzarExcepcion(string texto)
-    {
-        // Arrange
-        var dto = CrearUpdateDto() with { Estado = texto };
-
-        // Act
-        var resultado = dto.ToVehiculoModel(CrearFoto());
-        var validacion = new UpdateVehiculoValidator().Validate(dto);
-
-        // Assert
-        resultado.IsFailure.Should().BeTrue();
-        resultado.Error.Should().BeOfType<Alquiler_Vehiculos.Errors.Common.ValidationError>();
-        validacion.Errors.Should().ContainSingle(e => e.PropertyName == "Estado");
-    }
-
-    [TestCase(1, "BCDWVKFJTELM")]
-    [TestCase(2, "MNCABD")]
-    [TestCase(3, "DQVZHIEC")]
+    [TestCase(1, "BCDEFGHJKLMNPQRSTVW")]
+    [TestCase(2, "MNCABDQHF")]
+    [TestCase(3, "ABCDEFHILMNQRSUVXZ")]
     public void Acriss_TodasLasLetras_ValidadoresYMapeadoresCoinciden(int posicion, string admitidas)
     {
         // Arrange
@@ -131,7 +111,6 @@ public class VehiculoMapperTests
         Marca = "Toyota",
         Modelo = "Corolla",
         Acriss = acriss,
-        Estado = "Disponible",
         Color = "Azul",
         PrecioBaseDia = 45.90m,
         Plazas = 5,
@@ -139,8 +118,7 @@ public class VehiculoMapperTests
         AutonomiaKm = 780,
         Kilometraje = 12_500,
         FechaUltimaRevision = "2026-10-01",
-        Concesionario = 10L,
-        IsActivo = true
+        Concesionario = 10L
     };
 
     private static Foto CrearFoto() => new()
@@ -155,6 +133,7 @@ public class VehiculoMapperTests
     {
         var vehiculo = new VehiculoModel
         {
+            Id = "vehiculo-01",
             FotoFk = "delantera.jpg",
             Matrícula = "1234BCD",
             Marca = "Toyota",
@@ -253,24 +232,6 @@ public class VehiculoMapperTests
 
         // Assert — RF-01: un vehículo nuevo nace siempre Disponible.
         (resultado.Value.Estado, resultado.Value.Activo).Should().Be((EstadoVehiculo.Disponible, true));
-    }
-
-    [TestCase("Disponible", EstadoVehiculo.Disponible)]
-    [TestCase("Reservado", EstadoVehiculo.Reservado)]
-    [TestCase("EnAlquiler", EstadoVehiculo.EnAlquiler)]
-    [TestCase("Mantenimiento", EstadoVehiculo.Mantenimiento)]
-    [TestCase("enAlquiler", EstadoVehiculo.EnAlquiler)]
-    public void ToVehiculoModel_ConEstadoDelCatalogo_MapeaElEstado(string estado, EstadoVehiculo esperado)
-    {
-        // Arrange
-        var dto = CrearUpdateDto();
-        dto.Estado = estado;
-
-        // Act
-        var resultado = dto.ToVehiculoModel(CrearFoto());
-
-        // Assert
-        resultado.Value.Estado.Should().Be(esperado);
     }
 
     [TestCase("Azul", TipoColor.Azul)]
@@ -374,10 +335,17 @@ public class VehiculoMapperTests
     [TestCase('W', TipoCarroceria.Familiar)]
     [TestCase('V', TipoCarroceria.Furgoneta)]
     [TestCase('K', TipoCarroceria.Furgoneta)]
+    [TestCase('H', TipoCarroceria.Furgoneta)]
+    [TestCase('R', TipoCarroceria.Furgoneta)]
     [TestCase('F', TipoCarroceria.Suv)]
+    [TestCase('G', TipoCarroceria.Suv)]
     [TestCase('J', TipoCarroceria.TodoTerreno)]
+    [TestCase('P', TipoCarroceria.TodoTerreno)]
+    [TestCase('Q', TipoCarroceria.TodoTerreno)]
     [TestCase('T', TipoCarroceria.Descapotable)]
+    [TestCase('N', TipoCarroceria.Descapotable)]
     [TestCase('E', TipoCarroceria.Coupe)]
+    [TestCase('S', TipoCarroceria.Coupe)]
     [TestCase('M', TipoCarroceria.Monovolumen)]
     [TestCase('L', TipoCarroceria.Sedan)]
     public void ToVehiculo_ConSegundaLetraDelCatalogo_MapeaLaCarroceria(
@@ -395,20 +363,13 @@ public class VehiculoMapperTests
 
     /// <summary>
     /// Letras cuyo <see cref="AcrissTipo"/> no tiene equivalente en <see cref="TipoCarroceria"/>
-    /// (Deportivo, Roadster, Crossover, pickups, autocaravana, recreativo, especial y oferta especial).
+    /// (solo los códigos comerciales <c>Especial</c> y <c>OfertaEspecial</c>).
     /// </summary>
-    private static readonly char[] LetrasSinCarroceria = ['G', 'H', 'N', 'P', 'Q', 'R', 'S', 'X', 'Z'];
+    private static readonly char[] LetrasSinCarroceria = ['X', 'Z'];
 
     [TestCase('A')]
-    [TestCase('G')]
-    [TestCase('H')]
     [TestCase('I')]
-    [TestCase('N')]
     [TestCase('O')]
-    [TestCase('P')]
-    [TestCase('Q')]
-    [TestCase('R')]
-    [TestCase('S')]
     [TestCase('U')]
     [TestCase('X')]
     [TestCase('Y')]
@@ -469,6 +430,9 @@ public class VehiculoMapperTests
     [TestCase('A', TipoTransmision.Automatica)]      // AutomaticaSinTraccionDefinida
     [TestCase('B', TipoTransmision.Automatica)]      // Automatica4Wd
     [TestCase('D', TipoTransmision.Automatica)]      // AutomaticaAwd
+    [TestCase('Q', TipoTransmision.Automatica)]      // AutomatizacionNivel3
+    [TestCase('H', TipoTransmision.Automatica)]      // AutomatizacionNivel4
+    [TestCase('F', TipoTransmision.Automatica)]      // AutomatizacionNivel5
     public void ToVehiculo_ConTerceraLetraDelCatalogo_MapeaLaTransmision(
         char letra, TipoTransmision esperada)
     {
@@ -482,11 +446,9 @@ public class VehiculoMapperTests
         resultado.Value.Transmision.Should().Be(esperada);
     }
 
-    [TestCase('F')] // AutomatizacionNivel5
-    [TestCase('H')] // AutomatizacionNivel4
-    [TestCase('Q')] // AutomatizacionNivel3
     [TestCase('V')] // letra fuera del catálogo
-    public void ToVehiculo_ConTerceraLetraSinEquivalente_DevuelveErrorDeTransmision(char letra)
+    [TestCase('Y')] // letra fuera del catálogo
+    public void ToVehiculo_ConTerceraLetraFueraDelCatalogo_DevuelveErrorDeTransmision(char letra)
     {
         // Arrange
         var dto = CrearDto(CrearAcriss('L', letra));
@@ -499,11 +461,10 @@ public class VehiculoMapperTests
     }
 
     [Test]
-    public void ToVehiculo_ConCualquierTransmisionDelCatalogo_SoloFallaSiEstaFueraDelMapa()
+    public void ToVehiculo_ConCualquierTransmisionDelCatalogo_NoFallaPorTransmision()
     {
         // Arrange
         var transmisiones = Enum.GetValues<AcrissTransmisionTraccion>();
-        char[] sinEquivalente = ['F', 'H', 'Q'];
 
         // Act
         var fallidas = transmisiones
@@ -516,8 +477,8 @@ public class VehiculoMapperTests
             .ToArray();
 
         // Assert
-        fallidas.Should().BeEquivalentTo(sinEquivalente,
-            "solo las automatizaciones sin equivalente deben devolver error de transmisión");
+        fallidas.Should().BeEmpty(
+            "todas las transmisiones del catálogo, incluidas las automatizaciones 3/4/5, tienen equivalente");
     }
 
     [TestCase('D', TipoCombustible.Diesel)]    // DieselConAire
@@ -528,6 +489,16 @@ public class VehiculoMapperTests
     [TestCase('I', TipoCombustible.Hibrido)]   // HibridoEnchufable
     [TestCase('E', TipoCombustible.Electrico)] // ElectricoE
     [TestCase('C', TipoCombustible.Electrico)] // ElectricoC
+    [TestCase('A', TipoCombustible.Electrico)] // HidrogenoConAire (pila de combustible)
+    [TestCase('B', TipoCombustible.Electrico)] // HidrogenoSinAire (pila de combustible)
+    [TestCase('L', TipoCombustible.Gasolina)]  // GlpConAire
+    [TestCase('S', TipoCombustible.Gasolina)]  // GlpSinAire
+    [TestCase('M', TipoCombustible.Gasolina)]  // MulticombustibleConAire
+    [TestCase('F', TipoCombustible.Gasolina)]  // MulticombustibleSinAire
+    [TestCase('U', TipoCombustible.Gasolina)]  // EtanolConAire
+    [TestCase('X', TipoCombustible.Gasolina)]  // EtanolSinAire
+    [TestCase('R', TipoCombustible.Gasolina)]  // SinEspecificarConAire (ejemplo CCMR)
+    [TestCase('N', TipoCombustible.Gasolina)]  // SinEspecificarSinAire
     public void ToVehiculo_ConCuartaLetraDelCatalogo_MapeaElCombustible(
         char letra, TipoCombustible esperado)
     {
@@ -541,18 +512,9 @@ public class VehiculoMapperTests
         resultado.Value.Combustible.Should().Be(esperado);
     }
 
-    [TestCase('A')] // HidrogenoConAire
-    [TestCase('B')] // HidrogenoSinAire
-    [TestCase('F')] // MulticombustibleSinAire
-    [TestCase('U')] // EtanolConAire
-    [TestCase('L')] // GlpConAire
-    [TestCase('M')] // MulticomustibleConAire
-    [TestCase('N')] // SinEspecificarSinAire
-    [TestCase('R')] // SinEspecificarConAire
-    [TestCase('S')] // GlpSinAire
-    [TestCase('X')] // EtanolSinAire
     [TestCase('K')] // letra fuera del catálogo
-    public void ToVehiculo_ConCuartaLetraSinEquivalente_DevuelveErrorDeCombustible(char letra)
+    [TestCase('Y')] // letra fuera del catálogo
+    public void ToVehiculo_ConCuartaLetraFueraDelCatalogo_DevuelveErrorDeCombustible(char letra)
     {
         // Arrange
         var dto = CrearDto(CrearAcriss('L', 'A', letra));
@@ -597,7 +559,7 @@ public class VehiculoMapperTests
     public void ToVehiculoModel_ConSegundaLetraNoMapeable_DevuelveErrorDeCarroceria()
     {
         // Arrange
-        var dto = CrearUpdateDto(CrearAcriss('S'));
+        var dto = CrearUpdateDto(CrearAcriss('X'));
 
         // Act
         var resultado = dto.ToVehiculoModel(CrearFoto());
@@ -619,6 +581,7 @@ public class VehiculoMapperTests
         // Assert
         dto.Should().BeEquivalentTo(new
         {
+            Id = "vehiculo-01",
             Foto = "delantera.jpg",
             Matricula = "1234BCD",
             Marca = "Toyota",
@@ -638,6 +601,20 @@ public class VehiculoMapperTests
             Concesionario = 10L,
             IsActivo = true
         });
+    }
+
+    [Test]
+    public void ToDto_ConModelo_IncluyeElIdGeneradoPorElServidor()
+    {
+        // Arrange
+        var modelo = CrearModelo();
+
+        // Act
+        var dto = modelo.ToDto();
+
+        // Assert — RF-01 y RF-06: el cliente necesita el identificador de 11 caracteres.
+        dto.Id.Should().Be(modelo.Id);
+        dto.Id.Should().HaveLength(11);
     }
 
     [Test]

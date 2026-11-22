@@ -80,9 +80,6 @@ public static class VehiculoMapper
 
         if (int.TryParse(dto.Color, out _) || !Enum.TryParse<TipoColor>(dto.Color, true, out var color)
             || !Enum.IsDefined(color)) return VehiculoError.TipoColorInvalido();
-        if (int.TryParse(dto.Estado, out _) || !Enum.TryParse<EstadoVehiculo>(dto.Estado, true, out var estado)
-            || !Enum.IsDefined(estado) || estado == EstadoVehiculo.Retirado)
-            return ValidationError.Create("El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
 
         if (!DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) || fecha > DateTime.UtcNow)
             return ValidationError.Create("La fecha de la última revisión debe ser válida y no puede ser futura.");
@@ -106,13 +103,11 @@ public static class VehiculoMapper
             Kilometraje = dto.Kilometraje,
             FechaUltimaRevision = fecha,
             ConesionarioFk = dto.Concesionario,
-            Activo = dto.IsActivo,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null,
             DeletedAt = null
         };
         
-        vehiculo.CambiarEstadoMapper(estado);
         return vehiculo;
     }
     
@@ -125,6 +120,7 @@ public static class VehiculoMapper
     {
         return new VehiculoDto
         {
+            Id = vehiculoModel.Id,
             Foto = vehiculoModel.FotoFk,
             Matricula = vehiculoModel.Matrícula,
             Marca = vehiculoModel.Marca,
@@ -152,10 +148,12 @@ public static class VehiculoMapper
     /// </summary>
     /// <remarks>
     /// El mapa es explícito a propósito: cada miembro de <see cref="AcrissTipo"/> que tiene
-    /// equivalente en <see cref="TipoCarroceria"/> aparece aquí. Los que no lo tienen
-    /// (<c>Deportivo</c>, <c>Roadster</c>, <c>Crossover</c>, pickups, autocaravanas,
-    /// recreativos y los códigos comerciales <c>Especial</c>/<c>OfertaEspecial</c>)
-    /// devuelven error de carrocería.
+    /// equivalente en <see cref="TipoCarroceria"/> aparece aquí. Las letras del catálogo sin
+    /// carrocería propia se aproximan a la más cercana de la flota: <c>Deportivo</c> a
+    /// <c>Coupe</c>, <c>Roadster</c> a <c>Descapotable</c>, <c>Crossover</c> a <c>Suv</c>,
+    /// pickups a <c>TodoTerreno</c> y autocaravanas/recreativos a <c>Furgoneta</c>.
+    /// Solo quedan fuera los códigos comerciales <c>Especial</c> y <c>OfertaEspecial</c>,
+    /// que devuelven error de carrocería (ver la memoria de la práctica).
     /// </remarks>
     /// <param name="letraTipo">Segunda letra del ACRISS (catálogo <see cref="AcrissTipo"/>).</param>
     /// <returns><see cref="TipoCarroceria"/> o <see cref="BadRequestError"/></returns>
@@ -169,12 +167,19 @@ public static class VehiculoMapper
             AcrissTipo.Berlina                => TipoCarroceria.Sedan,
             AcrissTipo.Familiar               => TipoCarroceria.Familiar,
             AcrissTipo.FurgonetaPasajeros
-                or AcrissTipo.FurgonetaComercial => TipoCarroceria.Furgoneta,
-            AcrissTipo.Suv                    => TipoCarroceria.Suv,
-            AcrissTipo.TodoTerrenoAbierto     => TipoCarroceria.TodoTerreno,
-            AcrissTipo.Descapotable           => TipoCarroceria.Descapotable,
-            AcrissTipo.Coupe                  => TipoCarroceria.Coupe,
-            AcrissTipo.Monovolumen            => TipoCarroceria.Monovolumen,
+                or AcrissTipo.FurgonetaComercial
+                or AcrissTipo.Autocaravana
+                or AcrissTipo.Recreativo    => TipoCarroceria.Furgoneta,
+            AcrissTipo.Suv
+                or AcrissTipo.Crossover     => TipoCarroceria.Suv,
+            AcrissTipo.TodoTerrenoAbierto
+                or AcrissTipo.PickupCabinaSimple
+                or AcrissTipo.PickupDobleCabina => TipoCarroceria.TodoTerreno,
+            AcrissTipo.Descapotable
+                or AcrissTipo.Roadster     => TipoCarroceria.Descapotable,
+            AcrissTipo.Coupe
+                or AcrissTipo.Deportivo    => TipoCarroceria.Coupe,
+            AcrissTipo.Monovolumen          => TipoCarroceria.Monovolumen,
             _                                 => VehiculoError.TipoDeCarroceria()
         };
     }
@@ -182,6 +187,13 @@ public static class VehiculoMapper
     /// <summary>
     /// Obtiene <see cref="TipoCombustible"/> según la cuarta letra del ACRISS
     /// </summary>
+    /// <remarks>
+    /// <see cref="TipoCombustible"/> solo admite cuatro valores (RF-04), así que las letras
+    /// del catálogo sin equivalente exacto se agrupan en el valor más cercano: GLP/gas
+    /// comprimido, multicombustible y etanol se clasifican como <c>Gasolina</c>; el hidrógeno
+    /// (pila de combustible) como <c>Electrico</c>; y «sin especificar» toma <c>Gasolina</c>
+    /// como valor por defecto de la flota. Se documenta en la memoria de la práctica.
+    /// </remarks>
     /// <param name="letraCombustible">AcrissCombustible</param>
     /// <returns><see cref="TipoCombustible"/> o <see cref="BadRequestError"/></returns>
     internal static Result<TipoCombustible, DomainError> ObtenerTipoCombustible(char letraCombustible)
@@ -189,9 +201,10 @@ public static class VehiculoMapper
         return letraCombustible switch
         {
             'D' or 'Q' => TipoCombustible.Diesel,
-            'V' or 'Z' => TipoCombustible.Gasolina,
+            'V' or 'Z' or 'L' or 'S' or 'M' or 'F' or 'U' or 'X' or 'R' or 'N'
+                => TipoCombustible.Gasolina,
             'H' or 'I' => TipoCombustible.Hibrido,
-            'E' or 'C' => TipoCombustible.Electrico,
+            'E' or 'C' or 'A' or 'B' => TipoCombustible.Electrico,
             _ => VehiculoError.TipoCombustible()
         };
     }
@@ -200,6 +213,10 @@ public static class VehiculoMapper
     /// <summary>
     /// Obtiene <see cref="TipoTransmision"/> según la tercera letra del ACRISS
     /// </summary>
+    /// <remarks>
+    /// Los niveles de automatización 3, 4 y 5 (<c>Q</c>, <c>H</c> y <c>F</c>) son cajas
+    /// automáticas, así que se mapean a <see cref="TipoTransmision.Automatica"/>.
+    /// </remarks>
     /// <param name="letraTransmision">AcrissTransmision</param>
     /// <returns><see cref="TipoTransmision"/> o <see cref="BadRequestError"/></returns>
     internal static Result<TipoTransmision, DomainError> ObtenerTipoTransmision(char letraTransmision)
@@ -207,7 +224,7 @@ public static class VehiculoMapper
         return letraTransmision switch
         {
             'M' or 'N' or 'C' => TipoTransmision.Manual,
-            'A' or 'B' or 'D' => TipoTransmision.Automatica,
+            'A' or 'B' or 'D' or 'Q' or 'H' or 'F' => TipoTransmision.Automatica,
             _ => VehiculoError.TipoDeTransmision()
         };
     }

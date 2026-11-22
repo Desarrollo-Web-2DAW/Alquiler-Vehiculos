@@ -135,8 +135,8 @@ public class VehiculoServiceTests
     private const string ClaveMatricula = "vehiculo:matricula:";
     // C compacto · C 2/4 puertas (Hatchback) · M manual · D diésel con aire.
     private const string AcrissValido = "CCMD";
-    // S en 2ª posición no tiene equivalente de dominio: se rechaza antes de consultar dependencias.
-    private const string AcrissQueFallaEnElMapper = "ISMD";
+    // X (Especial) en 2ª posición es un código comercial sin carrocería: se rechaza antes de consultar dependencias.
+    private const string AcrissQueFallaEnElMapper = "IXMD";
 
     private Mock<IVehiculoRepository> _repository = null!;
     private Mock<IFotoRepository> _fotoRepository = null!;
@@ -193,7 +193,6 @@ public class VehiculoServiceTests
         Marca = "Toyota",
         Modelo = "Corolla",
         Acriss = AcrissValido,
-        Estado = "Disponible",
         Color = "Rojo",
         PrecioBaseDia = 50m,
         Plazas = 5,
@@ -201,8 +200,7 @@ public class VehiculoServiceTests
         AutonomiaKm = 600,
         Kilometraje = 1500,
         FechaUltimaRevision = "2025-01-01",
-        Concesionario = 1,
-        IsActivo = true
+        Concesionario = 1
     };
 
     private static VehiculoModel CrearModelo(string matricula = Matricula, string fotoFk = FotoId) => new()
@@ -239,6 +237,7 @@ public class VehiculoServiceTests
 
     private static VehiculoDto CrearDto(string matricula = Matricula) => new()
     {
+        Id = VehiculoId,
         Foto = FotoId,
         Matricula = matricula,
         Marca = "Toyota",
@@ -681,11 +680,10 @@ public class VehiculoServiceTests
     }
 
     [Test]
-    public async Task Update_CuandoTodoEsCorrecto_AplicaEstadoMarcaModeloYConcesionarioDelDto()
+    public async Task Update_CuandoTodoEsCorrecto_AplicaMarcaModeloYConcesionarioDelDto()
     {
         // Arrange
         var dto = CrearUpdateValido();
-        dto.Estado = "Mantenimiento";
         dto.Marca = "Renault";
         dto.Modelo = "Megane";
         dto.Concesionario = 9;
@@ -702,30 +700,54 @@ public class VehiculoServiceTests
         resultado.IsSuccess.Should().BeTrue();
 
         _transactionsService.Verify(t => t.UpdateAsync(VehiculoId, It.Is<VehiculoModel>(m =>
-            m.Estado == EstadoVehiculo.Mantenimiento
+            m.Estado == EstadoVehiculo.Disponible
             && m.Marca == "Renault"
             && m.Modelo == "Megane"
             && m.ConesionarioFk == 9
             && m.FotoFk == FotoId), It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Test]
-    public async Task Update_ConEstadoRetirado_DevuelveValidationErrorSinTocarLaTransaccion()
+    [TestCase(EstadoVehiculo.Disponible, true)]
+    [TestCase(EstadoVehiculo.Reservado, true)]
+    [TestCase(EstadoVehiculo.EnAlquiler, true)]
+    [TestCase(EstadoVehiculo.Mantenimiento, true)]
+    [TestCase(EstadoVehiculo.Retirado, false)]
+    public async Task Update_ConEstadoExistente_ConservaEstadoYActivo(EstadoVehiculo estado, bool activo)
     {
         // Arrange
-        var dto = CrearUpdateValido();
-        dto.Estado = "Retirado";
+        var existente = CrearModelo() with { Activo = activo };
+        existente.CambiarEstadoMapper(estado);
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(existente);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _transactionsService
+            .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((string _, VehiculoModel datos, CancellationToken _) =>
+                Result.Success<VehiculoModel, DomainError>(datos));
 
         // Act
-        var resultado = await _service.Update(dto, VehiculoId);
+        var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
 
         // Assert
-        var error = resultado.Error.Should().BeOfType<ValidationError>().Subject;
-        error.ValidationErrors.Should().ContainKey("Estado");
-
-        _transactionsService.Verify(
-            t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        resultado.IsSuccess.Should().BeTrue();
+        (resultado.Value.Estado, resultado.Value.IsActivo).Should().Be((estado.ToString(), activo));
+        (existente.Estado, existente.Activo).Should().Be((estado, activo));
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
+        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
+        _transactionsService.Verify(t => t.UpdateAsync(VehiculoId,
+            It.Is<VehiculoModel>(m => m.Estado == estado && m.Activo == activo),
+            It.IsAny<CancellationToken>()), Times.Once);
+        _transactionsService.Verify(t => t.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _transactionsService.Verify(t => t.RestoreAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.SetAsync(ClaveVehiculo + VehiculoId,
+            It.Is<VehiculoDto>(d => d.Estado == estado.ToString() && d.IsActivo == activo),
+            It.IsAny<TimeSpan?>(), It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.SetAsync(ClaveMatricula + Matricula,
+            It.Is<VehiculoDto>(d => d.Estado == estado.ToString() && d.IsActivo == activo),
+            It.IsAny<TimeSpan?>(), It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]

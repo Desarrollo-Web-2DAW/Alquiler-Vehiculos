@@ -42,8 +42,7 @@ No repitas la configuración inicial con otra contraseña sobre los volúmenes e
 
 La compilación no garantiza todavía el arranque: el catálogo depende de
 `ITransactionManager`, cuya implementación no está en esta copia. También falta
-aprovisionar el esquema del catálogo y configurar un Redis accesible. Estas
-decisiones están registradas en [la revisión del catálogo](docs/revision-catalogo.md).
+aprovisionar el esquema del catálogo y configurar un Redis accesible.
 
 La clave JWT se configura mediante User Secrets en desarrollo o `Jwt__Key` en el
 entorno; no se guarda en `appsettings.json`. La clave que estuvo versionada debe
@@ -105,6 +104,18 @@ de 24 caracteres. Los identificadores de vehículos y concesionarios no cambian.
 `MarcaRepository` consulta solo marcas activas y realiza bajas lógicas, conservando
 el documento, sus datos y las fechas de auditoría. No ofrece borrado físico.
 Los permisos de RF-46 deberán aplicarse en los endpoints cuando se implementen.
+
+`IMarcaService` está registrado y ofrece alta, listado, consulta por ObjectId,
+modificación completa y baja lógica con `Result` y errores de validación por campo.
+`ModelosDisponibles` es una lista de nombres dentro del documento de marca:
+el alta la recibe y el PUT la sustituye completa; los validadores existentes
+exigen al menos un modelo y rechazan nombres vacíos. No equivale al stock de vehículos.
+Cambiar esta lista o dar de baja la marca no modifica ni borra los vehículos existentes.
+Los vehículos conservan Marca y Modelo como texto; su validación contra este catálogo
+en las altas/modificaciones de vehículos no está implementada por este servicio.
+
+Pruebas de servicio de RF-09: `MarcaServiceTests` (CRUD, validación de modelos,
+errores y caché). No sustituyen las pruebas de endpoints y permisos pendientes.
 
 Este cambio no convierte documentos antiguos cuyo `_id` sea numérico. Si ya hay
 marcas guardadas con ese formato, requieren una migración de datos antes de leerlas

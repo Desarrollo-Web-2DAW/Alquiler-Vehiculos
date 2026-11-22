@@ -6,6 +6,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Services.Common;
+using Alquiler_Vehiculos.Services.Taller;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions.Common;
 using CSharpFunctionalExtensions;
@@ -31,6 +32,7 @@ public class VehiculoTransactionsServiceTests
 
     private Mock<IVehiculoRepository> _repository = null!;
     private Mock<IFotoRepository> _fotoRepository = null!;
+    private Mock<IParteTallerService> _parteTallerService = null!;
     private Mock<ITransactionManager> _transactionManager = null!;
     private VehiculoTransactionsService _service = null!;
 
@@ -39,7 +41,13 @@ public class VehiculoTransactionsServiceTests
     {
         _repository = new Mock<IVehiculoRepository>();
         _fotoRepository = new Mock<IFotoRepository>();
+        _parteTallerService = new Mock<IParteTallerService>();
         _transactionManager = new Mock<ITransactionManager>();
+
+        // Por defecto el vehículo no tiene partes abiertos; cada test que lo necesite lo cambia.
+        _parteTallerService
+            .Setup(p => p.TienePartesAbiertosAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<bool, DomainError>(false));
 
         // El gestor de transacciones es una frontera: en el test se limita a
         // ejecutar la operación sin abrir transacción real.
@@ -52,6 +60,7 @@ public class VehiculoTransactionsServiceTests
         _service = new VehiculoTransactionsService(
             _repository.Object,
             _fotoRepository.Object,
+            _parteTallerService.Object,
             _transactionManager.Object,
             NullLogger<VehiculoTransactionsService>.Instance);
     }
@@ -85,6 +94,8 @@ public class VehiculoTransactionsServiceTests
         // Assert
         resultado.Error.Should().Be(ErrorNoEncontrado());
 
+        _parteTallerService.Verify(
+            p => p.TienePartesAbiertosAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         VerificarTransaccionEjecutada();
@@ -107,26 +118,76 @@ public class VehiculoTransactionsServiceTests
         // Assert
         resultado.Error.Should().Be(VehiculoError.NoDisponibleParaBaja(estado));
 
+        _parteTallerService.Verify(
+            p => p.TienePartesAbiertosAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
     }
 
     [Test]
-    public async Task DeleteAsync_CuandoExisteConFoto_BorraVehiculoYFoto()
+    public async Task DeleteAsync_CuandoTieneUnParteAbierto_DevuelveConflictoSinBorrar()
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
-        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
-        _fotoRepository.Setup(r => r.SoftDelete(FotoId)).ReturnsAsync(true);
+        _parteTallerService
+            .Setup(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<bool, DomainError>(true));
+
+        // Act
+        var resultado = await _service.DeleteAsync(VehiculoId);
+
+        // Assert — RF-01 y RF-08: con un parte abierto no se da de baja (409) ni se borra nada.
+        resultado.Error.Should().Be(VehiculoError.VehiculoConPartesAbiertos(VehiculoId));
+
+        _parteTallerService.Verify(
+            p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task DeleteAsync_CuandoLaConsultaDePartesFalla_DevuelveElErrorSinBorrar()
+    {
+        // Arrange
+        var error = new ConflictError("PARTES_NO_DISPONIBLES", "No se pudo consultar el taller.");
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
+        _parteTallerService
+            .Setup(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<bool, DomainError>(error));
 
         // Act
         var resultado = await _service.DeleteAsync(VehiculoId);
 
         // Assert
-        resultado.Value.Matrícula.Should().Be("1234BBB");
+        resultado.Error.Should().Be(error);
 
+        _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
+    public async Task DeleteAsync_CuandoExisteConFoto_DaDeBajaElVehiculoYConservaLaFoto()
+    {
+        // Arrange
+        var vehiculo = CrearVehiculo();
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(vehiculo);
+        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
+
+        // Act
+        var resultado = await _service.DeleteAsync(VehiculoId);
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.FotoFk.Should().Be(FotoId);
+        resultado.Value.Foto.Should().BeSameAs(vehiculo.Foto);
+        vehiculo.Foto.Activo.Should().BeTrue();
+        vehiculo.Foto.DeletedAt.Should().BeNull();
+
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _parteTallerService.Verify(
+            p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
         _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
-        _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
+        _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         VerificarTransaccionEjecutada();
     }
 
@@ -147,22 +208,22 @@ public class VehiculoTransactionsServiceTests
     }
 
     [Test]
-    public async Task DeleteAsync_CuandoFallaElBorradoDeLaFoto_DevuelveBusinessRuleError()
+    public async Task DeleteAsync_SinFoto_ConservaLasComprobacionesDeBaja()
     {
         // Arrange
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo(string.Empty));
         _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
-        _fotoRepository.Setup(r => r.SoftDelete(FotoId)).ReturnsAsync(false);
 
         // Act
         var resultado = await _service.DeleteAsync(VehiculoId);
 
         // Assert
-        resultado.Error.Should().Be(
-            new BusinessRuleError("BORRADO_FOTO", "No se pudo eliminar la foto asociada al vehículo."));
-
+        resultado.IsSuccess.Should().BeTrue();
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
         _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
-        _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
+        _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+        VerificarTransaccionEjecutada();
     }
 
     [Test]

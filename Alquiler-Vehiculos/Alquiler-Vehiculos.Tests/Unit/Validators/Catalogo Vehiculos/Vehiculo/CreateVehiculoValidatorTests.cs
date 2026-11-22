@@ -33,19 +33,6 @@ public class CreateVehiculoValidatorTests {
         resultado.Errors.Should().BeEmpty();
     }
 
-    [Test]
-    public void Validate_DatosValidos_NoDevuelveErrores() {
-        // Arrange
-        var dto = CrearDtoValido();
-
-        // Act
-        var resultado = _validator.Validate(dto);
-
-        // Assert
-        resultado.IsValid.Should().BeTrue();
-        resultado.Errors.Should().BeEmpty();
-    }
-
     [TestCase(null)]
     [TestCase("")]
     [TestCase("   ")]
@@ -73,6 +60,7 @@ public class CreateVehiculoValidatorTests {
     [TestCase("MTAV")]
     [TestCase("IMMD")]
     [TestCase("FKMD")]
+    [TestCase("CCMR")] // el ejemplo explícito del enunciado (compacto, 2/4 puertas, manual, sin especificar)
     public void Validate_AcrissDelEnunciado_NoDevuelveErrores(string acriss) {
         // Arrange
         var dto = CrearDtoValido();
@@ -108,7 +96,9 @@ public class CreateVehiculoValidatorTests {
 
     [TestCase('F')] // multicombustible sin aire
     [TestCase('U')] // etanol con aire
-    public void Validate_CuartaLetraSinEquivalenteEnDominio_EsRechazada(char combustible) {
+    [TestCase('A')] // hidrógeno con aire
+    [TestCase('R')] // combustible sin especificar (el del ejemplo CCMR)
+    public void Validate_CuartaLetraDelCatalogoSinEquivalenteExacto_SeAceptaConElMapeoDocumentado(char combustible) {
         // Arrange
         var dto = CrearDtoValido();
         dto.Acriss = $"ILA{combustible}";
@@ -117,7 +107,7 @@ public class CreateVehiculoValidatorTests {
         var resultado = _validator.Validate(dto);
 
         // Assert
-        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Acriss");
+        resultado.Errors.Should().BeEmpty();
     }
 
     [TestCase("1234BCA")] // vocal
@@ -172,7 +162,7 @@ public class CreateVehiculoValidatorTests {
     }
 
     [TestCase("ILAH", true)]
-    [TestCase("CDMR", false)]
+    [TestCase("CDMR", true)]
     [TestCase("ilah", false)]
     [TestCase("ILA", false)]
     [TestCase("ILAHH", false)]
@@ -180,7 +170,7 @@ public class CreateVehiculoValidatorTests {
     [TestCase("ZLAH", false)]
     [TestCase("IUAH", false)]
     [TestCase("ILZH", false)]
-    [TestCase("ILAU", false)]
+    [TestCase("ILAU", true)]
     public void Validate_CodigoAcriss_CompruebaFormatoYCadaPosicion(string acriss, bool valido) {
         // Arrange
         var dto = CrearDtoValido();

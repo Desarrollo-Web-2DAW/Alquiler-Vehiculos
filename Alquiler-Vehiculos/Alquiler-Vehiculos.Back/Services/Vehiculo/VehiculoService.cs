@@ -144,7 +144,7 @@ public class VehiculoService(
 
         var mapeado = mapeadoResult.Value;
 
-        // Se parte del registro existente para conservar Id, CreatedAt y auditoría.
+        // Se conserva Id, auditoría, Estado y Activo: el PUT no realiza transiciones ni bajas.
         var vehiculo = existente with
         {
             Matrícula = mapeado.Matrícula,
@@ -166,9 +166,6 @@ public class VehiculoService(
             Foto = mapeado.Foto,
             FotoFk = mapeado.FotoFk
         };
-
-        // Estado tiene setter privado: el "with" copia el del existente, así que se aplica el del DTO.
-        vehiculo.CambiarEstadoMapper(mapeado.Estado);
 
         var result = await transactionsService.UpdateAsync(key, vehiculo);
         if (result.IsFailure)

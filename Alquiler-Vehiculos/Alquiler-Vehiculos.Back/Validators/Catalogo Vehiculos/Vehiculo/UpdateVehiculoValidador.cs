@@ -43,12 +43,6 @@ public class UpdateVehiculoValidator : AbstractValidator<UpdateVehiculoDto>
             .Matches(_patronAcriss).WithMessage("El código ACRISS debe constar exactamente de 4 letras.")
             .Must(ValidarCodigoAcriss).WithMessage("El código ACRISS contiene valores no válidos en sus letras.");
             
-        RuleFor(v => v.Estado)
-            .NotEmpty().WithMessage("El estado no puede estar vacío.")
-            .Must(e => !int.TryParse(e, out _) && Enum.TryParse<EstadoVehiculo>(e, true, out var estado)
-                && Enum.IsDefined(estado) && estado != EstadoVehiculo.Retirado)
-            .WithMessage("El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
-
         RuleFor(v => v.Color)
             .NotEmpty().WithMessage("El color no puede estar vacío.")
             .Must(col => !int.TryParse(col, out _) && Enum.TryParse<TipoColor>(col, true, out var color)

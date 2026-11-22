@@ -5,6 +5,8 @@ namespace Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 /// Datos de un vehículo, su concesionario, marca y modelo devueltos por la API.
 /// </summary>
 public record VehiculoDto {
+    /// <summary>Identificador del vehículo (11 caracteres) generado por el servidor.</summary>
+    public string Id { get; set; } = string.Empty;
     /// <summary>Referencia de la foto del vehículo devuelta por la API.</summary>
     public string Foto { get; set; } = string.Empty;
     /// <summary>Matrícula del vehículo.</summary>

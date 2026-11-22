@@ -89,6 +89,17 @@ public static class VehiculoError
     }
 
     /// <summary>
+    /// Crea un error de tipo <see cref="ConflictError"/> cuando se intenta dar de baja un vehículo
+    /// que tiene un parte de taller abierto (RF-01 y RF-08).
+    /// </summary>
+    /// <param name="id">Identificador del vehículo.</param>
+    /// <returns>Una instancia de <see cref="ConflictError"/> (HTTP 409).</returns>
+    public static ConflictError VehiculoConPartesAbiertos(string id)
+    {
+        return new ConflictError("VEHICULO_CON_PARTE_ABIERTO", $"No se puede dar de baja el vehículo '{id}' porque tiene un parte de taller abierto.");
+    }
+
+    /// <summary>
     /// Crea un error de tipo <see cref="BusinessRuleError"/> cuando ocurre un error genérico al realizar el borrado del vehículo.
     /// </summary>
     /// <returns>Una instancia de <see cref="BusinessRuleError"/> (HTTP 400/422).</returns>

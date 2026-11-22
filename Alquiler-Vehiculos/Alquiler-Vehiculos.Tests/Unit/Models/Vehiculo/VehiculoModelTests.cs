@@ -14,6 +14,86 @@ namespace Alquiler_Vehiculos.Tests.Unit.Models.Vehiculo;
 [Category("Unit")]
 public class VehiculoModelTests
 {
+    [TestCase(EstadoVehiculo.Disponible)]
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    [TestCase(EstadoVehiculo.Retirado)]
+    public void MarcarVehiculoDisponible_SegunEstadoInicial_RespetaTransicion(EstadoVehiculo inicial) {
+        // Arrange
+        var vehiculo = new VehiculoModel();
+        vehiculo.CambiarEstadoMapper(inicial);
+
+        // Act
+        var resultado = vehiculo.MarcarVehiculoDisponible();
+
+        // Assert
+        resultado.IsSuccess.Should().Be(inicial != EstadoVehiculo.Retirado);
+        vehiculo.Estado.Should().Be(inicial == EstadoVehiculo.Retirado ? inicial : EstadoVehiculo.Disponible);
+        if (resultado.IsSuccess) resultado.Value.Should().BeTrue();
+        else resultado.Error.Should().Be(Alquiler_Vehiculos.Errors.Vehiculo.VehiculoError.CambiarDeEstado(inicial.ToString(), nameof(EstadoVehiculo.Disponible)));
+    }
+
+    [TestCase(EstadoVehiculo.Disponible)]
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    [TestCase(EstadoVehiculo.Retirado)]
+    public void MarcarVehiculoReservado_SegunEstadoInicial_RespetaTransicion(EstadoVehiculo inicial) {
+        // Arrange
+        var vehiculo = new VehiculoModel();
+        vehiculo.CambiarEstadoMapper(inicial);
+
+        // Act
+        var resultado = vehiculo.MarcarVehiculoReservado(inicial);
+
+        // Assert
+        resultado.IsSuccess.Should().Be(inicial == EstadoVehiculo.Disponible);
+        vehiculo.Estado.Should().Be(inicial == EstadoVehiculo.Disponible ? EstadoVehiculo.Reservado : inicial);
+        if (resultado.IsSuccess) resultado.Value.Should().BeTrue();
+        else resultado.Error.Should().Be(Alquiler_Vehiculos.Errors.Vehiculo.VehiculoError.CambiarDeEstado(inicial.ToString(), nameof(EstadoVehiculo.Reservado)));
+    }
+
+    [TestCase(EstadoVehiculo.Disponible)]
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    [TestCase(EstadoVehiculo.Retirado)]
+    public void MarcarVehiculoAlquilado_SegunEstadoInicial_RespetaTransicion(EstadoVehiculo inicial) {
+        // Arrange
+        var vehiculo = new VehiculoModel();
+        vehiculo.CambiarEstadoMapper(inicial);
+
+        // Act
+        var resultado = vehiculo.MarcarVehiculoAlquilado();
+
+        // Assert
+        resultado.IsSuccess.Should().Be(inicial == EstadoVehiculo.Reservado);
+        vehiculo.Estado.Should().Be(inicial == EstadoVehiculo.Reservado ? EstadoVehiculo.EnAlquiler : inicial);
+        if (resultado.IsSuccess) resultado.Value.Should().BeTrue();
+        else resultado.Error.Should().Be(Alquiler_Vehiculos.Errors.Vehiculo.VehiculoError.CambiarDeEstado(inicial.ToString(), nameof(EstadoVehiculo.EnAlquiler)));
+    }
+
+    [TestCase(EstadoVehiculo.Disponible)]
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    [TestCase(EstadoVehiculo.Retirado)]
+    public void MeterVehiculoTaller_SegunEstadoInicial_RespetaTransicion(EstadoVehiculo inicial) {
+        // Arrange
+        var vehiculo = new VehiculoModel();
+        vehiculo.CambiarEstadoMapper(inicial);
+
+        // Act
+        var resultado = vehiculo.MeterVehiculoTaller();
+
+        // Assert
+        resultado.IsSuccess.Should().Be(inicial != EstadoVehiculo.Retirado);
+        vehiculo.Estado.Should().Be(inicial == EstadoVehiculo.Retirado ? inicial : EstadoVehiculo.Mantenimiento);
+        if (resultado.IsSuccess) resultado.Value.Should().BeTrue();
+        else resultado.Error.Should().Be(Alquiler_Vehiculos.Errors.Vehiculo.VehiculoError.CambiarDeEstado(inicial.ToString(), nameof(EstadoVehiculo.Mantenimiento)));
+    }
+
     private static VehiculoModel CrearVehiculoCompleto()
     {
         var vehiculo = new VehiculoModel

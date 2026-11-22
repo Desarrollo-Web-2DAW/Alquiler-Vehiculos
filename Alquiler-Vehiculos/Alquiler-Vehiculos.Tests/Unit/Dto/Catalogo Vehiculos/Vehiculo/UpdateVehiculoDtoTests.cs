@@ -17,15 +17,14 @@ public class UpdateVehiculoDtoTests {
         // Assert
         dto.Should().BeEquivalentTo(new {
             Foto = "", Matricula = "", Marca = "", Modelo = "", Acriss = "",
-            Estado = "", Color = "", PrecioBaseDia = 0m,
+            Color = "", PrecioBaseDia = 0m,
             Plazas = 0, MaleteroLitros = 0, AutonomiaKm = 0, Kilometraje = 0,
-            FechaUltimaRevision = "", Concesionario = 0L, IsActivo = false
+            FechaUltimaRevision = "", Concesionario = 0L
         });
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
-    public void Propiedades_AsignarDatos_ConservaValores(bool isActivo) {
+    [Test]
+    public void Propiedades_AsignarDatos_ConservaValores() {
         // Arrange
         var dto = new UpdateVehiculoDto();
 
@@ -35,7 +34,6 @@ public class UpdateVehiculoDtoTests {
         dto.Marca = "Toyota";
         dto.Modelo = "Corolla";
         dto.Acriss = "ILAH";
-        dto.Estado = "Disponible";
         dto.Color = "Azul";
         dto.PrecioBaseDia = 45.50m;
         dto.Plazas = 5;
@@ -44,16 +42,27 @@ public class UpdateVehiculoDtoTests {
         dto.Kilometraje = 12000;
         dto.FechaUltimaRevision = "2026-11-01";
         dto.Concesionario = 10L;
-        dto.IsActivo = isActivo;
 
         // Assert
         dto.Should().BeEquivalentTo(new {
             Foto = "foto-002", Matricula = "1234BCD", Marca = "Toyota", Modelo = "Corolla",
             Acriss = "ILAH",
-            Estado = "Disponible", Color = "Azul", PrecioBaseDia = 45.50m, Plazas = 5,
+            Color = "Azul", PrecioBaseDia = 45.50m, Plazas = 5,
             MaleteroLitros = 361, AutonomiaKm = 700, Kilometraje = 12000,
-            FechaUltimaRevision = "2026-11-01", Concesionario = 10L, IsActivo = isActivo
+            FechaUltimaRevision = "2026-11-01", Concesionario = 10L
         });
+    }
+
+    [Test]
+    public void Contrato_NoExponeEstadoNiIsActivo() {
+        // Arrange
+        var tipo = typeof(UpdateVehiculoDto);
+
+        // Act
+        var propiedades = tipo.GetProperties().Select(p => p.Name);
+
+        // Assert
+        propiedades.Should().NotContain(new[] { "Estado", "IsActivo" });
     }
 
     [Test]

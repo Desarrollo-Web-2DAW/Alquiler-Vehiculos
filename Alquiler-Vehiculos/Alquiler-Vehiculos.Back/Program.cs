@@ -10,6 +10,7 @@ using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Services.Vehiculo;
 using Alquiler_Vehiculos.Services.Vehiculo.Concesonario;
+using Alquiler_Vehiculos.Services.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Concesionario;
@@ -108,6 +109,7 @@ try {
     // ── SERVICIOS ─────────────────────────────────────────────────────────────
     builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
     builder.Services.AddScoped<IMarcaRepository, MarcaRepository>();
+    builder.Services.AddScoped<IMarcaService, MarcaService>();
     builder.Services.AddScoped<IAuthService, AuthService>();
     builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
     builder.Services.AddScoped<IVehiculoService, VehiculoService>();

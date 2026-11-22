@@ -9,6 +9,57 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [Category("Integration")]
 [NonParallelizable]
 public class ConcesionarioRepositoryTests : RepositoryTestBase {
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task GetVehiculos_ConcesionarioConOSinFlota_DevuelveSoloSusVehiculos(bool tieneFlota) {
+        // Arrange
+        var vehiculo = await GuardarVehiculo();
+        var otro = await GuardarConcesionario();
+        var id = tieneFlota ? vehiculo.ConesionarioFk : otro.Id;
+        await using var db = CrearContexto();
+        var repository = new ConcesionarioRepository(db, NullLogger<ConcesionarioRepository>.Instance);
+
+        // Act
+        var resultado = (await repository.GetVehiculos(id)).ToArray();
+
+        // Assert
+        if (tieneFlota) resultado.Should().ContainSingle().Which.Should().BeEquivalentTo(vehiculo, o => o.Excluding(v => v.Foto));
+        else resultado.Should().BeEmpty();
+        db.ChangeTracker.Entries().Should().BeEmpty();
+    }
+
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task HasVehiculos_ConcesionarioConOSinFlota_IndicaExistencia(bool tieneFlota) {
+        // Arrange
+        var vehiculo = await GuardarVehiculo();
+        var otro = await GuardarConcesionario();
+        await using var db = CrearContexto();
+        var repository = new ConcesionarioRepository(db, NullLogger<ConcesionarioRepository>.Instance);
+
+        // Act
+        var resultado = await repository.HasVehiculos(tieneFlota ? vehiculo.ConesionarioFk : otro.Id);
+
+        // Assert
+        resultado.Should().Be(tieneFlota);
+    }
+
+    [TestCase(true, false)]
+    [TestCase(true, true)]
+    [TestCase(false, false)]
+    public async Task ExistsByTelefono_ActivoEliminadoOInexistente_IncluyeHistorico(bool existe, bool eliminado) {
+        // Arrange
+        var concesionario = await GuardarConcesionario(eliminado);
+        await using var db = CrearContexto();
+        var repository = new ConcesionarioRepository(db, NullLogger<ConcesionarioRepository>.Instance);
+
+        // Act
+        var resultado = await repository.ExistsByTelefono(existe ? concesionario.Telefono : "999999999");
+
+        // Assert
+        resultado.Should().Be(existe);
+    }
+
     [Test]
     public async Task Create_ConcesionarioValido_GeneraIdYPersisteDatos() {
         // Arrange

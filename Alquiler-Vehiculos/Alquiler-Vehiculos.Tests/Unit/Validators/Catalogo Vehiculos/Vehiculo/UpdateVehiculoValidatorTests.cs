@@ -15,10 +15,10 @@ public class UpdateVehiculoValidatorTests {
     private static UpdateVehiculoDto CrearDtoValido() => new() {
         // Foto es el Nombre de la foto (clave de IFotoRepository), no una URL.
         Foto = "coche.jpg", Matricula = "1234BCD",
-        Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH", Estado = "Disponible",
+        Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH",
         Color = "Azul", PrecioBaseDia = 45.50m, Plazas = 5, MaleteroLitros = 361,
         AutonomiaKm = 700, Kilometraje = 12000, FechaUltimaRevision = "2026-11-01",
-        Concesionario = 10L, IsActivo = true
+        Concesionario = 10L
     };
 
     [Test]
@@ -65,21 +65,6 @@ public class UpdateVehiculoValidatorTests {
             && e.ErrorMessage == "El código ACRISS debe constar exactamente de 4 letras.");
     }
 
-    [TestCase("Retirado")]
-    [TestCase("retirado")]
-    public void Validate_EstadoRetirado_DevuelveErrorPorqueSoloSeRetiraConLaBaja(string estado) {
-        // Arrange
-        var dto = CrearDtoValido();
-        dto.Estado = estado;
-
-        // Act
-        var resultado = _validator.Validate(dto);
-
-        // Assert
-        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Estado"
-            && e.ErrorMessage == "El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
-    }
-
     [TestCase("Matricula", "1234BCD", true)]
     [TestCase("Matricula", "0000ZZZ", true)]
     [TestCase("Matricula", "123BCD", false)]
@@ -90,7 +75,7 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Matricula", "1234bcd", false)]
     [TestCase("Matricula", "1234 BCD", false)]
     [TestCase("Acriss", "ILAH", true)]
-    [TestCase("Acriss", "CDMR", false)]
+    [TestCase("Acriss", "CDMR", true)]
     [TestCase("Acriss", "ilah", false)]
     [TestCase("Acriss", "ILA", false)]
     [TestCase("Acriss", "ILAHH", false)]
@@ -98,15 +83,8 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Acriss", "ZLAH", false)]
     [TestCase("Acriss", "IUAH", false)]
     [TestCase("Acriss", "ILZH", false)]
-    [TestCase("Acriss", "ILAU", false)] // U está en ACRISS pero no tiene equivalente de dominio.
+    [TestCase("Acriss", "ILAU", true)] // U es etanol: se mapea a Gasolina con el mapeo documentado.
     [TestCase("Acriss", "ILAK", false)]
-    [TestCase("Estado", "Disponible", true)]
-    [TestCase("Estado", "Reservado", true)]
-    [TestCase("Estado", "Mantenimiento", true)]
-    [TestCase("Estado", "Retirado", false)]
-    [TestCase("Estado", "enAlquiler", true)]
-    [TestCase("Estado", "Mantenimiento", true)]
-    [TestCase("Estado", "Desconocido", false)]
     [TestCase("Color", "Azul", true)]
     [TestCase("Color", "rojo", true)]
     [TestCase("Color", "Verde", true)]
@@ -137,7 +115,6 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Marca", "La marca no puede estar vacía.")]
     [TestCase("Modelo", "El modelo no puede estar vacío.")]
     [TestCase("Acriss", "El código ACRISS no puede estar vacío.")]
-    [TestCase("Estado", "El estado no puede estar vacío.")]
     [TestCase("Color", "El color no puede estar vacío.")]
     [TestCase("FechaUltimaRevision", "La fecha de la última revisión no puede estar vacía.")]
     public void Validate_CampoObligatorioSinContenido_DevuelveErrorConcreto(string campo, string mensaje) {
@@ -245,21 +222,6 @@ public class UpdateVehiculoValidatorTests {
         resultado.Errors.Should().BeEmpty();
     }
 
-    [TestCase(false)]
-    [TestCase(true)]
-    public void Validate_IsActivo_NoRestringeElValor(bool activo) {
-        // Arrange
-        var dto = CrearDtoValido();
-        dto.IsActivo = activo;
-
-        // Act
-        var resultado = _validator.Validate(dto);
-
-        // Assert
-        resultado.IsValid.Should().BeTrue();
-        resultado.Errors.Should().BeEmpty();
-    }
-
     [Test]
     public void Validate_DtoVacio_DevuelveErroresDeTodosLosCamposObligatorios() {
         // Arrange
@@ -271,7 +233,7 @@ public class UpdateVehiculoValidatorTests {
         // Assert
         resultado.IsValid.Should().BeFalse();
         resultado.Errors.Select(e => e.PropertyName).Distinct().Should().BeEquivalentTo(
-            "Foto", "Matricula", "Marca", "Modelo", "Acriss", "Estado", "Color", "PrecioBaseDia",
+            "Foto", "Matricula", "Marca", "Modelo", "Acriss", "Color", "PrecioBaseDia",
             "Plazas", "AutonomiaKm", "FechaUltimaRevision", "Concesionario");
     }
 
@@ -281,7 +243,6 @@ public class UpdateVehiculoValidatorTests {
             case "Marca": dto.Marca = valor; break;
             case "Modelo": dto.Modelo = valor; break;
             case "Acriss": dto.Acriss = valor; break;
-            case "Estado": dto.Estado = valor; break;
             case "Color": dto.Color = valor; break;
             case "FechaUltimaRevision": dto.FechaUltimaRevision = valor; break;
         }
