@@ -14,7 +14,7 @@ public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbC
     
     /// <summary>Vehículos del catálogo.</summary>
     public DbSet<VehiculoModel> Vehiculos => Set<VehiculoModel>();
-    /// <summary>Fotografías identificadas por su ruta.</summary>
+    /// <summary>Fotografías identificadas por su nombre.</summary>
     public DbSet<Foto> Fotos => Set<Foto>();
     /// <summary>Concesionarios a los que pertenecen los vehículos.</summary>
     public DbSet<ConcesionarioModel> Concesionarios => Set<ConcesionarioModel>();
@@ -76,7 +76,8 @@ public class PostgreDbContext (DbContextOptions<PostgreDbContext> options) : DbC
         });
         
         modelBuilder.Entity<Foto>(entity => {
-            entity.HasKey(f => f.Ruta);
+            entity.HasKey(f => f.Nombre);
+            entity.HasIndex(f => f.Ruta).IsUnique();
             entity.Property(f => f.Nombre).IsRequired();
             entity.Property(f => f.Extension).IsRequired();
             entity.Property(f => f.Tamano).IsRequired();

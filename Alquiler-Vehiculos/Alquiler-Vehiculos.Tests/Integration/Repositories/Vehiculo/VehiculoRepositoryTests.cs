@@ -77,7 +77,7 @@ public class VehiculoRepositoryTests : RepositoryTestBase {
 
         // Assert
         resultado.Select(v => v.Matrícula).Should().Equal(conDatos ? new[] { "1234BCD", "5678FGH" } : Array.Empty<string>());
-        resultado.Should().OnlyContain(v => v.Foto != null && v.Foto.Ruta == v.FotoFk);
+        resultado.Should().OnlyContain(v => v.Foto != null && v.Foto.Nombre == v.FotoFk);
         db.ChangeTracker.Entries().Should().BeEmpty();
     }
 
@@ -98,7 +98,7 @@ public class VehiculoRepositoryTests : RepositoryTestBase {
         resultado.TotalItems.Should().Be(2);
         resultado.Items.Select(v => v.Matrícula).Should().Equal(
             matricula == "" ? Array.Empty<string>() : new[] { matricula });
-        resultado.Items.Should().OnlyContain(v => v.Foto != null && v.Foto.Ruta == v.FotoFk);
+        resultado.Items.Should().OnlyContain(v => v.Foto != null && v.Foto.Nombre == v.FotoFk);
         db.ChangeTracker.Entries().Should().BeEmpty();
     }
 

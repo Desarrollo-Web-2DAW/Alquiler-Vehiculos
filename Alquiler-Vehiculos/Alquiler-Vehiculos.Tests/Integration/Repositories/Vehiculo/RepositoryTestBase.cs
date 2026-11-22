@@ -78,7 +78,7 @@ public abstract class RepositoryTestBase {
     }
 
     protected static VehiculoModel CrearVehiculo(Foto foto, long concesionario) => new() {
-        FotoFk = foto.Ruta, Foto = foto, Matrícula = "1234BCD", Marca = "Toyota", Modelo = "Corolla",
+        FotoFk = foto.Nombre, Foto = foto, Matrícula = "1234BCD", Marca = "Toyota", Modelo = "Corolla",
         Acriss = "ILAH", Carroceria = TipoCarroceria.Sedan, Combustible = TipoCombustible.Hibrido,
         Transmision = TipoTransmision.Automatica,
         Color = TipoColor.Azul, PrecioBaseDia = 45.50m, Plazas = 5, MaleteroLitros = 361,

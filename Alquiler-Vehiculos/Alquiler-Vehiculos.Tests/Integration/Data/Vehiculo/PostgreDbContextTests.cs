@@ -49,7 +49,7 @@ public class PostgreDbContextTests {
     private PostgreDbContext CrearContexto() => new(_options);
 
     private static Foto CrearFoto(string ruta = "https://example.com/uploads/vehiculos/coche.jpg") => new() {
-        Ruta = ruta, Nombre = "coche.jpg", Extension = ".jpg", Tamano = 1024,
+        Ruta = ruta, Nombre = Path.GetFileName(ruta), Extension = ".jpg", Tamano = 1024,
         Activo = true, CreatedAt = Fecha
     };
 
@@ -64,7 +64,7 @@ public class PostgreDbContextTests {
 
     private static VehiculoModel CrearVehiculo(Foto foto, long concesionario,
         string matricula = "1234BCD", decimal precio = 45.50m, bool incluirFoto = true) => new() {
-        FotoFk = foto.Ruta, Foto = incluirFoto ? foto : null!, Matrícula = matricula,
+        FotoFk = foto.Nombre, Foto = incluirFoto ? foto : null!, Matrícula = matricula,
         Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH",
         Carroceria = TipoCarroceria.Sedan, Combustible = TipoCombustible.Hibrido,
         Transmision = TipoTransmision.Automatica,
@@ -137,7 +137,7 @@ public class PostgreDbContextTests {
     }
 
     [Test]
-    public async Task SaveChanges_FotoFkConUrlExistente_CargaFotoPorSuRuta() {
+    public async Task SaveChanges_FotoFkConNombreExistente_CargaFotoPorSuNombre() {
         // Arrange
         var concesionario = await GuardarConcesionario();
         var foto = CrearFoto();
@@ -153,12 +153,12 @@ public class PostgreDbContextTests {
         // Assert
         await using var lectura = CrearContexto();
         var guardado = await lectura.Vehiculos.Include(v => v.Foto).SingleAsync(v => v.Id == vehiculo.Id);
-        guardado.FotoFk.Should().Be(foto.Ruta);
+        guardado.FotoFk.Should().Be(foto.Nombre);
         guardado.Foto.Should().BeEquivalentTo(foto);
     }
 
     [Test]
-    public async Task SaveChanges_FotoFkConUrlInexistente_RechazaClaveForanea() {
+    public async Task SaveChanges_FotoFkConNombreInexistente_RechazaClaveForanea() {
         // Arrange
         var concesionario = await GuardarConcesionario();
         await using var db = CrearContexto();
@@ -180,7 +180,7 @@ public class PostgreDbContextTests {
         // Arrange
         var existente = await GuardarVehiculo();
         await using var db = CrearContexto();
-        var foto = await db.Fotos.SingleAsync(f => f.Ruta == existente.FotoFk);
+        var foto = await db.Fotos.SingleAsync(f => f.Nombre == existente.FotoFk);
         db.Vehiculos.Add(CrearVehiculo(foto, existente.ConesionarioFk, "5678FGH", incluirFoto: false));
 
         // Act
@@ -305,7 +305,7 @@ public class PostgreDbContextTests {
         var vehiculo = await GuardarVehiculo();
         await using var db = CrearContexto();
         if (entidad == "Foto") {
-            db.Fotos.Remove(await db.Fotos.SingleAsync(f => f.Ruta == vehiculo.FotoFk));
+            db.Fotos.Remove(await db.Fotos.SingleAsync(f => f.Nombre == vehiculo.FotoFk));
         } else {
             db.Concesionarios.Remove(await db.Concesionarios.SingleAsync(c => c.Id == vehiculo.ConesionarioFk));
         }

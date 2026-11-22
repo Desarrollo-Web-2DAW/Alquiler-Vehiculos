@@ -10,6 +10,52 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [NonParallelizable]
 public class FotoRepositoryTests : RepositoryTestBase {
     [Test]
+    public async Task SoftDelete_YRestore_ConFotoRastreada_ActualizanLaMismaInstancia() {
+        // Arrange
+        await GuardarFoto(CrearFoto());
+        await using var db = CrearContexto();
+        var foto = await db.Fotos.SingleAsync();
+        var repository = new FotoRepository(db, NullLogger<FotoRepository>.Instance);
+
+        // Act
+        var borrada = await repository.SoftDelete(foto.Nombre);
+        var activaTrasBaja = foto.Activo;
+        var fechaBaja = foto.DeletedAt;
+        await repository.Restore(foto.Nombre);
+
+        // Assert
+        borrada.Should().BeTrue();
+        activaTrasBaja.Should().BeFalse();
+        fechaBaja.Should().NotBeNull();
+        foto.Activo.Should().BeTrue();
+        foto.DeletedAt.Should().BeNull();
+        await using var lectura = CrearContexto();
+        var persistida = await lectura.Fotos.SingleAsync();
+        persistida.Activo.Should().BeTrue();
+        persistida.DeletedAt.Should().BeNull();
+    }
+
+    [Test]
+    public async Task Create_DosNombresConMismaRuta_RechazaRutaDuplicada() {
+        // Arrange
+        var foto = CrearFoto();
+        await GuardarFoto(foto);
+        await using var db = CrearContexto();
+        var repository = new FotoRepository(db, NullLogger<FotoRepository>.Instance);
+        var otra = foto with { Nombre = "otro.jpg" };
+
+        // Act
+        Func<Task> guardar = () => repository.Create(otra);
+
+        // Assert
+        var error = await guardar.Should().ThrowAsync<DbUpdateException>();
+        error.Which.InnerException.Should().BeOfType<Npgsql.PostgresException>()
+            .Which.SqlState.Should().Be(Npgsql.PostgresErrorCodes.UniqueViolation);
+        await using var lectura = CrearContexto();
+        (await lectura.Fotos.CountAsync()).Should().Be(1);
+    }
+
+    [Test]
     public async Task Create_FotoValida_PersisteTodosLosCampos() {
         // Arrange
         await using var db = CrearContexto();

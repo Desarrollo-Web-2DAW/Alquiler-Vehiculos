@@ -22,12 +22,17 @@ public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> lo
     /// <inheritdoc cref="IFotoRepository.SoftDelete" />
     public async Task<bool> SoftDelete(string key) {
         logger.LogInformation("Realizando borrado lógico de Foto ID: {Id}", key);
-        return await context.Set<Foto>()
-            .Where(f => f.Nombre == key)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(f => f.DeletedAt, DateTime.UtcNow)
-                .SetProperty(f => f.UpdatedAt, DateTime.UtcNow)
-                .SetProperty(f => f.Activo, false)) > 0;
+        var existente = await context.Fotos.FirstOrDefaultAsync(f => f.Nombre == key);
+        if (existente is null) return false;
+
+        var actualizado = existente with {
+            Activo = false,
+            DeletedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        context.Entry(existente).CurrentValues.SetValues(actualizado);
+        await context.SaveChangesAsync();
+        return true;
     }
 
     /// <inheritdoc cref="IFotoRepository.GetById" />
