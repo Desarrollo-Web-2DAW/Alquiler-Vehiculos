@@ -29,6 +29,9 @@ builder.Services.AddOpenApi();
 // Caché LRU con TTL sobre Redis (carpeta Cache/)
 builder.Services.AddCache(builder.Configuration);
 
+// Notificaciones por correo (RF-34 a RF-36): cola de envío con reintentos en segundo plano
+builder.Services.AddEmailNotifications(builder.Configuration);
+
 // Partes de taller (RF-08): núcleo del taller
 builder.Services.AddTallerServices();
 
