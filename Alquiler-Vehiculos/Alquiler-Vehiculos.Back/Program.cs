@@ -5,6 +5,14 @@ using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Repositories.Clientes;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
+using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
+using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
+using Alquiler_Vehiculos.Repositories.Storage;
+using Alquiler_Vehiculos.Services.Vehiculo;
+using Alquiler_Vehiculos.Services.Vehiculo.Concesonario;
+using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
+using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
+using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Concesionario;
 using Alquiler_Vehiculos.Services.Usuarios.Auth;
 using FluentValidation;
 using Alquiler_Vehiculos.Cache;
@@ -46,7 +54,6 @@ try {
     // Fail-fast: sin cadena de conexión la API no debe arrancar.
     var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
-builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     if (string.IsNullOrWhiteSpace(connectionString)) {
         throw new InvalidOperationException(
             "Falta la cadena de conexión 'ConnectionStrings:DefaultConnection'. " +
@@ -95,13 +102,22 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
     builder.Services.AddHttpContextAccessor(); // SignInManager lo necesita
     builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-builder.Services.AddCache(builder.Configuration);
-
-var app = builder.Build();
+    builder.Services.AddCache(builder.Configuration);
+    builder.Services.AddStorage(builder.Configuration);
     // ── SERVICIOS ─────────────────────────────────────────────────────────────
     builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
     builder.Services.AddScoped<IMarcaRepository, MarcaRepository>();
     builder.Services.AddScoped<IAuthService, AuthService>();
+    builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
+    builder.Services.AddScoped<IVehiculoService, VehiculoService>();
+    builder.Services.AddScoped<IVehiculoTransactionsService, VehiculoTransactionsService>();
+    builder.Services.AddScoped<IConcesionarioRepository, ConcesionarioRepository>();
+    builder.Services.AddScoped<IConcesionarioService, ConcesionarioService>();
+    builder.Services.AddScoped<IFotoRepository, FotoRepository>();
+    builder.Services.AddScoped<CreateVehiculoValidator>();
+    builder.Services.AddScoped<UpdateVehiculoValidator>();
+    builder.Services.AddScoped<CreateConcesionarioValidator>();
+    builder.Services.AddScoped<UpdateConcesionarioValidator>();
 
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
     var app = builder.Build();
@@ -151,28 +167,10 @@ if (app.Environment.IsDevelopment()) {
     Console.WriteLine($"  {apiConfig.Nombre}");
     Console.WriteLine($"  {apiConfig.Mensaje}");
     Console.WriteLine($"  http://localhost:{port}");
-    Console.WriteLine($"  Comprobación: http://localhost:{port}/weatherforecast");
     Console.WriteLine($"  Entorno: {app.Environment.EnvironmentName}");
     Console.WriteLine("========================================");
 
     app.UseHttpsRedirection();
-
-    var summaries = new[] {
-        "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-    };
-
-    app.MapGet("/weatherforecast", () => {
-            var forecast = Enumerable.Range(1, 5).Select(index =>
-                    new WeatherForecast
-                    (
-                        DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                        Random.Shared.Next(-20, 55),
-                        summaries[Random.Shared.Next(summaries.Length)]
-                    ))
-                .ToArray();
-            return forecast;
-        })
-        .WithName("GetWeatherForecast");
 
     await app.RunAsync();
 } catch (HostAbortedException) {
@@ -184,6 +182,3 @@ if (app.Environment.IsDevelopment()) {
     await Log.CloseAndFlushAsync();
 }
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
