@@ -1,5 +1,6 @@
 using System.Text;
 using Alquiler_Vehiculos.Cache;
+using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Middleware;
 using Serilog;
 using Serilog.Events;
@@ -27,6 +28,9 @@ builder.Services.AddOpenApi();
 
 // Caché LRU con TTL sobre Redis (carpeta Cache/)
 builder.Services.AddCache(builder.Configuration);
+
+// Notificaciones por correo (RF-34 a RF-36): cola de envío con reintentos en segundo plano
+builder.Services.AddEmailNotifications(builder.Configuration);
 
 var app = builder.Build();
 

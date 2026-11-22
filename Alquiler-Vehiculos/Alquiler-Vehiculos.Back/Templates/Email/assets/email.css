@@ -1,0 +1,95 @@
+/* ============================================================
+   Alquiler Vehículos · Estilos de las plantillas de correo
+   Se combina con Bootstrap 5 (CDN). Uso: clases .correo-*
+   ============================================================ */
+
+body {
+  background-color: #f0f2f5;
+  font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+.correo-tarjeta {
+  max-width: 640px;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.correo-cabecera {
+  background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+  border-bottom: 4px solid #0b5ed7;
+}
+
+.correo-marca {
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.correo-codigo {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.9rem;
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  font-size: 0.95rem;
+}
+
+.correo-titulo {
+  color: #1a1a2e;
+  border-bottom: 2px solid #0d6efd;
+  padding-bottom: 0.6rem;
+}
+
+.correo-texto {
+  color: #4a4a68;
+  line-height: 1.8;
+}
+
+.tabla-lineas th {
+  background-color: #eef2ff;
+  color: #1a1a2e;
+  font-weight: 600;
+  border-bottom: 2px solid #0d6efd;
+}
+
+.tabla-lineas td {
+  vertical-align: middle;
+}
+
+.tabla-total td {
+  background-color: #0d6efd;
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.correo-datos {
+  background-color: #f8f9fa;
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.correo-datos .etiqueta {
+  color: #6c757d;
+}
+
+.correo-datos .valor {
+  font-weight: 600;
+  color: #1a1a2e;
+  text-align: right;
+}
+
+.correo-aviso {
+  border-left: 4px solid #0d6efd;
+  border-radius: 6px;
+  background-color: #e7f1ff;
+  color: #084298;
+  padding: 1rem 1.25rem;
+}
+
+.correo-pie {
+  background-color: #f8f9fa;
+  border-top: 1px solid #e9ecef;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
