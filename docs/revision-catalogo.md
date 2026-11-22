@@ -44,7 +44,7 @@ Compilación inicial: `dotnet build Alquiler-Vehiculos/Alquiler-Vehiculos.slnx`:
 | ILAU válido, ILAK inválido y Mantenimiento válido | Presentes; ILAU no es mapeable. | Rechazar ILAU según alcance vigente; conservar los demás. |
 | CreateVehiculoDtoTests ya no usa Estado/IsActivo | Contrastar compilación tras corregir producción. | No reintroducir campos eliminados. |
 | CreateRequestVehiculoDtoTests modificado y con AAA | No existe. | No crear test de un DTO inexistente. |
-| EnumTests F/U actualizados | Confirmado en Unit/Models/Vehiculo/Enums. | Conservar y actualizar errata de M. |
+| EnumTests F/U actualizados | Parcial: el enum ya tiene F/U correctos, pero el test conservaba EtanolConAire = F. | Corregir expectativa y comprobar tanto F como U, además de la errata de M. |
 | Snapshot Entorno-Servidor/_entrega-transacciones-vehiculo eliminado | No existe en el árbol disponible; no acredita el borrado del zip. | No borrar otras carpetas. |
 | Cuatro duplicados Unit/Enums eliminados y carpeta vacía | Falso en esta copia: están los cuatro archivos. | Eliminar únicamente esos duplicados, conservando Unit/Models/Vehiculo/Enums. |
 | DTOs Request de vehículo pendientes por no usarse | No existen aquí. | Sin acción. |
@@ -78,9 +78,53 @@ Compilación inicial: `dotnet build Alquiler-Vehiculos/Alquiler-Vehiculos.slnx`:
 - [Tema 06, unitarias](https://github.com/joseluisgs/DespliegueAplicacionesWeb-06-2025-2026/blob/master/02-Pruebas-Unitarias.md), 2.1, 2.3 y 2.4.2: AAA, NUnit, Moq y resultados.
 - [Tema 06, integración](https://github.com/joseluisgs/DespliegueAplicacionesWeb-06-2025-2026/blob/master/03-Pruebas-Integracion.md), 3.1 y 3.3: BD real y ciclo del contenedor.
 - [Tema 07, CI](https://github.com/joseluisgs/DespliegueAplicacionesWeb-07-2025-2026/blob/master/02-Integracion-Continua-CI.md), 2.3 y 2.4: ejecución e informes. No se modifican pipelines.
+- [Validador de ProductosAvanzados](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/08-ProductosAvanzados/ProductosAvanzados/Validators/CreateProductoValidator.cs): reglas Must y mensajes por campo.
+- [Repositorio nativo Mongo](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/12-ProductosMongo/ProductosMongo/Repositories/Native/ProductoNativeRepository.cs): filtros por ObjectId y baja lógica; la sustitución de Parse por TryParse es la corrección solicitada, no un comportamiento ya presente en ese ejemplo.
+- [Patrón Result](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/07-excepciones-patron-result.md), 7.6–7.8: errores tipados y traducción a HTTP. Se adaptan a los constructores con Code/Message del proyecto, sin modificar DomainError común.
+- [Caché](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/14-cache-redis.md), 14.9 y 14.13: invalidación por operación y claves descriptivas; se conservan los servicios existentes.
 
 Las reglas específicas ACRISS y las correcciones funcionales proceden del prompt vigente; los ejemplos se adaptan sin copiar arquitectura adicional.
 
+## Correcciones realizadas y regresiones
+
+Se conserva la rama original por indicación expresa posterior al prompt. No se han creado controladores, endpoints, servicios, repositorios, validadores, DTOs, migraciones ni seeders. Las altas siguen naciendo Disponible/Activo y se conserva Cascade Stop.
+
+| Punto | Corrección | Commit | Prueba o comprobación |
+| --- | --- | --- | --- |
+| Fase 0 | Una declaración del contexto y reparación de Update | `a2f7b2a`, `2bda5de` | Build y pruebas de actualización activa/inactiva existentes. |
+| Fase 0 | Un Build, registros previos, validadores concretos, AddStorage y retirada de la plantilla meteorológica | `2965f29` | Build; revisión de registros. No se afirma arranque mientras falte ITransactionManager. |
+| Fase 0 | JSON válido, una AllowedHosts y clave JWT retirada a User Secrets | `2965f29` | Parseo JSON y comprobación sin mostrar valores sensibles. Rotación de la clave expuesta pendiente del responsable. |
+| Fase 0 | Referencias NuGet duplicadas y nombres ACRISS | `9ba6c04`, `3e57295` | Restauración/build sin NU1504; pruebas enum conservadas. |
+| Fase 0 | Adaptación de fábricas de errores al DomainError existente | `1f4da5e` | Unitarias de servicios y mapper; no se cambia el contrato de errores común del equipo. |
+| Fase 0 | Import EF en concesionario, uso del método de estado en seeder/pruebas y contrato de alta en tests | `621b9b1`, `a81eac6`, `1da4952` | Build con cero errores, sin abrir setters ni llamar seeders desde Program. |
+| a | Foto.Nombre PK, Ruta única, baja rastreada (Restore ya lo estaba) | `c8b2d93` | 35 pruebas de FotoRepository/contexto: FK por nombre, ruta duplicada y baja/restauración de la misma instancia. Decisión ratificada por la responsable durante la sesión. |
+| b–c | Funciones internal comunes y switches explícitos por letra | `b5abb62` | Cada letra A–Z en las posiciones 2–4, ambos mappers y ambos validadores; casos por tipo concreto y F/U conservados. |
+| d | Color/Estado exigen valor definido y rechazan texto numérico | `1a9437f` | Casos numéricos definidos/no definidos, negativos y nombres desconocidos; se conservan nombres válidos sin distinguir mayúsculas. |
+| e | Fecha inválida/futura rechazada, sin sustituir por UtcNow | `53e588c` | Ambos mappers/validadores y servicios con fecha inválida/futura: error de validación → 400 y guardar nunca llamado. |
+| f | Únicamente 23505 del índice de matrícula se traduce a ConflictError | `3b4337e` | Inserción entre comprobación y alta en contextos distintos; matrícula reservada tras baja; FK ajena no se confunde con duplicado; servicio devuelve 409 sin cachear. |
+| g | Concesionario existente antes de Create/Update | `2b7a719` | Dos casos con Moq: inexistente → 400, sin foto, guardado ni transacción. |
+| h | ObjectId.TryParse en GetById/SoftDelete/ExistById de Marca | `aac8160` | IDs mal formados y vacío devuelven null/false y no alteran documentos; Update queda protegido al llamar GetById. 26 pruebas Mongo pasaron. |
+| i | Prefijos vehiculo:id:/vehiculo:matricula: e invalidación al crear/actualizar/borrar/restaurar | `a022215` | Verificaciones explícitas de claves y prueba con id igual a matrícula; invalidación en cascada de concesionario. 55 unitarias de ambos servicios pasaron. |
+| j | Solo activos en GetAll/GetPaged y en el total | `e82fa50` | Colecciones con baja y con/sin activo; el histórico se conserva físicamente. |
+| k | Comentarios correctos y sin IgnoreQueryFilters innecesario en vehículo | `c8dc15d` | ExistById/ExistByMatricula incluyen histórico; crear con matrícula de baja sigue en conflicto. 25 pruebas de VehiculoRepository pasaron. |
+| l | Program/appsettings | Véase Fase 0 | No se crean rutas ni se activan migraciones/seeders de catálogo. |
+| m | README sin restos, logs ignorados, revisión del índice | `1c21918` | JSON válido; TestResults, .idea, logs, bin y obj ignorados. Cero archivos de esas carpetas estaban versionados, por lo que no fue necesario git rm --cached. |
+| Fallo adicional del catálogo | Update de concesionario ignoraba Nombre/Ciudad/Telefono/Email | `bfab017` | Prueba de integración existente antes roja y ahora verde; conserva Id y CreatedAt. |
+| Datos de integración | Teléfonos duplicados en preparación incumplían índice único | `574509b` | Fixtures con teléfonos distintos, sin quitar ni debilitar el índice. 35 pruebas de ambos repositorios pasaron. |
+
+### Cambios mínimos de compatibilidad
+
+`IVehiculoRepository.Create` devuelve ahora `Result<VehiculoModel, DomainError>`. Como el CRUD común devuelve una entidad sin error tipado, la interfaz de vehículo declara sus operaciones existentes sin heredar ese CRUD. Se conserva el resto de firmas y no se modifica `ICrud`, los otros repositorios ni los contratos HTTP. El servicio propaga el conflicto de dominio; las demás excepciones de base de datos siguen siendo excepciones.
+
+La clave JWT antigua se retiró del árbol actual y se guardó fuera del repositorio. **Esto no borra el secreto del historial ni lo rota**. No se reescribe historial ni se publica nada.
+La revisión final detectó además la conexión de usuarios y contraseñas de cuentas de inicialización en `appsettings.Development.json`. Se trasladaron a User Secrets junto con las conexiones de MongoDB/Redis, manteniendo en el fichero las opciones no sensibles. Es un cambio mínimo fuera del catálogo para cumplir la ausencia de secretos; no modifica el seeder ni crea cuentas nuevas. También deben rotarse las credenciales que ya estuvieron expuestas en el historial.
+
 ## Comprobaciones
 
-Pendientes las comprobaciones posteriores a las correcciones. Este documento no certifica todavía una compilación ni una suite verde.
+- Build inicial: 7 errores / 4 advertencias (los errores de sintaxis ocultaban otros posteriores).
+- Al cerrar Fase 0: 0 errores / 0 advertencias. Primera suite: **895 total · 875 OK · 19 KO · 1 omitida**.
+- Docker no estaba disponible en la primera comprobación; después se comprobó operativo (`docker info`: 29.9.2) y se ejecutaron las regresiones de integración con PostgreSQL/MongoDB reales en Testcontainers.
+- Build final: **0 errores / 0 advertencias**.
+- `dotnet test Alquiler-Vehiculos/Alquiler-Vehiculos.slnx --logger "trx;LogFileName=catalogo-final.trx"`: **Total: 926 · OK: 926 · KO: 0 · Omitidas: 0**, repetido tras retirar las credenciales de desarrollo, duración final de tests 37 s. Informe local ignorado por Git: `Alquiler-Vehiculos/Alquiler-Vehiculos.Tests/TestResults/catalogo-final.trx`.
+- Sin KO finales. La omisión temporal de Redis en la primera ejecución no se cuenta como éxito; en la ejecución completa final no hubo omitidas.
+- No se ejecutaron E2E ni se crearon endpoints para hacerlos posibles. No se arrancó la API ni se escribieron datos en las bases habituales.
