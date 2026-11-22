@@ -67,7 +67,7 @@ public class PostgreDbContextTests {
         FotoFk = foto.Ruta, Foto = incluirFoto ? foto : null!, Matrícula = matricula,
         Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH",
         Carroceria = TipoCarroceria.Sedan, Combustible = TipoCombustible.Hibrido,
-        Transmision = TipoTransmision.Automatica, Estado = EstadoVehiculo.Disponible,
+        Transmision = TipoTransmision.Automatica,
         Color = TipoColor.Azul, PrecioBaseDia = precio, Plazas = 5,
         MaleteroLitros = 361, AutonomiaKm = 700, Kilometraje = 12000,
         FechaUltimaRevision = Fecha, ConesionarioFk = concesionario, Activo = true,

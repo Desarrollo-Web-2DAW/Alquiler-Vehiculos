@@ -69,9 +69,9 @@ public abstract class RepositoryTestBase {
         await using var db = CrearContexto();
         var vehiculo = CrearVehiculo(CrearFoto($"{matricula}.jpg"), concesionario.Id) with {
             Matrícula = matricula, Activo = activo,
-            Estado = activo ? EstadoVehiculo.Disponible : EstadoVehiculo.Retirado,
             DeletedAt = activo ? null : Fecha
         };
+        vehiculo.CambiarEstadoMapper(activo ? EstadoVehiculo.Disponible : EstadoVehiculo.Retirado);
         db.Vehiculos.Add(vehiculo);
         await db.SaveChangesAsync();
         return vehiculo;
@@ -80,7 +80,7 @@ public abstract class RepositoryTestBase {
     protected static VehiculoModel CrearVehiculo(Foto foto, long concesionario) => new() {
         FotoFk = foto.Ruta, Foto = foto, Matrícula = "1234BCD", Marca = "Toyota", Modelo = "Corolla",
         Acriss = "ILAH", Carroceria = TipoCarroceria.Sedan, Combustible = TipoCombustible.Hibrido,
-        Transmision = TipoTransmision.Automatica, Estado = EstadoVehiculo.Disponible,
+        Transmision = TipoTransmision.Automatica,
         Color = TipoColor.Azul, PrecioBaseDia = 45.50m, Plazas = 5, MaleteroLitros = 361,
         AutonomiaKm = 700, Kilometraje = 12000, FechaUltimaRevision = Fecha,
         ConesionarioFk = concesionario, Activo = true, CreatedAt = Fecha

@@ -114,9 +114,34 @@ public static class VehiculoSeeder {
         // Estos estados no sustituyen las reservas/partes: el escenario solo estará completo al integrarlos.
         // Marca conserva el nombre, como el DTO y el mapper actuales del proyecto.
         // Id se deja sin asignar: el generador del contexto crea los 11 caracteres.
+        var reservado = megane with { };
+        reservado.CambiarEstadoMapper(EstadoVehiculo.Reservado);
+        transit.CambiarEstadoMapper(EstadoVehiculo.Mantenimiento);
+        var enAlquiler = megane with {
+            Matrícula = "0123NPR", Color = TipoColor.Rojo, Kilometraje = 21000, PrecioBaseDia = 48m
+        };
+        enAlquiler.CambiarEstadoMapper(EstadoVehiculo.EnAlquiler);
+        var corollaReservado = corolla with {
+            Matrícula = "1357PRS", Color = TipoColor.Negro, Kilometraje = 9000, PrecioBaseDia = 58m
+        };
+        corollaReservado.CambiarEstadoMapper(EstadoVehiculo.Reservado);
+        var disponible = transit with {
+            Matrícula = "2468RST", Color = TipoColor.Azul, Kilometraje = 30000, PrecioBaseDia = 90m
+        };
+        disponible.CambiarEstadoMapper(EstadoVehiculo.Disponible);
+        var retirado = new VehiculoModel {
+            Matrícula = "7890JKL", Marca = "MINI", Modelo = "Cabrio", Acriss = "MTAV",
+            Carroceria = TipoCarroceria.Descapotable, Combustible = TipoCombustible.Gasolina,
+            Transmision = TipoTransmision.Automatica, Color = TipoColor.Rojo,
+            PrecioBaseDia = 70m, Plazas = 4, MaleteroLitros = 160, AutonomiaKm = 600,
+            Kilometraje = 85000, FechaUltimaRevision = fecha.AddMonths(-4), Activo = false,
+            CreatedAt = fecha.AddYears(-2), UpdatedAt = fecha, DeletedAt = fecha
+        };
+        retirado.CambiarEstadoMapper(EstadoVehiculo.Retirado);
+
         return [
             corolla,
-            megane with { Estado = EstadoVehiculo.Reservado },
+            reservado,
             new VehiculoModel {
                 Matrícula = "3456DFG", Marca = "Nissan", Modelo = "Ariya", Acriss = "IFAE",
                 Carroceria = TipoCarroceria.Suv, Combustible = TipoCombustible.Electrico,
@@ -145,15 +170,7 @@ public static class VehiculoSeeder {
                 PrecioBaseDia = 110m, Plazas = 4, MaleteroLitros = 440, AutonomiaKm = 700,
                 Kilometraje = 20000, FechaUltimaRevision = fecha.AddMonths(-2), CreatedAt = fecha
             },
-            new VehiculoModel {
-                Matrícula = "7890JKL", Marca = "MINI", Modelo = "Cabrio", Acriss = "MTAV",
-                Carroceria = TipoCarroceria.Descapotable, Combustible = TipoCombustible.Gasolina,
-                Transmision = TipoTransmision.Automatica, Color = TipoColor.Rojo,
-                PrecioBaseDia = 70m, Plazas = 4, MaleteroLitros = 160, AutonomiaKm = 600,
-                Kilometraje = 85000, FechaUltimaRevision = fecha.AddMonths(-4),
-                Estado = EstadoVehiculo.Retirado, Activo = false,
-                CreatedAt = fecha.AddYears(-2), UpdatedAt = fecha, DeletedAt = fecha
-            },
+            retirado,
             new VehiculoModel {
                 Matrícula = "8901KLM", Marca = "Renault", Modelo = "Grand Scénic", Acriss = "IMMD",
                 Carroceria = TipoCarroceria.Monovolumen, Combustible = TipoCombustible.Diesel,
@@ -161,16 +178,10 @@ public static class VehiculoSeeder {
                 PrecioBaseDia = 70m, Plazas = 7, MaleteroLitros = 230, AutonomiaKm = 900,
                 Kilometraje = 42000, FechaUltimaRevision = fecha.AddMonths(-1), CreatedAt = fecha
             },
-            transit with { Estado = EstadoVehiculo.Mantenimiento },
-            megane with {
-                Matrícula = "0123NPR", Color = TipoColor.Rojo, Kilometraje = 21000,
-                PrecioBaseDia = 48m, Estado = EstadoVehiculo.EnAlquiler
-            },
-            corolla with {
-                Matrícula = "1357PRS", Color = TipoColor.Negro, Kilometraje = 9000,
-                PrecioBaseDia = 58m, Estado = EstadoVehiculo.Reservado
-            },
-            transit with { Matrícula = "2468RST", Color = TipoColor.Azul, Kilometraje = 30000, PrecioBaseDia = 90m }
+            transit,
+            enAlquiler,
+            corollaReservado,
+            disponible
         ];
     }
 }
