@@ -177,3 +177,62 @@ Revisión del código y de las pruebas según las convenciones de calidad del pr
 - Resuelto: decisión D12 (FluentAssertions adoptado; Moq no hace falta) y el aviso de `Microsoft.OpenApi` (actualizado el paquete).
 - Siguen abiertos: tabla **evento → etiquetas invalidadas** (D4), servicio Redis en el `compose.yaml` (RNF-05) y la integración con el servicio de disponibilidad.
 - Nuevo pendiente: decidir si el contrato `ICacheService` mantiene sus adiciones (`ExistsAsync`, `GetOrSetAsync`, `RemoveByTagAsync`, `ClearAsync`, `PruneAsync` y `CancellationToken`) frente al contrato base (solo `Get`/`Set`/`Remove` sin token), y citar la decisión en la memoria.
+
+---
+
+## Tarea: middleware de gestión global de excepciones
+
+_**Fecha de registro:**_ 20/11/2026 · _**Rama:**_ `feature/middleware` · _**Estado:**_ implementado, registrado y probado.
+
+### Alcance y objetivo
+
+Centralizar la gestión de excepciones no controladas en la API para evitar respuestas inconsistentes y proporcionar información uniforme sobre los errores.
+
+---
+
+## 1. Implementación
+
+Se ha creado `Middleware/GlobalExceptionHandler.cs`, que contiene:
+
+- `GlobalExceptionHandler`: middleware encargado de capturar las excepciones durante el procesamiento de las peticiones HTTP.
+- `GlobalExceptionHandlerExtensions`: clase de extensión para facilitar su registro en el pipeline de ASP.NET Core.
+
+**Funcionamiento:**
+
+- Captura las excepciones mediante `try/catch`.
+- Registra los errores utilizando `ILogger`, generando un identificador único (`errorId`) para facilitar su seguimiento.
+- Clasifica las excepciones y asigna el código HTTP correspondiente:
+  - `NotFoundException` → 404.
+  - `ValidationException` → 400, incluyendo los errores por campo.
+  - `BusinessException` → 400.
+  - `UnauthorizedAccessException` → 401.
+  - `ArgumentException` → 400.
+  - `TimeoutException` → 408.
+  - Cualquier otra excepción → 500.
+- Devuelve una respuesta JSON con `errorId`, `message`, `errorType`, `timestamp`, `path`, `method` y, cuando corresponda, `errors`.
+- Configura la serialización JSON para utilizar nombres `camelCase` y omitir propiedades nulas.
+
+## 2. Registro en Program.cs
+
+Se ha registrado el middleware inmediatamente después de construir la aplicación:
+
+```csharp
+var app = builder.Build();
+
+app.UseGlobalExceptionHandler();
+```
+
+La extensión `UseGlobalExceptionHandler()` permite incorporar el middleware al pipeline sin utilizar directamente `UseMiddleware` en `Program.cs`.
+
+## 3. Prueba de funcionamiento
+
+- Se creó temporalmente el endpoint `/test-exception` para provocar una excepción no controlada.
+- Se comprobó que el middleware captura la excepción y devuelve una respuesta JSON con código HTTP 500.
+- Se verificó la generación del identificador del error y el resto de información de la respuesta.
+- Se ajustó `path` para devolver directamente la ruta como cadena mediante `context.Request.Path.Value`.
+
+**Resultado:** implementación, registro y prueba del `GlobalExceptionHandler` completados correctamente.
+
+## 4. Alcance de la tarea
+
+Esta tarea comprende exclusivamente el middleware de gestión global de excepciones (`GlobalExceptionHandler`). No incluye la implementación de `SecurityHeadersMiddleware` ni `RateLimitMiddleware`.
