@@ -1,0 +1,38 @@
+meta {
+  name: [011] ME - Perfil cliente autenticado (200)
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/auth/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{nuevoClienteToken}}
+}
+
+script:post-response {
+  test("GetMe autenticado - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("GetMe autenticado - Devuelve datos del cliente recién registrado", function () {
+    const body = res.getBody();
+    expect(body.email).to.equal("e2e.cliente@alquiler.local");
+    expect(body.nombre).to.equal("Luis");
+    expect(body.apellidos).to.equal("Vega Moreno");
+    expect(body.role).to.equal("Cliente");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Verifica que el JWT emitido por /signup autentica correctamente en /api/auth/me.
+}

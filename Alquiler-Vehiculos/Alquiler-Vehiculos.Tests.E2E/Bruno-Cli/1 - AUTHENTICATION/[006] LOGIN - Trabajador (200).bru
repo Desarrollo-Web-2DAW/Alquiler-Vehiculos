@@ -1,0 +1,47 @@
+meta {
+  name: [006] LOGIN - Trabajador (200)
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{trabajadorEmail}}",
+    "password": "{{trabajadorPassword}}"
+  }
+}
+
+script:post-response {
+  test("Login Trabajador - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Login Trabajador - Devuelve token y rol Trabajador", function () {
+    const body = res.getBody();
+    expect(body.token).to.be.a("string").and.not.be.empty;
+    expect(body.role).to.equal("Trabajador");
+  });
+
+  if (res.getStatus() === 200) {
+    bru.setVar("trabajadorToken", res.getBody().token);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Login del trabajador de operaciones semilla (RF-12, RF-46). Guarda trabajadorToken.
+}

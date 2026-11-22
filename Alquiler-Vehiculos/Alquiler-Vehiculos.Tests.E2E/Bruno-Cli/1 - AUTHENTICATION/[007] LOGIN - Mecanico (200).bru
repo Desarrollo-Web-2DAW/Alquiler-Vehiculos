@@ -1,0 +1,47 @@
+meta {
+  name: [007] LOGIN - Mecanico (200)
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{mecanicoEmail}}",
+    "password": "{{mecanicoPassword}}"
+  }
+}
+
+script:post-response {
+  test("Login Mecanico - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Login Mecanico - Devuelve token y rol Trabajador", function () {
+    const body = res.getBody();
+    expect(body.token).to.be.a("string").and.not.be.empty;
+    expect(body.role).to.equal("Trabajador");
+  });
+
+  if (res.getStatus() === 200) {
+    bru.setVar("mecanicoToken", res.getBody().token);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Login del mecánico de taller semilla (RF-08, RF-12, RF-46). Guarda mecanicoToken.
+}

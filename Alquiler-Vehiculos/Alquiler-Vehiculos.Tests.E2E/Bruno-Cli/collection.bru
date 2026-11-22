@@ -1,0 +1,28 @@
+meta {
+  name: Alquiler-Vehiculos API - Tests E2E
+  description: Colección de tests E2E con Bruno (RNF-04) para la API de Alquiler de Vehículos.
+}
+
+auth {
+  mode: none
+}
+
+script:post-response {
+  if (res.getStatus() >= 500) {
+    const requestName = bru.getRequestName ? bru.getRequestName() : 'Request';
+    console.log('Error 5xx en: ' + requestName + ' - Status: ' + res.getStatus());
+    console.log('Response: ' + JSON.stringify(res.getBody()));
+  }
+}
+
+docs {
+  ## Ejecución desde PowerShell (con la API arrancada en local)
+  ```powershell
+  cd Alquiler-Vehiculos\Alquiler-Vehiculos.Tests.E2E\Bruno-Cli
+  bru run --env local
+  ```
+
+  ## Organización de la colección
+  - `1 - AUTHENTICATION`: alta de cliente, login de los 5 perfiles semilla (RF-46) y consulta de `/api/auth/me`.
+  - Los módulos siguientes (`2 - CLIENTES`, `3 - VEHICULOS`, `4 - TRABAJADORES`, `5 - TALLER`, `6 - RESERVAS`, `7 - PAGOS`) reutilizan los tokens guardados (`adminToken`, `clienteToken`, `trabajadorToken`, `mecanicoToken`, `responsableToken`).
+}
