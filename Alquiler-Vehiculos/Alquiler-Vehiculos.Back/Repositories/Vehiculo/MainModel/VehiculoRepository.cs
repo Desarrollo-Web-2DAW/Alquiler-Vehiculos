@@ -65,12 +65,6 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
         VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null || !existente.Activo) return null;
 
-        var actualizado = existente with
-        {
-    
-        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
-        if (existente == null || existente.Activo) return null;
-        
         var actualizado = existente with {
             FotoFk = item.FotoFk,
             Foto = item.Foto,
