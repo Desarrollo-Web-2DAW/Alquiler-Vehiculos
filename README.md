@@ -13,6 +13,8 @@ dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=localhost;Po
 dotnet user-secrets set "ConnectionStrings:Catalogo" "Host=localhost;Port=5433;Database=catalogo;Username=postgres;Password=$env:POSTGRES_PASSWORD" --project $proyecto
 $mongoPassword = [Uri]::EscapeDataString($env:POSTGRES_PASSWORD)
 dotnet user-secrets set "MongoDbSettings:ConnectionString" "mongodb://alquiler:${mongoPassword}@localhost:27018/?authSource=admin" --project $proyecto
+$jwtKey = Read-Host "Clave JWT del entorno local" -MaskInput
+dotnet user-secrets set "Jwt:Key" $jwtKey --project $proyecto
 dotnet run --project $proyecto --launch-profile http
 ```
 
@@ -20,8 +22,8 @@ La contraseña se configura al crear los volúmenes por primera vez. En posterio
 arranques usa la misma; cambiar la variable no cambia las credenciales ya guardadas.
 User Secrets conserva las conexiones fuera del repositorio para tu usuario local.
 
-En el PC de Lucia ya se han creado los contenedores y guardado las conexiones.
-Para volver a arrancar, desde la raíz del repositorio, basta con:
+Si ya se han creado los contenedores y guardado las conexiones y la clave JWT,
+para volver a arrancar, desde la raíz del repositorio:
 
 ```powershell
 docker start alquiler-vehiculos-postgres-1 alquiler-vehiculos-mongodb-1
@@ -30,13 +32,22 @@ dotnet run --project Alquiler-Vehiculos/Alquiler-Vehiculos.Back --launch-profile
 
 No repitas la configuración inicial con otra contraseña sobre los volúmenes existentes.
 
-- Comprobar el back: http://localhost:5216/weatherforecast
+- Consultar la URL de escucha y los mensajes de arranque en la consola.
 - No hay interfaz Swagger ni endpoint GraphQL habilitados actualmente. Un 404 en
   `/`, `/swagger` o `/graphql` no significa que el back esté apagado.
-- PostgreSQL usa el puerto **5433** y MongoDB el **27018**, separados de Funko.
+- PostgreSQL usa el puerto **5433** y MongoDB el **27018**.
 - Usuarios aplica sus migraciones al arrancar sin borrar datos. El contexto de
   catálogo todavía no tiene migraciones ni inicialización de esquema en el arranque.
 - Detener dependencias conservando sus datos: `docker compose stop`.
+
+La compilación no garantiza todavía el arranque: el catálogo depende de
+`ITransactionManager`, cuya implementación no está en esta copia. También falta
+aprovisionar el esquema del catálogo y configurar un Redis accesible. Estas
+decisiones están registradas en [la revisión del catálogo](docs/revision-catalogo.md).
+
+La clave JWT se configura mediante User Secrets en desarrollo o `Jwt__Key` en el
+entorno; no se guarda en `appsettings.json`. La clave que estuvo versionada debe
+rotarse. Retirarla del fichero no la elimina de los commits antiguos.
 
 ## Pruebas
 

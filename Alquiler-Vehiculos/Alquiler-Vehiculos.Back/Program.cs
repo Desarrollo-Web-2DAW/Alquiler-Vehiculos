@@ -181,4 +181,3 @@ if (app.Environment.IsDevelopment()) {
 } finally {
     await Log.CloseAndFlushAsync();
 }
-

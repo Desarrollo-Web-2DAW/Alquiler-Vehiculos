@@ -33,6 +33,7 @@ artifacts/
 # Publicaciones y resultados de test
 publish/
 TestResults/
+logs/
 BenchmarkDotNet.Artifacts/
 
 # Informe de cobertura generado
