@@ -1,7 +1,31 @@
 # Desarrollo: un solo comando para levantar la infraestructura (RNF-05).
-# Mailpit (RF-36): SMTP local en el puerto 1025 y bandeja de captura en http://localhost:8025
-# Añadid aquí el resto de servicios del proyecto (PostgreSQL, MongoDB, Redis, API...).
+# PostgreSQL (5433), Redis (6379) y Mailpit (SMTP 1025 / bandeja web http://localhost:8025).
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: alquiler-vehiculos-postgres
+    environment:
+      POSTGRES_DB: alquiler
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d alquiler"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: alquiler-vehiculos-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: alquiler-vehiculos-mailpit
@@ -9,3 +33,6 @@ services:
       - "1025:1025"   # SMTP (a lo que apunta Email:Host/Port en desarrollo)
       - "8025:8025"   # Bandeja web para ver los correos sin salir de la máquina
     restart: unless-stopped
+
+volumes:
+  postgres_data:
