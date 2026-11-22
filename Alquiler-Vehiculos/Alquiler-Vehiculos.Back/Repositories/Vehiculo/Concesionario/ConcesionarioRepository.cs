@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 
