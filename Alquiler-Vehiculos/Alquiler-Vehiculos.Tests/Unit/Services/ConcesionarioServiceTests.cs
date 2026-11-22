@@ -330,10 +330,10 @@ public class ConcesionarioServiceTests
         resultado.IsSuccess.Should().BeTrue();
 
         _cache.Verify(c => c.RemoveAsync(ClaveConcesionario, It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync("vehiculo:abc123", It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync("vehiculo:1111AAA", It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync("vehiculo:def456", It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync("vehiculo:2222BBB", It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync("vehiculo:id:abc123", It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync("vehiculo:matricula:1111AAA", It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync("vehiculo:id:def456", It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync("vehiculo:matricula:2222BBB", It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]

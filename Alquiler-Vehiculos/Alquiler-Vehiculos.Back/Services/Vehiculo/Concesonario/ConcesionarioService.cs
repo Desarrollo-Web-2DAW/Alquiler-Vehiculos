@@ -88,8 +88,8 @@ public class ConcesionarioService(
 
         var vehiculos = await repository.GetVehiculos(key);
         foreach (var vehiculo in vehiculos) {
-            await cache.RemoveAsync("vehiculo:" + vehiculo.Id);
-            await cache.RemoveAsync("vehiculo:" + vehiculo.Matrícula);
+            await cache.RemoveAsync("vehiculo:id:" + vehiculo.Id);
+            await cache.RemoveAsync("vehiculo:matricula:" + vehiculo.Matrícula);
         }
 
         return Result.Success<ConcesionarioDto, DomainError>(actualizado.ToDto());

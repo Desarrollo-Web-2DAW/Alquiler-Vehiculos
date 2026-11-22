@@ -29,7 +29,8 @@ public class VehiculoService(
     UpdateVehiculoValidator updateVehiculoValidator,
     IConcesionarioRepository concesionarioRepository) : IVehiculoService
 {
-    private const string ClaveVehiculo = "vehiculo:";
+    private const string ClaveVehiculo = "vehiculo:id:";
+    private const string ClaveMatricula = "vehiculo:matricula:";
 
     /// <inheritdoc cref="IVehiculoService.GetAll" />
     public async Task<IEnumerable<VehiculoDto>> GetAll()
@@ -63,7 +64,7 @@ public class VehiculoService(
 
         var dto = vehiculo.ToDto();
         await cache.SetAsync(ClaveVehiculo + key, dto);
-        await cache.SetAsync(ClaveVehiculo + vehiculo.Matrícula, dto);
+        await cache.SetAsync(ClaveMatricula + vehiculo.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);
     }
@@ -98,8 +99,10 @@ public class VehiculoService(
         var creado = await repository.Create(vehiculo.Value);
         if (creado.IsFailure) return creado.Error;
         var dto = creado.Value.ToDto();
+        await cache.RemoveAsync(ClaveVehiculo + creado.Value.Id);
+        await cache.RemoveAsync(ClaveMatricula + creado.Value.Matrícula);
         await cache.SetAsync(ClaveVehiculo + creado.Value.Id, dto);
-        await cache.SetAsync(ClaveVehiculo + creado.Value.Matrícula, dto);
+        await cache.SetAsync(ClaveMatricula + creado.Value.Matrícula, dto);
         return Result.Success<VehiculoDto, DomainError>(dto);
     }
 
@@ -174,12 +177,13 @@ public class VehiculoService(
         }
 
         await cache.RemoveAsync(ClaveVehiculo + key);
-        await cache.RemoveAsync(ClaveVehiculo + existente.Matrícula);
-        await cache.RemoveAsync(ClaveVehiculo + vehiculo.Matrícula);
+        await cache.RemoveAsync(ClaveMatricula + existente.Matrícula);
+        if (vehiculo.Matrícula != existente.Matrícula)
+            await cache.RemoveAsync(ClaveMatricula + vehiculo.Matrícula);
 
         var dto = result.Value.ToDto();
         await cache.SetAsync(ClaveVehiculo + key, dto);
-        await cache.SetAsync(ClaveVehiculo + vehiculo.Matrícula, dto);
+        await cache.SetAsync(ClaveMatricula + vehiculo.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);
     }
@@ -196,7 +200,7 @@ public class VehiculoService(
         }
 
         await cache.RemoveAsync(ClaveVehiculo + key);
-        await cache.RemoveAsync(ClaveVehiculo + result.Value.Matrícula);
+        await cache.RemoveAsync(ClaveMatricula + result.Value.Matrícula);
 
         return Result.Success<bool, DomainError>(true);
     }
@@ -213,8 +217,10 @@ public class VehiculoService(
         }
 
         var dto = result.Value.ToDto();
+        await cache.RemoveAsync(ClaveVehiculo + key);
+        await cache.RemoveAsync(ClaveMatricula + result.Value.Matrícula);
         await cache.SetAsync(ClaveVehiculo + key, dto);
-        await cache.SetAsync(ClaveVehiculo + result.Value.Matrícula, dto);
+        await cache.SetAsync(ClaveMatricula + result.Value.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);
     }

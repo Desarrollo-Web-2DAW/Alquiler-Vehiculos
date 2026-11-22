@@ -27,6 +27,27 @@ namespace Alquiler_Vehiculos.Tests.Unit.Services;
 [Category("Unit")]
 public class VehiculoServiceTests
 {
+    [Test]
+    public async Task GetById_IdIgualAMatricula_UsaClavesDistintas()
+    {
+        // Arrange
+        var vehiculo = CrearModelo() with { Id = Matricula };
+        _repository.Setup(r => r.GetById(Matricula)).ReturnsAsync(vehiculo);
+
+        // Act
+        var resultado = await _service.GetById(Matricula);
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+        _repository.Verify(r => r.GetById(Matricula), Times.Once);
+        _cache.Verify(c => c.GetAsync<VehiculoDto>("vehiculo:id:" + Matricula, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.GetAsync<VehiculoDto>("vehiculo:matricula:" + Matricula, It.IsAny<CancellationToken>()), Times.Never);
+        _cache.Verify(c => c.SetAsync("vehiculo:id:" + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.SetAsync("vehiculo:matricula:" + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     [TestCase(false)]
     [TestCase(true)]
     public async Task Guardar_ConcesionarioInexistente_Devuelve400SinPersistir(bool actualizar)
@@ -108,7 +129,8 @@ public class VehiculoServiceTests
     private const string MatriculaNueva = "5678CCC";
     // La foto se referencia por su Nombre, que es la clave de IFotoRepository.
     private const string FotoId = "foto-1";
-    private const string ClaveVehiculo = "vehiculo:";
+    private const string ClaveVehiculo = "vehiculo:id:";
+    private const string ClaveMatricula = "vehiculo:matricula:";
     // C compacto · C 2/4 puertas (Hatchback) · M manual · D diésel con aire.
     private const string AcrissValido = "CCMD";
     // S en 2ª posición no tiene equivalente de dominio: se rechaza antes de consultar dependencias.
@@ -336,7 +358,7 @@ public class VehiculoServiceTests
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _cache.Verify(
-            c => c.SetAsync(ClaveVehiculo + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            c => c.SetAsync(ClaveMatricula + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -486,13 +508,15 @@ public class VehiculoServiceTests
 
         // Assert
         resultado.IsSuccess.Should().BeTrue();
+        _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);
 
         _cache.Verify(
             c => c.SetAsync(ClaveVehiculo + VehiculoId, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _cache.Verify(
-            c => c.SetAsync(ClaveVehiculo + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            c => c.SetAsync(ClaveMatricula + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -720,14 +744,14 @@ public class VehiculoServiceTests
         resultado.Value.Matricula.Should().Be(MatriculaNueva);
 
         _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + Matricula, It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + MatriculaNueva, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveMatricula + MatriculaNueva, It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(
             c => c.SetAsync(ClaveVehiculo + VehiculoId, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _cache.Verify(
-            c => c.SetAsync(ClaveVehiculo + MatriculaNueva, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            c => c.SetAsync(ClaveMatricula + MatriculaNueva, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
@@ -765,7 +789,7 @@ public class VehiculoServiceTests
         resultado.Value.Should().BeTrue();
 
         _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
-        _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + Matricula, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -802,13 +826,15 @@ public class VehiculoServiceTests
 
         // Assert
         resultado.Value.Matricula.Should().Be(Matricula);
+        _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);
 
         _cache.Verify(
             c => c.SetAsync(ClaveVehiculo + VehiculoId, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
         _cache.Verify(
-            c => c.SetAsync(ClaveVehiculo + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            c => c.SetAsync(ClaveMatricula + Matricula, It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
                 It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()),
             Times.Once);
     }
