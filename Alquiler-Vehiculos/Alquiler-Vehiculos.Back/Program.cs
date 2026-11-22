@@ -1,48 +1,56 @@
 using System.Text;
 using Alquiler_Vehiculos.Cache;
+using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Middleware;
+using FluentValidation;
 using Serilog;
-using Serilog.Events;
 
 Console.OutputEncoding = Encoding.UTF8;
-
-Log.Logger = new LoggerConfiguration()
-    .MinimumLevel.Information()
-    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-    .MinimumLevel.Override("System", LogEventLevel.Warning)
-    .WriteTo.Console(
-        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .WriteTo.File(
-        "logs/api-.log",
-        rollingInterval: RollingInterval.Day,
-        retainedFileCountLimit: 7,
-        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
-    .CreateLogger();
+Log.Logger = SerilogConfig.Configure().CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseSerilog(Log.Logger);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+try {
+    Log.Information("Iniciando la aplicación...");
 
-// Caché LRU con TTL sobre Redis (carpeta Cache/)
-builder.Services.AddCache(builder.Configuration);
+    builder.Services.Configure<ApiSettings>(builder.Configuration.GetSection("Api"));
+    builder.Services.AddOpenApi();
+    builder.Services.AddDatabase(builder.Configuration, builder.Environment);
+    builder.Services.AddIdentityConfiguration(builder.Configuration, builder.Environment);
+    builder.Services.AddControllers();
+    builder.Services.AddHttpContextAccessor();
+    builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-// Notificaciones por correo (RF-34 a RF-36): cola de envío con reintentos en segundo plano
-builder.Services.AddEmailNotifications(builder.Configuration);
+    builder.Services.AddCache(builder.Configuration);
+    builder.Services.AddEmailNotifications(builder.Configuration);
+    builder.Services.AddTallerServices();
 
-// Partes de taller (RF-08): núcleo del taller
-builder.Services.AddTallerServices();
+    var app = builder.Build();
 
-var app = builder.Build();
+    app.UseGlobalExceptionHandler();
+    app.UseSerilogRequestLogging();
 
-// Añadimos Middleware
-app.UseGlobalExceptionHandler();
+    if (app.Environment.IsDevelopment()) {
+        app.MapOpenApi();
+    } else if (!app.Environment.IsEnvironment("Testing")) {
+        app.UseHttpsRedirection();
+    }
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()) app.MapOpenApi();
+    app.UseAuthentication();
+    app.UseAuthorization();
+    app.MapControllers();
 
-app.UseHttpsRedirection();
+    await app.InitializeDatabaseAsync();
 
-app.Run();
+    await app.RunAsync();
+} catch (HostAbortedException) {
+    // Normal al ejecutar `dotnet ef`.
+} catch (Exception ex) {
+    Log.Fatal(ex, "La aplicación terminó de forma inesperada");
+} finally {
+    await Log.CloseAndFlushAsync();
+}
+
+public partial class Program;
