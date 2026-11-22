@@ -125,16 +125,23 @@ public class AuthIntegrationTests {
 
         // Act
         var signupResponse = await _client!.PostAsJsonAsync("/api/auth/signup", signup);
+        var signupBody = await signupResponse.Content.ReadAsStringAsync();
+        signupResponse.StatusCode.Should().Be(HttpStatusCode.Created, $"Body signup: {signupBody}");
+
         var auth = await signupResponse.Content.ReadFromJsonAsync<AuthResponseDto>();
+        auth.Should().NotBeNull();
+        auth!.Token.Should().NotBeNullOrWhiteSpace();
 
         using var meRequest = new HttpRequestMessage(HttpMethod.Get, "/api/auth/me");
-        meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth!.Token);
+        meRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", auth.Token);
         var meResponse = await _client!.SendAsync(meRequest);
+        var meBody = await meResponse.Content.ReadAsStringAsync();
+        meResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            $"WWW-Authenticate: {meResponse.Headers.WwwAuthenticate} | Body: {meBody}");
+
         var perfil = await meResponse.Content.ReadFromJsonAsync<UserDto>();
 
         // Assert
-        signupResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        meResponse.StatusCode.Should().Be(HttpStatusCode.OK);
         perfil!.Email.Should().Be(signup.Email);
         perfil.Role.Should().Be("Cliente");
     }
