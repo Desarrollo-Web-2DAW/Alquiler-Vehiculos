@@ -26,6 +26,31 @@ namespace Alquiler_Vehiculos.Tests.Unit.Services;
 [Category("Unit")]
 public class VehiculoServiceTests
 {
+    [TestCase("no-es-una-fecha")]
+    [TestCase("9999-01-01")]
+    public async Task Create_YUpdate_FechaInvalidaOFutura_Devuelven400SinGuardar(string fecha)
+    {
+        // Arrange
+        var create = CrearCreateValido() with { FechaUltimaRevision = fecha };
+        var update = CrearUpdateValido() with { FechaUltimaRevision = fecha };
+
+        // Act
+        var alta = await _service.Create(create);
+        var modificacion = await _service.Update(update, VehiculoId);
+
+        // Assert
+        alta.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("FechaUltimaRevision");
+        modificacion.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("FechaUltimaRevision");
+        var http = Alquiler_Vehiculos.Extensions.DomainErrorExtensions.ToHttpResult(alta.Error);
+        http.Should().BeOfType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
+        _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
+        _repository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
+        _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
+        _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
+        _transactionsService.Verify(t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     // Id no numérico a propósito: las claves de vehículo son string (antes NotFoundVehiculo lanzaba FormatException).
     private const string VehiculoId = "veh-1";
     private const string Matricula = "1234BBB";

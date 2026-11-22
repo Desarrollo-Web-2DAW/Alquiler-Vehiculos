@@ -71,7 +71,10 @@ public class UpdateVehiculoValidator : AbstractValidator<UpdateVehiculoDto>
             .GreaterThanOrEqualTo(0).WithMessage("El kilometraje no puede ser negativo.");
 
         RuleFor(v => v.FechaUltimaRevision)
-            .NotEmpty().WithMessage("La fecha de la última revisión no puede estar vacía.");
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty().WithMessage("La fecha de la última revisión no puede estar vacía.")
+            .Must(texto => DateTime.TryParse(texto, out var fecha) && fecha <= DateTime.UtcNow)
+            .WithMessage("La fecha de la última revisión debe ser válida y no puede ser futura.");
 
         RuleFor(v => v.Concesionario)
             .GreaterThan(0).WithMessage("El identificador del concesionario debe ser válido.");

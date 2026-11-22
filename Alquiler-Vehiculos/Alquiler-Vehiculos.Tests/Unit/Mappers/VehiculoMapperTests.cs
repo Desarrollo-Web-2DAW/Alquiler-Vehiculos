@@ -305,19 +305,28 @@ public class VehiculoMapperTests
         resultado.Value.FechaUltimaRevision.Should().Be(new DateTime(2026, 10, 1));
     }
 
-    [Test]
-    public void ToVehiculo_ConFechaNoParseable_UsaLaFechaActual()
+    [TestCase("no-es-una-fecha")]
+    [TestCase("9999-01-01")]
+    [TestCase("2026-02-30")]
+    public void Fecha_InvalidaOFutura_ValidadoresYMapeadoresLaRechazan(string texto)
     {
         // Arrange
-        var antes = DateTime.UtcNow;
-        var dto = CrearDto();
-        dto.FechaUltimaRevision = "no-es-una-fecha";
+        var dto = CrearDto() with { FechaUltimaRevision = texto };
+        var update = CrearUpdateDto() with { FechaUltimaRevision = texto };
 
         // Act
         var resultado = dto.ToVehiculo(CrearFoto());
+        var modificacion = update.ToVehiculoModel(CrearFoto());
+        var altaValida = new CreateVehiculoValidator().Validate(dto);
+        var modificacionValida = new UpdateVehiculoValidator().Validate(update);
 
         // Assert
-        resultado.Value.FechaUltimaRevision.Should().BeCloseTo(antes, TimeSpan.FromMinutes(1));
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().BeOfType<Alquiler_Vehiculos.Errors.Common.ValidationError>();
+        modificacion.IsFailure.Should().BeTrue();
+        modificacion.Error.Should().BeEquivalentTo(resultado.Error);
+        altaValida.Errors.Should().ContainSingle(e => e.PropertyName == "FechaUltimaRevision");
+        modificacionValida.Errors.Should().ContainSingle(e => e.PropertyName == "FechaUltimaRevision");
     }
 
     [Test]

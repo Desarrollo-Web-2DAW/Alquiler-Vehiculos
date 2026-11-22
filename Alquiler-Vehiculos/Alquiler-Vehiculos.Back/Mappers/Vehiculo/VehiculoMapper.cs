@@ -33,6 +33,8 @@ public static class VehiculoMapper
             || !Enum.IsDefined(color)) return VehiculoError.TipoColorInvalido();
 
         // RF-01: un vehículo nuevo nace siempre Disponible (valor por defecto del modelo) y activo.
+        if (!DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) || fecha > DateTime.UtcNow)
+            return ValidationError.Create("La fecha de la última revisión debe ser válida y no puede ser futura.");
         return new VehiculoModel()
         {
             FotoFk = foto.Nombre,
@@ -50,7 +52,7 @@ public static class VehiculoMapper
             MaleteroLitros = dto.MaleteroLitros,
             AutonomiaKm = dto.AutonomiaKm,
             Kilometraje = dto.Kilometraje,
-            FechaUltimaRevision = DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) ? fecha : DateTime.UtcNow,
+            FechaUltimaRevision = fecha,
             ConesionarioFk = dto.Concesionario,
             Activo = true,
             CreatedAt = DateTime.UtcNow,
@@ -82,6 +84,9 @@ public static class VehiculoMapper
             || !Enum.IsDefined(estado) || estado == EstadoVehiculo.Retirado)
             return ValidationError.Create("El estado del vehículo no es válido. Para retirarlo, usa la baja lógica.");
 
+        if (!DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) || fecha > DateTime.UtcNow)
+            return ValidationError.Create("La fecha de la última revisión debe ser válida y no puede ser futura.");
+
         var vehiculo = new VehiculoModel
         {
             FotoFk = foto.Nombre,
@@ -99,7 +104,7 @@ public static class VehiculoMapper
             MaleteroLitros = dto.MaleteroLitros,
             AutonomiaKm = dto.AutonomiaKm,
             Kilometraje = dto.Kilometraje,
-            FechaUltimaRevision = DateTime.TryParse(dto.FechaUltimaRevision, out var fecha) ? fecha : DateTime.UtcNow,
+            FechaUltimaRevision = fecha,
             ConesionarioFk = dto.Concesionario,
             Activo = dto.IsActivo,
             CreatedAt = DateTime.UtcNow,
