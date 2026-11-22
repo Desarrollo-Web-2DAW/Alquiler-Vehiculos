@@ -264,4 +264,28 @@ public class AuthServiceIntegrationTests {
         (await db.Roles.CountAsync()).Should().Be(4);
         (await db.UserRoles.CountAsync()).Should().Be(3);
     }
+
+    [Test]
+    public async Task GetMeAsync_CuentaSinEmailPersonaNiRol_DevuelveCamposVacios() {
+        // Arrange
+        Guid id;
+        using (var preparacion = _provider.CreateScope()) {
+            var db = preparacion.ServiceProvider.GetRequiredService<AppDbContextUsuarios>();
+            var admin = await db.Users.SingleAsync(u => u.Email == "admin@example.com");
+            id = admin.Id;
+            admin.Email = null;
+            admin.NormalizedEmail = null;
+            await db.UserRoles.Where(r => r.UserId == id).ExecuteDeleteAsync();
+            await db.SaveChangesAsync();
+        }
+        using var lectura = _provider.CreateScope();
+        var service = lectura.ServiceProvider.GetRequiredService<IAuthService>();
+
+        // Act
+        var resultado = await service.GetMeAsync(id);
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().Be(new UserDto(id, "", "", "", ""));
+    }
 }

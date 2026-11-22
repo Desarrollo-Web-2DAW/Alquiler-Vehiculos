@@ -94,6 +94,24 @@ Las pruebas de integración crean y eliminan sus propios contenedores y datos ai
 No utilizan las bases habituales. Las de almacenamiento también usan PostgreSQL real
 y se ejecutan dentro de un contenedor Linux mediante el proyecto principal de tests.
 
+Para generar el **informe conjunto de Windows y Docker**, desde la raíz:
+
+```powershell
+.\scripts\coverage.ps1
+Start-Process ".\Alquiler-Vehiculos\Alquiler-Vehiculos.Tests\coveragereport\index.html"
+```
+
+Requiere `reportgenerator` instalado, además de .NET y Docker. El script comprueba
+Docker, ejecuta los tests con cobertura y genera HTML, `Summary.xml` y `Summary.txt`.
+Usa una carpeta nueva por ejecución y reúne allí los informes del host y del
+contenedor. No borra resultados anteriores ni mezcla su cobertura con la actual.
+El comando manual `reportgenerator -reports:"TestResults/**/coverage.cobertura.xml"`
+desde la carpeta de tests no recogía los adjuntos de Docker guardados bajo `bin`:
+por eso almacenamiento podía aparecer al 0 % aunque sus pruebas hubieran pasado.
+
+Casos añadidos, resultados y diferencia entre cobertura de líneas y de ramas:
+[docs/tests-catalogo-cobertura.md](docs/tests-catalogo-cobertura.md).
+
 ## Marcas: identificadores y baja lógica (RF-09)
 
 `MarcaModel.Id` es un `ObjectId` de MongoDB. El mapper deja `ObjectId.Empty` cuando

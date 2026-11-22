@@ -44,6 +44,7 @@ public class StorageContainerTests {
 
     [TestCase("StorageServiceTests")]
     [TestCase("StorageInitializationExtensionsTests")]
+    [TestCase("FotosArchivoControllerTests")]
     public async Task Storage_EscenariosEnContenedor_TodosLosCasosPasan(string clase) {
         // Arrange
         var destino = $"/tmp/results/{clase}";
@@ -63,8 +64,10 @@ public class StorageContainerTests {
         TestContext.Out.WriteLine(resultado.Stderr);
         // Guardar TRX y cobertura antes de comprobar el resultado permite investigar fallos.
         var trx = await _container.ReadFileAsync($"{destino}/tests.trx", timeout.Token);
-        var carpeta = Path.Combine(TestContext.CurrentContext.WorkDirectory, "TestResults", "StorageContainer",
-            Guid.NewGuid().ToString("N"), clase);
+        // El script de cobertura reúne host y Docker en una ejecución aislada.
+        var resultados = Environment.GetEnvironmentVariable("ALQUILER_TEST_RESULTS_DIRECTORY")
+            ?? Path.Combine(TestContext.CurrentContext.WorkDirectory, "TestResults");
+        var carpeta = Path.Combine(resultados, "StorageContainer", Guid.NewGuid().ToString("N"), clase);
         Directory.CreateDirectory(carpeta);
         await File.WriteAllBytesAsync(Path.Combine(carpeta, "tests.trx"), trx, timeout.Token);
         TestContext.AddTestAttachment(Path.Combine(carpeta, "tests.trx"));
@@ -76,9 +79,13 @@ public class StorageContainerTests {
         var cobertura = await _container.ReadFileAsync(rutas[0], timeout.Token);
         using var contenidoCobertura = new MemoryStream(cobertura);
         var informeCobertura = XDocument.Load(contenidoCobertura);
+        var claseMedida = clase switch {
+            "StorageServiceTests" => "Services.Storage.StorageService",
+            "FotosArchivoControllerTests" => "Controllers.Vehiculo.FotosController",
+            _ => "Infrastructure.StorageInitializationExtensions"
+        };
         informeCobertura.Descendants("class").Should().Contain(c =>
-            (string?)c.Attribute("name") == "Alquiler_Vehiculos." +
-                (clase == "StorageServiceTests" ? "Services.Storage.StorageService" : "Infrastructure.StorageInitializationExtensions"));
+            (string?)c.Attribute("name") == "Alquiler_Vehiculos." + claseMedida);
         informeCobertura.Descendants("line").Should().Contain(l => (int)l.Attribute("hits")! > 0,
             "un XML vacío no demuestra que se haya medido la cobertura");
         var archivoCobertura = Path.Combine(carpeta, "coverage.cobertura.xml");

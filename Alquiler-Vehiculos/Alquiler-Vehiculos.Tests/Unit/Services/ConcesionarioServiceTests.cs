@@ -67,8 +67,9 @@ public class ConcesionarioServiceTests
         new(id, "Motor Norte", "Santander", telefono, EmailValido, false,
             new DateTime(2025, 1, 1), null, null);
 
-    private static ConcesionarioDto CrearDtoEsperado(string telefono = TelefonoValido) => new()
+    private static ConcesionarioDto CrearDtoEsperado(string telefono = TelefonoValido, long id = IdExistente) => new()
     {
+        Id = id,
         Nombre = "Motor Norte",
         Ciudad = "Santander",
         Telefono = telefono,
@@ -89,7 +90,7 @@ public class ConcesionarioServiceTests
         var resultado = await _service.GetAll();
 
         // Assert
-        resultado.Should().BeEquivalentTo([CrearDtoEsperado(), CrearDtoEsperado("942000222")]);
+        resultado.Should().BeEquivalentTo([CrearDtoEsperado(id: 1), CrearDtoEsperado("942000222", 2)]);
 
         _repository.Verify(r => r.GetAll(), Times.Once);
     }
@@ -120,6 +121,7 @@ public class ConcesionarioServiceTests
         var resultado = await _service.GetById(IdExistente);
 
         // Assert
+        resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeEquivalentTo(CrearDtoEsperado());
 
         _repository.Verify(r => r.GetById(It.IsAny<long>()), Times.Never);
@@ -141,8 +143,11 @@ public class ConcesionarioServiceTests
         var resultado = await _service.GetById(IdExistente);
 
         // Assert
+        resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeEquivalentTo(CrearDtoEsperado());
 
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
+        _cache.Verify(c => c.GetAsync<ConcesionarioDto>(ClaveConcesionario, It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(
             c => c.SetAsync(ClaveConcesionario,
                 It.Is<ConcesionarioDto>(d => ReferenceEquals(d, resultado.Value)),
@@ -217,8 +222,10 @@ public class ConcesionarioServiceTests
         var resultado = await _service.Create(dto);
 
         // Assert
+        resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeEquivalentTo(CrearDtoEsperado());
 
+        _repository.Verify(r => r.ExistsByTelefono(TelefonoValido), Times.Once);
         _repository.Verify(r => r.Create(It.Is<ConcesionarioModel>(m =>
             m.Id == 0 && m.Nombre == "Motor Norte" && m.Ciudad == "Santander" &&
             m.Telefono == TelefonoValido && m.Email == EmailValido && !m.IsDeleted)), Times.Once);
@@ -287,10 +294,13 @@ public class ConcesionarioServiceTests
         var resultado = await _service.Update(CrearUpdateValido(TelefonoValido), IdExistente);
 
         // Assert
+        resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeEquivalentTo(CrearDtoEsperado());
 
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
         _repository.Verify(r => r.ExistsByTelefono(It.IsAny<string>()), Times.Never);
         _repository.Verify(r => r.Update(IdExistente, It.IsAny<ConcesionarioModel>()), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveConcesionario, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -307,10 +317,14 @@ public class ConcesionarioServiceTests
         var resultado = await _service.Update(CrearUpdateValido(telefonoNuevo), IdExistente);
 
         // Assert
+        resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeEquivalentTo(CrearDtoEsperado(telefonoNuevo));
 
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
+        _repository.Verify(r => r.ExistsByTelefono(telefonoNuevo), Times.Once);
         _repository.Verify(r => r.Update(IdExistente, It.Is<ConcesionarioModel>(m =>
             m.Telefono == telefonoNuevo)), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveConcesionario, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -371,52 +385,81 @@ public class ConcesionarioServiceTests
     }
 
     [Test]
-    public async Task SoftDelete_CuandoTieneVehiculos_DevuelveBusinessRuleError()
+    public async Task SoftDelete_CuandoTieneVehiculos_PermiteLaBajaEInvalidaLaCache()
     {
         // Arrange
-        _repository.Setup(r => r.ExistById(IdExistente)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetById(IdExistente)).ReturnsAsync(CrearModelo());
         _repository.Setup(r => r.HasVehiculos(IdExistente)).ReturnsAsync(true);
+        _repository.Setup(r => r.SoftDelete(IdExistente)).ReturnsAsync(true);
 
         // Act
         var resultado = await _service.SoftDelete(IdExistente);
 
         // Assert
-        resultado.Error.Should().Be(
-            new BusinessRuleError("CONCESIONARIO_CON_VEHICULOS", "No se puede borrar un concesionario con vehiculos asociados"));
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Should().BeTrue();
 
-        _repository.Verify(r => r.SoftDelete(It.IsAny<long>()), Times.Never);
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
+        _repository.Verify(r => r.HasVehiculos(It.IsAny<long>()), Times.Never);
+        _repository.Verify(r => r.SoftDelete(IdExistente), Times.Once);
+        _cache.Verify(c => c.RemoveAsync(ClaveConcesionario, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
     public async Task SoftDelete_CuandoNoExiste_DevuelveNotFound()
     {
         // Arrange
-        _repository.Setup(r => r.ExistById(IdExistente)).ReturnsAsync(false);
+        _repository.Setup(r => r.GetById(IdExistente)).ReturnsAsync((ConcesionarioModel?)null);
 
         // Act
         var resultado = await _service.SoftDelete(IdExistente);
 
         // Assert
+        resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().Be(ConcesionarioError.NotFoundConcesionario(IdExistente));
 
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
         _repository.Verify(r => r.HasVehiculos(It.IsAny<long>()), Times.Never);
         _repository.Verify(r => r.SoftDelete(It.IsAny<long>()), Times.Never);
+        _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task SoftDelete_CuandoYaEstaInactivo_DevuelveNotFoundSinBorrarNiInvalidarCache()
+    {
+        // Arrange
+        _repository.Setup(r => r.GetById(IdExistente))
+            .ReturnsAsync(CrearModelo() with { IsDeleted = true });
+
+        // Act
+        var resultado = await _service.SoftDelete(IdExistente);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(ConcesionarioError.NotFoundConcesionario(IdExistente));
+
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
+        _repository.Verify(r => r.HasVehiculos(It.IsAny<long>()), Times.Never);
+        _repository.Verify(r => r.SoftDelete(It.IsAny<long>()), Times.Never);
+        _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
     public async Task SoftDelete_CuandoElRepositorioFalla_DevuelveBorradoError()
     {
         // Arrange
-        _repository.Setup(r => r.HasVehiculos(IdExistente)).ReturnsAsync(false);
-        _repository.Setup(r => r.ExistById(IdExistente)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetById(IdExistente)).ReturnsAsync(CrearModelo());
         _repository.Setup(r => r.SoftDelete(IdExistente)).ReturnsAsync(false);
 
         // Act
         var resultado = await _service.SoftDelete(IdExistente);
 
         // Assert
+        resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().Be(ConcesionarioError.BorradoError());
 
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
+        _repository.Verify(r => r.SoftDelete(IdExistente), Times.Once);
         _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -424,16 +467,18 @@ public class ConcesionarioServiceTests
     public async Task SoftDelete_CuandoSeBorra_DevuelveTrueEInvalidaLaCache()
     {
         // Arrange
-        _repository.Setup(r => r.HasVehiculos(IdExistente)).ReturnsAsync(false);
-        _repository.Setup(r => r.ExistById(IdExistente)).ReturnsAsync(true);
+        _repository.Setup(r => r.GetById(IdExistente)).ReturnsAsync(CrearModelo());
         _repository.Setup(r => r.SoftDelete(IdExistente)).ReturnsAsync(true);
 
         // Act
         var resultado = await _service.SoftDelete(IdExistente);
 
         // Assert
+        resultado.IsSuccess.Should().BeTrue();
         resultado.Value.Should().BeTrue();
 
+        _repository.Verify(r => r.GetById(IdExistente), Times.Once);
+        _repository.Verify(r => r.SoftDelete(IdExistente), Times.Once);
         _cache.Verify(c => c.RemoveAsync(ClaveConcesionario, It.IsAny<CancellationToken>()), Times.Once);
     }
 }

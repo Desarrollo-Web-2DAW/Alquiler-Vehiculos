@@ -3,7 +3,7 @@ using Alquiler_Vehiculos.Exceptions;
 using Alquiler_Vehiculos.Middleware;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Middleware;
@@ -11,26 +11,25 @@ namespace Alquiler_Vehiculos.Tests.Unit.Middleware;
 /// <summary>
 ///     Tests unitarios para GlobalExceptionHandler.
 /// </summary>
+[TestFixture]
+[Category("Unit")]
 public class GlobalExceptionHandlerTests {
-    private readonly GlobalExceptionHandler _handler;
-    private readonly DefaultHttpContext _httpContext;
-    private readonly Mock<ILogger<GlobalExceptionHandler>> _mockLogger = new();
-    private readonly Mock<RequestDelegate> _mockNext = new();
+    private GlobalExceptionHandler _handler = null!;
+    private DefaultHttpContext _httpContext = null!;
+    private Mock<RequestDelegate> _mockNext = null!;
 
-    public GlobalExceptionHandlerTests() {
+    [SetUp]
+    public void Setup() {
+        _mockNext = new Mock<RequestDelegate>();
         _handler = new GlobalExceptionHandler(
             _mockNext.Object,
-            _mockLogger.Object
+            NullLogger<GlobalExceptionHandler>.Instance
         );
 
         _httpContext = new DefaultHttpContext();
 
         _httpContext.Request.Path = "/api/vehiculos";
         _httpContext.Request.Method = HttpMethods.Post;
-    }
-
-    [SetUp]
-    public void Setup() {
         _httpContext.Response.Body = new MemoryStream();
     }
 
@@ -66,6 +65,7 @@ public class GlobalExceptionHandlerTests {
         // Assert
         statusCode.Should().Be(500);
         body.Should().Contain("Ha ocurrido un error interno");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -80,6 +80,7 @@ public class GlobalExceptionHandlerTests {
         statusCode.Should().Be(400);
         body.Should().Contain("Stock insuficiente");
         body.Should().Contain("BusinessRuleError");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -98,6 +99,7 @@ public class GlobalExceptionHandlerTests {
         statusCode.Should().Be(404);
         message.Should().Be("Vehículo no encontrado");
         errorType.Should().Be("NotFoundError");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -121,6 +123,7 @@ public class GlobalExceptionHandlerTests {
         statusCode.Should().Be(400);
         message.Should().Be("Errores de validación");
         errorType.Should().Be("ValidationError");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -143,12 +146,13 @@ public class GlobalExceptionHandlerTests {
         validationErrors.GetProperty("Nombre")[0].GetString().Should().Be("El nombre es obligatorio");
 
         validationErrors.GetProperty("Precio")[0].GetString().Should().Be("El precio debe ser mayor a 0");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
-    public async Task InvokeAsync_ConUnauthorizedAccessException_DeberiaRetornar401() {
+    public async Task InvokeAsync_ConUnauthorizedAccessException_DeberiaRetornar500SinExponerDetalles() {
         // Arrange
-        var exception = new UnauthorizedAccessException("Token inválido");
+        var exception = new UnauthorizedAccessException("Acceso denegado a un archivo del servidor");
 
         // Act
         var (statusCode, body) = await ExecuteHandlerAsync(exception);
@@ -158,9 +162,11 @@ public class GlobalExceptionHandlerTests {
         var errorType = response.RootElement.GetProperty("errorType").GetString();
 
         // Assert
-        statusCode.Should().Be(401);
-        message.Should().Be("No autorizado");
-        errorType.Should().Be("UnauthorizedError");
+        statusCode.Should().Be(500);
+        message.Should().Be("Ha ocurrido un error interno");
+        errorType.Should().Be("InternalError");
+        body.Should().NotContain(exception.Message);
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -179,6 +185,7 @@ public class GlobalExceptionHandlerTests {
         statusCode.Should().Be(400);
         message.Should().Be("El argumento es inválido");
         errorType.Should().Be("ValidationError");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -197,6 +204,7 @@ public class GlobalExceptionHandlerTests {
         statusCode.Should().Be(408);
         message.Should().Be("Tiempo de espera agotado");
         errorType.Should().Be("InternalError");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -217,6 +225,7 @@ public class GlobalExceptionHandlerTests {
         message.Should().Be("Ha ocurrido un error interno");
         body.Should().NotContain("NullReferenceException");
         body.Should().NotContain("Object reference");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -229,6 +238,7 @@ public class GlobalExceptionHandlerTests {
 
         // Assert
         _httpContext.Response.ContentType.Should().Contain("application/json");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -244,6 +254,7 @@ public class GlobalExceptionHandlerTests {
 
         // Assert
         path.Should().Be("/api/vehiculos");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -259,6 +270,7 @@ public class GlobalExceptionHandlerTests {
 
         // Assert
         method.Should().Be("POST");
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -275,6 +287,7 @@ public class GlobalExceptionHandlerTests {
         response.RootElement.TryGetProperty("timestamp", out var timestamp).Should().BeTrue();
 
         timestamp.GetString().Should().NotBeNullOrEmpty();
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
@@ -291,6 +304,7 @@ public class GlobalExceptionHandlerTests {
         // Assert
         errorId.Should().NotBeNullOrEmpty();
         errorId.Should().HaveLength(8);
+        _mockNext.Verify(next => next(_httpContext), Times.Once);
     }
 
     [Test]
