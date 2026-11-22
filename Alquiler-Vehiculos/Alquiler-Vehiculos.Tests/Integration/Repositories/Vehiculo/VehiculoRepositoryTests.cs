@@ -10,6 +10,28 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [Category("Integration")]
 [NonParallelizable]
 public class VehiculoRepositoryTests : RepositoryTestBase {
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Listar_ConVehiculosDeBaja_SoloDevuelveYCuentaActivos(bool conActivo)
+    {
+        // Arrange
+        await GuardarVehiculo("1234BCD", activo: false);
+        if (conActivo) await GuardarVehiculo("5678FGH");
+        await using var db = CrearContexto();
+        var repository = new VehiculoRepository(db, NullLogger<VehiculoRepository>.Instance);
+
+        // Act
+        var todos = (await repository.GetAll()).ToList();
+        var pagina = await repository.GetPaged(1, 10);
+
+        // Assert
+        todos.Should().HaveCount(conActivo ? 1 : 0).And.OnlyContain(v => v.Activo);
+        pagina.TotalItems.Should().Be(conActivo ? 1 : 0);
+        pagina.Items.Select(v => v.Id).Should().BeEquivalentTo(todos.Select(v => v.Id));
+        await using var lectura = CrearContexto();
+        (await lectura.Vehiculos.CountAsync(v => !v.Activo)).Should().Be(1);
+    }
+
     [Test]
     public async Task Create_MatriculaDuplicadaTrasConsultaEnOtroContexto_DevuelveConflicto()
     {

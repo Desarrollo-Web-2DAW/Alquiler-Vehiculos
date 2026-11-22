@@ -111,7 +111,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     public async Task<IEnumerable<VehiculoModel>> GetAll()
     {
         logger.LogDebug("Obteniendo todos los Vehiculos");
-        return await context.Vehiculos.OrderBy(f => f.Matrícula)
+        return await context.Vehiculos.Where(f => f.Activo).OrderBy(f => f.Matrícula)
             .AsNoTracking()
             .Include(f => f.Foto)
             .ToListAsync();
@@ -122,6 +122,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     {
         logger.LogDebug("Obteniendo página {Page} de Vehiculos con tamaño {PageSize}", page, pageSize);
         var query = context.Vehiculos
+            .Where(f => f.Activo)
             .AsNoTracking()
             .Include(f => f.Foto)
             .OrderBy(f => f.Matrícula);
