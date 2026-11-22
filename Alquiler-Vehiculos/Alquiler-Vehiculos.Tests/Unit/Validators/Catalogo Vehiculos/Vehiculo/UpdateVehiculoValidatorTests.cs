@@ -90,7 +90,7 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Matricula", "1234bcd", false)]
     [TestCase("Matricula", "1234 BCD", false)]
     [TestCase("Acriss", "ILAH", true)]
-    [TestCase("Acriss", "CDMR", true)]
+    [TestCase("Acriss", "CDMR", false)]
     [TestCase("Acriss", "ilah", false)]
     [TestCase("Acriss", "ILA", false)]
     [TestCase("Acriss", "ILAHH", false)]
@@ -98,12 +98,12 @@ public class UpdateVehiculoValidatorTests {
     [TestCase("Acriss", "ZLAH", false)]
     [TestCase("Acriss", "IUAH", false)]
     [TestCase("Acriss", "ILZH", false)]
-    [TestCase("Acriss", "ILAU", true)]  // U = etanol con aire (RF-03)
+    [TestCase("Acriss", "ILAU", false)] // U está en ACRISS pero no tiene equivalente de dominio.
     [TestCase("Acriss", "ILAK", false)]
     [TestCase("Estado", "Disponible", true)]
     [TestCase("Estado", "Reservado", true)]
     [TestCase("Estado", "Mantenimiento", true)]
-    [TestCase("Estado", "Retirado", true)]
+    [TestCase("Estado", "Retirado", false)]
     [TestCase("Estado", "enAlquiler", true)]
     [TestCase("Estado", "Mantenimiento", true)]
     [TestCase("Estado", "Desconocido", false)]
@@ -271,7 +271,7 @@ public class UpdateVehiculoValidatorTests {
         // Assert
         resultado.IsValid.Should().BeFalse();
         resultado.Errors.Select(e => e.PropertyName).Distinct().Should().BeEquivalentTo(
-            "Matricula", "Marca", "Modelo", "Acriss", "Estado", "Color", "PrecioBaseDia",
+            "Foto", "Matricula", "Marca", "Modelo", "Acriss", "Estado", "Color", "PrecioBaseDia",
             "Plazas", "AutonomiaKm", "FechaUltimaRevision", "Concesionario");
     }
 

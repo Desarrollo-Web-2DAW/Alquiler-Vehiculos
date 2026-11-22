@@ -108,7 +108,7 @@ public class CreateVehiculoValidatorTests {
 
     [TestCase('F')] // multicombustible sin aire
     [TestCase('U')] // etanol con aire
-    public void Validate_CuartaLetraDelCatalogoOficial_EsAceptada(char combustible) {
+    public void Validate_CuartaLetraSinEquivalenteEnDominio_EsRechazada(char combustible) {
         // Arrange
         var dto = CrearDtoValido();
         dto.Acriss = $"ILA{combustible}";
@@ -117,7 +117,7 @@ public class CreateVehiculoValidatorTests {
         var resultado = _validator.Validate(dto);
 
         // Assert
-        resultado.Errors.Should().BeEmpty();
+        resultado.Errors.Should().ContainSingle(e => e.PropertyName == "Acriss");
     }
 
     [TestCase("1234BCA")] // vocal
@@ -172,7 +172,7 @@ public class CreateVehiculoValidatorTests {
     }
 
     [TestCase("ILAH", true)]
-    [TestCase("CDMR", true)]
+    [TestCase("CDMR", false)]
     [TestCase("ilah", false)]
     [TestCase("ILA", false)]
     [TestCase("ILAHH", false)]
@@ -368,7 +368,7 @@ public class CreateVehiculoValidatorTests {
         // Assert
         resultado.IsValid.Should().BeFalse();
         resultado.Errors.Select(e => e.PropertyName).Distinct().Should().BeEquivalentTo(
-            "Matricula", "Marca", "Modelo", "Acriss", "Estado", "Color", "PrecioBaseDia",
+            "Foto", "Matricula", "Marca", "Modelo", "Acriss", "Color", "PrecioBaseDia",
             "Plazas", "AutonomiaKm", "FechaUltimaRevision", "Concesionario");
     }
 

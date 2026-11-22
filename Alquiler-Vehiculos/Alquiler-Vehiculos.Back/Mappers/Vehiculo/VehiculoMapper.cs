@@ -147,7 +147,7 @@ public static class VehiculoMapper
     /// </remarks>
     /// <param name="letraTipo">Segunda letra del ACRISS (catálogo <see cref="AcrissTipo"/>).</param>
     /// <returns><see cref="TipoCarroceria"/> o <see cref="BadRequestError"/></returns>
-    private static Result<TipoCarroceria, DomainError> ObtenerTipoCarroceria(char letraTipo)
+    internal static Result<TipoCarroceria, DomainError> ObtenerTipoCarroceria(char letraTipo)
     {
         return (AcrissTipo)letraTipo switch
         {
@@ -172,18 +172,16 @@ public static class VehiculoMapper
     /// </summary>
     /// <param name="letraCombustible">AcrissCombustible</param>
     /// <returns><see cref="TipoCombustible"/> o <see cref="BadRequestError"/></returns>
-    private static Result<TipoCombustible, DomainError> ObtenerTipoCombustible(char letraCombustible)
+    internal static Result<TipoCombustible, DomainError> ObtenerTipoCombustible(char letraCombustible)
     {
-        var acrrisTipoCombustible = (AcrissCombustibleClimatizacion)letraCombustible;
-        
-        TipoCombustible[] valores = Enum.GetValues<TipoCombustible>();
-
-        foreach (var valor in valores)
+        return letraCombustible switch
         {
-            if (acrrisTipoCombustible.ToString().Contains(valor.ToString())) return valor;
-        }
-        
-        return VehiculoError.TipoCombustible();
+            'D' or 'Q' => TipoCombustible.Diesel,
+            'V' or 'Z' => TipoCombustible.Gasolina,
+            'H' or 'I' => TipoCombustible.Hibrido,
+            'E' or 'C' => TipoCombustible.Electrico,
+            _ => VehiculoError.TipoCombustible()
+        };
     }
     
     
@@ -192,17 +190,13 @@ public static class VehiculoMapper
     /// </summary>
     /// <param name="letraTransmision">AcrissTransmision</param>
     /// <returns><see cref="TipoTransmision"/> o <see cref="BadRequestError"/></returns>
-    private static Result<TipoTransmision, DomainError> ObtenerTipoTransmision(char letraTransmision)
+    internal static Result<TipoTransmision, DomainError> ObtenerTipoTransmision(char letraTransmision)
     {
-        var acrissTipoTransmision = (AcrissTransmisionTraccion)letraTransmision;
-        
-        TipoTransmision[] valores = Enum.GetValues<TipoTransmision>();
-
-        foreach (var valor in valores)
+        return letraTransmision switch
         {
-            if (acrissTipoTransmision.ToString().Contains(valor.ToString())) return valor;
-        }
-        
-        return VehiculoError.TipoDeTransmision();
+            'M' or 'N' or 'C' => TipoTransmision.Manual,
+            'A' or 'B' or 'D' => TipoTransmision.Automatica,
+            _ => VehiculoError.TipoDeTransmision()
+        };
     }
 }

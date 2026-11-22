@@ -35,7 +35,7 @@ public class VehiculoServiceTests
     private const string ClaveVehiculo = "vehiculo:";
     // C compacto · C 2/4 puertas (Hatchback) · M manual · D diésel con aire.
     private const string AcrissValido = "CCMD";
-    // S en 2ª posición = deportivo: existe en ACRISS (pasa el validador) pero no tiene Categoria.
+    // S en 2ª posición no tiene equivalente de dominio: se rechaza antes de consultar dependencias.
     private const string AcrissQueFallaEnElMapper = "ISMD";
 
     private Mock<IVehiculoRepository> _repository = null!;
@@ -330,7 +330,7 @@ public class VehiculoServiceTests
     }
 
     [Test]
-    public async Task Create_CuandoElAcrissPasaElValidadorPeroNoElMapper_DevuelveErrorDeCarroceria()
+    public async Task Create_CuandoElAcrissNoEsMapeable_DevuelveValidacionSinGuardar()
     {
         // Arrange
         var dto = CrearCreateValido();
@@ -342,7 +342,9 @@ public class VehiculoServiceTests
         var resultado = await _service.Create(dto);
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
+        resultado.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("Acriss");
+        _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
 
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
     }
@@ -508,7 +510,7 @@ public class VehiculoServiceTests
     }
 
     [Test]
-    public async Task Update_CuandoElAcrissPasaElValidadorPeroNoElMapper_DevuelveErrorDeCarroceria()
+    public async Task Update_CuandoElAcrissNoEsMapeable_DevuelveValidacionSinGuardar()
     {
         // Arrange
         var dto = CrearUpdateValido();
@@ -520,7 +522,9 @@ public class VehiculoServiceTests
         var resultado = await _service.Update(dto, VehiculoId);
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
+        resultado.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("Acriss");
+        _repository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
 
         _transactionsService.Verify(
             t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),

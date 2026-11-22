@@ -2,6 +2,7 @@
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums.ACRISS;
 using FluentValidation;
+using Alquiler_Vehiculos.Mappers.Vehiculo;
 
 namespace Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 
@@ -84,9 +85,9 @@ public class CreateVehiculoValidator : AbstractValidator<CreateVehiculoDto>
         char c4 = char.ToUpper(acriss[3]);
 
         bool esCatValida = Enum.IsDefined(typeof(AcrissCategoria), (int)c1);
-        bool esTipoValido = Enum.IsDefined(typeof(AcrissTipo), (int)c2);
-        bool esTransValida = Enum.IsDefined(typeof(AcrissTransmisionTraccion), (int)c3);
-        bool esCombValido = Enum.IsDefined(typeof(AcrissCombustibleClimatizacion), (int)c4);
+        bool esTipoValido = VehiculoMapper.ObtenerTipoCarroceria(c2).IsSuccess;
+        bool esTransValida = VehiculoMapper.ObtenerTipoTransmision(c3).IsSuccess;
+        bool esCombValido = VehiculoMapper.ObtenerTipoCombustible(c4).IsSuccess;
 
         return esCatValida && esTipoValido && esTransValida && esCombValido;
     }

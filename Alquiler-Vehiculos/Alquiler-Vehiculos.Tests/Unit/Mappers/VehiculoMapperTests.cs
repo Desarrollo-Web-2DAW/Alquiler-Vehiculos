@@ -6,6 +6,7 @@ using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums.ACRISS;
 using FluentAssertions;
+using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Mappers;
 
@@ -23,6 +24,41 @@ namespace Alquiler_Vehiculos.Tests.Unit.Mappers;
 [Category("Unit")]
 public class VehiculoMapperTests
 {
+    [TestCase(1, "BCDWVKFJTELM")]
+    [TestCase(2, "MNCABD")]
+    [TestCase(3, "DQVZHIEC")]
+    public void Acriss_TodasLasLetras_ValidadoresYMapeadoresCoinciden(int posicion, string admitidas)
+    {
+        // Arrange
+        var createValidator = new CreateVehiculoValidator();
+        var updateValidator = new UpdateVehiculoValidator();
+        var letras = Enumerable.Range('A', 26).Select(c => (char)c).ToArray();
+
+        // Act
+        var resultados = letras.Select(letra => {
+            var codigo = "CLAH".ToCharArray();
+            codigo[posicion] = letra;
+            var create = CrearDto(new string(codigo));
+            var update = CrearUpdateDto(new string(codigo));
+            return new {
+                Letra = letra,
+                CreateValido = createValidator.Validate(create).IsValid,
+                UpdateValido = updateValidator.Validate(update).IsValid,
+                CreateMapeable = create.ToVehiculo(CrearFoto()).IsSuccess,
+                UpdateMapeable = update.ToVehiculoModel(CrearFoto()).IsSuccess
+            };
+        }).ToArray();
+
+        // Assert
+        foreach (var resultado in resultados) {
+            var esperado = admitidas.Contains(resultado.Letra);
+            resultado.CreateValido.Should().Be(esperado, $"letra {resultado.Letra} en posición {posicion + 1}");
+            resultado.UpdateValido.Should().Be(esperado);
+            resultado.CreateMapeable.Should().Be(esperado);
+            resultado.UpdateMapeable.Should().Be(esperado);
+        }
+    }
+
     // C = Compacto, L = Berlina, D = Automática AWD, H = Híbrido.
     private const string AcrissValido = "CLDH";
 
@@ -405,7 +441,7 @@ public class VehiculoMapperTests
         var resultado = dto.ToVehiculo(CrearFoto());
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoDeTransmision());
+        resultado.Error.Should().BeEquivalentTo(VehiculoError.TipoDeTransmision());
     }
 
     [Test]
@@ -420,7 +456,8 @@ public class VehiculoMapperTests
             .Select(transmision => (
                 Letra: (char)transmision,
                 Resultado: CrearDto(CrearAcriss('L', (char)transmision)).ToVehiculo(CrearFoto())))
-            .Where(x => x.Resultado.IsFailure && x.Resultado.Error == VehiculoError.TipoDeTransmision())
+            .Where(x => x.Resultado.IsFailure && x.Resultado.Error.Code == VehiculoError.TipoDeTransmision().Code
+                && x.Resultado.Error.Message == VehiculoError.TipoDeTransmision().Message)
             .Select(x => x.Letra)
             .ToArray();
 
@@ -512,9 +549,8 @@ public class VehiculoMapperTests
         var resultado = dto.ToVehiculoModel(CrearFoto());
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.TipoDeCarroceria());
         resultado.IsFailure.Should().BeTrue();
-        resultado.Error.Should().BeEquivalentTo(VehiculoError.TipoDeTransmision());
+        resultado.Error.Should().BeEquivalentTo(VehiculoError.TipoDeCarroceria());
     }
 
     [Test]
