@@ -1,12 +1,6 @@
 using System.Text;
-using Alquiler_Vehiculos.Config;
-using Alquiler_Vehiculos.Entities;
-using Alquiler_Vehiculos.Infrastructure;
-using Alquiler_Vehiculos.Repositories.Clientes;
-using Alquiler_Vehiculos.Services.Usuarios.Auth;
-using FluentValidation;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
+using Alquiler_Vehiculos.Cache;
+using Alquiler_Vehiculos.Middleware;
 using Serilog;
 using Serilog.Events;
 
@@ -36,32 +30,12 @@ builder.Services.AddCache(builder.Configuration);
 
 var app = builder.Build();
 
+// Añadimos Middleware
+app.UseGlobalExceptionHandler();
+
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment()) {
-    app.MapOpenApi();
-}
+if (app.Environment.IsDevelopment()) app.MapOpenApi();
 
 app.UseHttpsRedirection();
 
-var summaries = new[] {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () => {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
-    })
-    .WithName("GetWeatherForecast");
-
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary) {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
