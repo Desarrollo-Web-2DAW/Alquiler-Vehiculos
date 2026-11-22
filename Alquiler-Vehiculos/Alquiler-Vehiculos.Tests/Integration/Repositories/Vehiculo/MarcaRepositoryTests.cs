@@ -13,6 +13,30 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories.Vehiculo;
 [Category("Integration")]
 [NonParallelizable]
 public class MarcaRepositoryTests {
+    [TestCase("no-es-un-objectid")]
+    [TestCase("")]
+    [TestCase("00000000000000000000000Z")]
+    public async Task ConsultarOEliminar_IdMalFormado_DevuelveAusenciaSinModificarDatos(string id) {
+        // Arrange
+        var original = CrearMarca();
+        await _context.Marcas.InsertOneAsync(original);
+
+        // Act
+        var encontrada = await _repository.GetById(id);
+        var existe = await _repository.ExistById(id);
+        var eliminada = await _repository.SoftDelete(id);
+        var actualizada = await _repository.Update(id, CrearMarca(nombre: "No guardar"));
+
+        // Assert
+        encontrada.Should().BeNull();
+        existe.Should().BeFalse();
+        eliminada.Should().BeFalse();
+        actualizada.Should().BeNull();
+        var lectura = new MongoDbContext(_database);
+        var marcas = await lectura.Marcas.Find(_ => true).ToListAsync();
+        marcas.Should().ContainSingle().Which.Should().BeEquivalentTo(original);
+    }
+
     private MongoDbContainer? _container;
     private MongoClient? _client;
     private IMongoDatabase _database = null!;

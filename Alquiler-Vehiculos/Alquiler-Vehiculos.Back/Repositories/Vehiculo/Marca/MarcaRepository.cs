@@ -32,7 +32,7 @@ public class MarcaRepository(MongoDbContext context, ILogger<MarcaRepository> lo
     /// <inheritdoc cref="IMarcaRepository.GetById"/>
     public async Task<MarcaModel?> GetById(string key) {
         logger.LogDebug("Obteniendo marca por ID: {Key}", key);
-        var objectId = ObjectId.Parse(key);
+        if (!ObjectId.TryParse(key, out var objectId)) return null;
         return await context.Marcas
             .Find(m => m.Id == objectId && !m.IsDeleted)
             .FirstOrDefaultAsync();
@@ -68,7 +68,7 @@ public class MarcaRepository(MongoDbContext context, ILogger<MarcaRepository> lo
     /// <inheritdoc cref="IMarcaRepository.SoftDelete"/>
     public async Task<bool> SoftDelete(string key) {
         logger.LogInformation("Realizando borrado lógico de marca ID: {Id}", key);
-        var objectId = ObjectId.Parse(key);
+        if (!ObjectId.TryParse(key, out var objectId)) return false;
         var fecha = DateTime.UtcNow;
         var resultado = await context.Marcas.UpdateOneAsync(m => m.Id == objectId && !m.IsDeleted,
             Builders<MarcaModel>.Update
@@ -81,7 +81,7 @@ public class MarcaRepository(MongoDbContext context, ILogger<MarcaRepository> lo
     /// <inheritdoc cref="IMarcaRepository.ExistById"/>
     public async Task<bool> ExistById(string key) {
         logger.LogDebug("Verificando existencia de marca por ID: {Key}", key);
-        var objectId = ObjectId.Parse(key);
+        if (!ObjectId.TryParse(key, out var objectId)) return false;
         return await context.Marcas
             .Find(m => m.Id == objectId && !m.IsDeleted)
             .AnyAsync();
