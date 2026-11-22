@@ -1,0 +1,23 @@
+#notifications-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.notification-item {
+    padding: 16px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #fff;
+}
+
+.notification-item p {
+    margin-bottom: 0;
+}
+
+.notification-item .notification-date {
+    display: block;
+    margin-top: 8px;
+    color: #6c757d;
+    font-size: 0.875rem;
+}

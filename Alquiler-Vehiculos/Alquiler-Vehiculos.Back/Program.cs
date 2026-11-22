@@ -1,5 +1,6 @@
 using System.Text;
 using Alquiler_Vehiculos.Cache;
+using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Middleware;
 using Serilog;
 using Serilog.Events;
@@ -28,6 +29,21 @@ builder.Services.AddOpenApi();
 // Caché LRU con TTL sobre Redis (carpeta Cache/)
 builder.Services.AddCache(builder.Configuration);
 
+// Configuración de Identity, JWT y autorización.
+builder.Services.AddIdentityConfiguration(builder.Configuration, builder.Environment);
+
+// Agregamos SignalR
+builder.Services.AddRealtimeSignalR();
+
+builder.Services.AddCors(options => {
+    options.AddPolicy("ClientesPolicy", policy => {
+        policy.WithOrigins("https://localhost:7150")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Añadimos Middleware
@@ -37,5 +53,11 @@ app.UseGlobalExceptionHandler();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 
 app.UseHttpsRedirection();
+
+app.UseCors("ClientesPolicy");
+
+app.UseAuthentication();
+app.UseAuthorization();
+app.MapSignalRHubs();
 
 app.Run();
