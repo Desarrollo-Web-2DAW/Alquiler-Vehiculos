@@ -4,6 +4,8 @@ using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using CSharpFunctionalExtensions;
 using Microsoft.EntityFrameworkCore;
+using Alquiler_Vehiculos.Errors.Vehiculo;
+using Npgsql;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 
@@ -14,12 +16,21 @@ namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoRepository> logger) : IVehiculoRepository
 {
     /// <inheritdoc cref="IVehiculoRepository.Create" />
-    public async Task<VehiculoModel> Create(VehiculoModel item)
+    public async Task<Result<VehiculoModel, DomainError>> Create(VehiculoModel item)
     {
         logger.LogInformation("Creando Vehiculo: {matricula}", item.Matrícula);
         await context.Vehiculos.AddAsync(item);
-        await context.SaveChangesAsync();
-        return item;
+        try {
+            await context.SaveChangesAsync();
+            return item;
+        } catch (DbUpdateException ex) when (ex.InnerException is PostgresException {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "IX_Vehiculos_Matrícula"
+        }) {
+            // No se ocultan otras restricciones ni errores de conexión.
+            context.Entry(item).State = EntityState.Detached;
+            return VehiculoError.VehiculoYaExiste(item.Matrícula);
+        }
     }
 
     /// <inheritdoc cref="IVehiculoRepository.SoftDelete" />

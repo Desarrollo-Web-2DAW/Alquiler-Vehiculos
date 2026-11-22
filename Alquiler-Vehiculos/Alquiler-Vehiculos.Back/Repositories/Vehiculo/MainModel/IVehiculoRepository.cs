@@ -1,10 +1,18 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
-using Alquiler_Vehiculos.Repositories.Common;
+using Alquiler_Vehiculos.Errors.Common;
+using CSharpFunctionalExtensions;
 
 namespace Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 
-public interface IVehiculoRepository : ICrud<VehiculoModel, string>
+public interface IVehiculoRepository
 {
+    // Create devuelve el conflicto del índice de matrícula, sin cambiar el CRUD de otros módulos.
+    Task<Result<VehiculoModel, DomainError>> Create(VehiculoModel item);
+    Task<VehiculoModel?> GetById(string key);
+    Task<bool> SoftDelete(string key);
+    Task<VehiculoModel?> Update(string key, VehiculoModel item);
+    Task<IEnumerable<VehiculoModel>> GetAll();
+
     /// <summary>
     /// Comprueba si un vehiculo existe en base a su Id
     /// </summary>

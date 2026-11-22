@@ -26,6 +26,29 @@ namespace Alquiler_Vehiculos.Tests.Unit.Services;
 [Category("Unit")]
 public class VehiculoServiceTests
 {
+    [Test]
+    public async Task Create_MatriculaInsertadaTrasLaComprobacion_Devuelve409SinCachear()
+    {
+        // Arrange
+        _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
+        _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
+            .ReturnsAsync(Result.Failure<VehiculoModel, DomainError>(VehiculoError.VehiculoYaExiste(Matricula)));
+
+        // Act
+        var resultado = await _service.Create(CrearCreateValido());
+
+        // Assert
+        resultado.Error.Should().Be(VehiculoError.VehiculoYaExiste(Matricula));
+        Alquiler_Vehiculos.Extensions.DomainErrorExtensions.ToHttpResult(resultado.Error)
+            .Should().BeOfType<Microsoft.AspNetCore.Mvc.ConflictObjectResult>();
+        _repository.Verify(r => r.ExistByMatricula(Matricula), Times.Once);
+        _repository.Verify(r => r.Create(It.Is<VehiculoModel>(v => v.Matrícula == Matricula)), Times.Once);
+        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
+        _cache.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
+            It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [TestCase("no-es-una-fecha")]
     [TestCase("9999-01-01")]
     public async Task Create_YUpdate_FechaInvalidaOFutura_Devuelven400SinGuardar(string fecha)
@@ -381,7 +404,7 @@ public class VehiculoServiceTests
         _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
-            .ReturnsAsync((VehiculoModel m) => m);
+            .ReturnsAsync((VehiculoModel m) => Result.Success<VehiculoModel, DomainError>(m));
 
         // Act
         var resultado = await _service.Create(CrearCreateValido());
@@ -405,7 +428,7 @@ public class VehiculoServiceTests
         _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
-            .ReturnsAsync((VehiculoModel m) => m);
+            .ReturnsAsync((VehiculoModel m) => Result.Success<VehiculoModel, DomainError>(m));
 
         // Act
         var resultado = await _service.Create(CrearCreateValido());
@@ -424,7 +447,7 @@ public class VehiculoServiceTests
         _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
-            .ReturnsAsync((VehiculoModel m) => m with { Id = VehiculoId });
+            .ReturnsAsync((VehiculoModel m) => Result.Success<VehiculoModel, DomainError>(m with { Id = VehiculoId }));
 
         // Act
         var resultado = await _service.Create(CrearCreateValido());

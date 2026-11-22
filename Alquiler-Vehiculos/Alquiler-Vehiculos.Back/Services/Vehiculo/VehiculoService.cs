@@ -91,9 +91,10 @@ public class VehiculoService(
         if (vehiculo.IsFailure) return vehiculo.Error;
 
         var creado = await repository.Create(vehiculo.Value);
-        var dto = creado.ToDto();
-        await cache.SetAsync(ClaveVehiculo + creado.Id, dto);
-        await cache.SetAsync(ClaveVehiculo + creado.Matrícula, dto);
+        if (creado.IsFailure) return creado.Error;
+        var dto = creado.Value.ToDto();
+        await cache.SetAsync(ClaveVehiculo + creado.Value.Id, dto);
+        await cache.SetAsync(ClaveVehiculo + creado.Value.Matrícula, dto);
         return Result.Success<VehiculoDto, DomainError>(dto);
     }
 

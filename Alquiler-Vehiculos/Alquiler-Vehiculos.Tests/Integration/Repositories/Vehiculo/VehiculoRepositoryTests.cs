@@ -11,6 +11,44 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [NonParallelizable]
 public class VehiculoRepositoryTests : RepositoryTestBase {
     [Test]
+    public async Task Create_MatriculaDuplicadaTrasConsultaEnOtroContexto_DevuelveConflicto()
+    {
+        // Arrange
+        await using var db = CrearContexto();
+        var repository = new VehiculoRepository(db, NullLogger<VehiculoRepository>.Instance);
+        (await repository.ExistByMatricula("1234BCD")).Should().BeFalse();
+        var original = await GuardarVehiculo();
+        var repetido = CrearVehiculo(CrearFoto("otra.jpg"), original.ConesionarioFk);
+
+        // Act
+        var resultado = await repository.Create(repetido);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(Alquiler_Vehiculos.Errors.Vehiculo.VehiculoError.VehiculoYaExiste("1234BCD"));
+        await using var lectura = CrearContexto();
+        (await lectura.Vehiculos.CountAsync()).Should().Be(1);
+        (await lectura.Fotos.CountAsync()).Should().Be(1);
+    }
+
+    [Test]
+    public async Task Create_ConcesionarioInexistente_NoConfundeFkConMatriculaDuplicada()
+    {
+        // Arrange
+        await using var db = CrearContexto();
+        var repository = new VehiculoRepository(db, NullLogger<VehiculoRepository>.Instance);
+        var vehiculo = CrearVehiculo(CrearFoto(), long.MaxValue);
+
+        // Act
+        Func<Task> guardar = () => repository.Create(vehiculo);
+
+        // Assert
+        var error = await guardar.Should().ThrowAsync<DbUpdateException>();
+        error.Which.InnerException.Should().BeOfType<Npgsql.PostgresException>()
+            .Which.SqlState.Should().Be(Npgsql.PostgresErrorCodes.ForeignKeyViolation);
+    }
+
+    [Test]
     public async Task Create_VehiculoValido_GeneraIdYPersisteRelacionFoto() {
         // Arrange
         var concesionario = await GuardarConcesionario();
@@ -22,10 +60,11 @@ public class VehiculoRepositoryTests : RepositoryTestBase {
         var resultado = await repository.Create(vehiculo);
 
         // Assert
-        resultado.Id.Should().MatchRegex("^[A-Za-z0-9_-]{11}$");
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.Id.Should().MatchRegex("^[A-Za-z0-9_-]{11}$");
         await using var lectura = CrearContexto();
         var guardado = await lectura.Vehiculos.Include(v => v.Foto).SingleAsync();
-        guardado.Should().BeEquivalentTo(resultado);
+        guardado.Should().BeEquivalentTo(resultado.Value);
     }
 
     [TestCase(true, false)]
