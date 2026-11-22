@@ -48,6 +48,10 @@ decisiones están registradas en [la revisión del catálogo](docs/revision-cata
 La clave JWT se configura mediante User Secrets en desarrollo o `Jwt__Key` en el
 entorno; no se guarda en `appsettings.json`. La clave que estuvo versionada debe
 rotarse. Retirarla del fichero no la elimina de los commits antiguos.
+Si se utilizan las cuentas de inicialización existentes, configura también sus
+contraseñas fuera del repositorio: `Seed:AdminPassword`, `Seed:ClientePassword` y
+`Seed:TrabajadorPassword` en User Secrets (o con `__` en variables de entorno).
+Las contraseñas de desarrollo que estuvieron versionadas también deben rotarse.
 
 ## Pruebas
 
