@@ -93,6 +93,7 @@ public class VehiculoServiceTests
             .Should().BeOfType<Microsoft.AspNetCore.Mvc.ConflictObjectResult>();
         _repository.Verify(r => r.ExistByMatricula(Matricula), Times.Once);
         _repository.Verify(r => r.Create(It.Is<VehiculoModel>(v => v.Matrícula == Matricula)), Times.Once);
+        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
         _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
         _cache.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
             It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -120,6 +121,7 @@ public class VehiculoServiceTests
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
         _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
         _transactionsService.Verify(t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()), Times.Never);
+        _concesionarioRepository.Verify(r => r.ExistById(It.IsAny<long>()), Times.Never);
         _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
