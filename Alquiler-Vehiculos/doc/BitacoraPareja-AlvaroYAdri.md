@@ -236,3 +236,46 @@ La extensión `UseGlobalExceptionHandler()` permite incorporar el middleware al 
 ## 4. Alcance de la tarea
 
 Esta tarea comprende exclusivamente el middleware de gestión global de excepciones (`GlobalExceptionHandler`). No incluye la implementación de `SecurityHeadersMiddleware` ni `RateLimitMiddleware`.
+
+---
+
+## Tarea: partes de taller
+
+_**Fecha de registro:**_ 22/11/2026 · _**Rama:**_ `feature/taller` · _**Estado:**_ núcleo del parte implementado, probado y documentado; las integraciones con vehículos y reservas esperan a esos módulos.
+
+### Alcance y requisitos que cubre
+
+| Requisito | Relación con el taller |
+|---|---|
+| **RF-08** | Partes de taller: cada entrada al taller abre un parte con `Id`, `Fecha`, `QuienLoTramita`, `Descripcion`, `Vehiculo` y `Estado` (`Abierto`/`Cerrado`); solo se cierra al terminar la reparación y no se reabren. Es un documento interno: los clientes no lo ven (RF-46) |
+| **RF-12** | Solo un trabajador de tipo `Mecanico` (y activo) abre y cierra partes |
+| **RF-01** | Consulta `TienePartesAbiertosAsync`: la comprobación de «sin partes abiertos» antes de dar de baja un vehículo (si no, 409) |
+| **CU-07** | Ida y vuelta del taller: abrir parte, meter el vehículo en `Mantenimiento` y devolverlo al día siguiente cerrando el parte (la transición del vehículo llega con su módulo) |
+| **CU-08** | Vehículos en taller con su fecha de entrada: partes abiertos ordenados por fecha |
+
+### Implementación
+
+- `Models/Taller/ParteTaller` + `Enums/Taller/EstadoParte`: modelo con los campos del enunciado y máquina de estados mínima (`Abierto` → `Cerrado`, sin reabrir: cada entrada al taller es un parte nuevo).
+- `Services/Taller/ParteTallerService` con patrón `Result<T, DomainError>` y los errores de dominio del patrón del proyecto (`ConflictError` 409, `ForbiddenError` 403, `BusinessRuleError` 422, `NotFoundError` 404). Orden de comprobaciones: permiso del tramitador → datos → reglas de negocio.
+- `Repositories/Taller`: contrato `IParteTallerRepository` con implementación en memoria, donde la regla «un solo parte abierto por vehículo» es atómica. Cuando se fije la base de datos transaccional, la implementación de EF Core la garantizará con un índice único parcial (igual que la idempotencia del outbox de correo).
+- `Validators/Taller/AbrirParteValidator` (FluentValidation): identificador de vehículo de 11 caracteres (RF-01) y descripción obligatoria con límite de longitud.
+- Registro en el contenedor con `Infrastructure/TallerConfig.AddTallerServices()`: una línea en `Program.cs`.
+- `Errors/Taller/ParteTallerError`: códigos estables `PARTE_NO_ENCONTRADA`, `PARTE_ABIERTA_EXISTENTE`, `PARTE_YA_CERRADA` y `SOLO_MECANICO`.
+
+### Decisiones
+
+- **Relación con el vehículo:** el parte guarda su identificador corto de 11 caracteres (RF-01); la clave foránea y las transiciones `Disponible` ↔ `Mantenimiento` se cablean cuando se fusione el módulo de vehículos. Así el núcleo del taller no depende de ramas en curso.
+- **Procedimiento de taller con reservas afectadas (RF-07)** documentado en `doc/Partes-Taller-Memoria.md` con la prioridad propuesta: reasignar a un vehículo equivalente de la misma categoría → aplazar el arreglo → cancelar con aviso y reembolso. Su implementación espera al servicio de reservas; los correos de aviso ya están implementados en el módulo de notificaciones.
+
+### Pruebas y cobertura
+
+- **38 pruebas unitarias** (servicio, repositorio, validador y registro en DI) siguiendo las convenciones del proyecto: NUnit + FluentAssertions, patrón AAA con sus comentarios, `Category("Unit")`, nombres `Método_Escenario_Resultado` y dobles a mano.
+- **Cobertura del módulo de taller: 211/211 líneas (100 %)** con `dotnet test --collect:"XPlat Code Coverage"`.
+- Suite completa de la rama: **96/96 OK · 0 omitidas**.
+
+### Pendientes
+
+- Endpoints REST de partes: pendientes de la superficie de API que fije el equipo y de la matriz de permisos (RF-46).
+- Transiciones del vehículo a `Mantenimiento` y vuelta al abrir/cerrar partes (RF-05, RF-33) cuando se fusione el módulo de vehículos.
+- RF-07 (entrar en taller con reservas vivas) y CU-12 (avería durante el alquiler) cuando exista el servicio de reservas.
+- Eventos en tiempo real `EntradaTaller`/`SalidaTaller` (RF-37) y semilla con partes en distintos estados (RI-03).

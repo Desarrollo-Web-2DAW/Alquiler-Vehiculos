@@ -1,5 +1,6 @@
 using System.Text;
 using Alquiler_Vehiculos.Cache;
+using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Middleware;
 using Serilog;
 using Serilog.Events;
@@ -27,6 +28,9 @@ builder.Services.AddOpenApi();
 
 // Caché LRU con TTL sobre Redis (carpeta Cache/)
 builder.Services.AddCache(builder.Configuration);
+
+// Partes de taller (RF-08): núcleo del taller
+builder.Services.AddTallerServices();
 
 var app = builder.Build();
 
