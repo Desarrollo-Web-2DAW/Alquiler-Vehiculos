@@ -15,8 +15,8 @@ namespace Alquiler_Vehiculos.Services.Storage
         /// </summary>
         /// <param name="file">Archivo enviado a la API que se quiere almacenar.</param>
         /// <param name="folder">Carpeta del almacenamiento en la que se guardará.</param>
-        /// <returns>Un modelo de <see cref="Foto"/> si se guarda correctamente, o con el error ocurrido.</returns>
-        Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder);
+        /// <returns>El nombre de la foto si se guarda correctamente, o con el error ocurrido.</returns>
+        Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder);
     
         /// <summary>
         /// Borra del almacenamiento el archivo identificado por su ruta relativa.

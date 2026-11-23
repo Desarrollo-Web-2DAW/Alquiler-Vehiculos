@@ -1,6 +1,7 @@
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
-
+using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Services.Common;
+using CSharpFunctionalExtensions;
 
 namespace Alquiler_Vehiculos.Services.Vehiculo;
 
@@ -13,4 +14,11 @@ public interface IVehiculoService : ICrudService<CreateVehiculoDto, UpdateVehicu
     /// <param name="pageSize">Cantidad de vehículos por página.</param>
     /// <returns>Los vehículos de la página y el total de registros.</returns>
     Task<(IEnumerable<VehiculoDto> Items, int TotalItems)> GetPaged(int page, int pageSize);
+    
+    /// <summary>
+    /// Cambia la propiedad Activo de un vehiculo de false a true.
+    /// </summary>
+    /// <param name="key">El Id del Vehículo</param>
+    /// <returns>El vehículo restaurado o el correspondiente error</returns>
+    Task<Result<VehiculoDto, DomainError>> Restore(string key);
 }

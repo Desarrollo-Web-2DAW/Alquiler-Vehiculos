@@ -4,7 +4,6 @@ using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Mappers.Vehiculo;
-using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
@@ -27,7 +26,8 @@ public class VehiculoService(
     ICacheService cache,
     CreateVehiculoValidator createVehiculoValidator,
     UpdateVehiculoValidator updateVehiculoValidator,
-    IConcesionarioRepository concesionarioRepository) : IVehiculoService
+    IConcesionarioRepository concesionarioRepository
+    ) : IVehiculoService
 {
     private const string ClaveVehiculo = "vehiculo:id:";
     private const string ClaveMatricula = "vehiculo:matricula:";
@@ -73,7 +73,7 @@ public class VehiculoService(
     public async Task<Result<VehiculoDto, DomainError>> Create(CreateVehiculoDto item)
     {
         Log.Debug("Creando vehículo con matrícula {Matricula}", item.Matricula);
-
+        
         var validationResult = await createVehiculoValidator.ValidateAsync(item);
         if (!validationResult.IsValid)
         {
@@ -90,7 +90,7 @@ public class VehiculoService(
         if (!await concesionarioRepository.ExistById(item.Concesionario))
             return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
 
-        var foto = await fotoRepository.GetById(item.Foto);
+        var foto= await fotoRepository.GetById(item.Foto);
         if (foto is null) return FotoError.FotoNotFound(item.Foto);
 
         var vehiculo = item.ToVehiculo(foto);
@@ -143,8 +143,7 @@ public class VehiculoService(
         }
 
         var mapeado = mapeadoResult.Value;
-
-        // Se conserva Id, auditoría, Estado y Activo: el PUT no realiza transiciones ni bajas.
+        
         var vehiculo = existente with
         {
             Matrícula = mapeado.Matrícula,

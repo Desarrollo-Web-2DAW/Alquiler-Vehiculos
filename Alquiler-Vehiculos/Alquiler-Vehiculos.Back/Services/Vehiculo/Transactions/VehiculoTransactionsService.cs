@@ -34,14 +34,12 @@ public sealed class VehiculoTransactionsService(
             {
                 return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
-
-            // RF-01: solo se da de baja un vehículo Disponible. Reservas vivas: pendiente de integrar.
+            
             if (vehiculo.Estado != EstadoVehiculo.Disponible)
             {
                 return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NoDisponibleParaBaja(vehiculo.Estado));
             }
-
-            // RF-01 y RF-08: tampoco se da de baja con un parte de taller abierto.
+            
             var partesAbiertos = await parteTallerService.TienePartesAbiertosAsync(id, ct);
             if (partesAbiertos.IsFailure)
             {
@@ -57,8 +55,7 @@ public sealed class VehiculoTransactionsService(
             {
                 return Result.Failure<VehiculoModel, DomainError>(VehiculoError.BorradoError());
             }
-
-            // RF-48: la baja del vehículo conserva sus fotos para no romper el histórico.
+            
             return Result.Success<VehiculoModel, DomainError>(vehiculo);
         }, ct);
 
@@ -119,7 +116,6 @@ public sealed class VehiculoTransactionsService(
                         new BusinessRuleError("RESTAURACION_FOTO", "No se pudo restaurar la foto asociada al vehículo."));
                 }
             }
-
             return Result.Success<VehiculoModel, DomainError>(restaurado);
         }, ct);
 }

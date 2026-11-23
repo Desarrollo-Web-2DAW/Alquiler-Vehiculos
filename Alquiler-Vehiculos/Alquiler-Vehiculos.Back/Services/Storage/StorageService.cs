@@ -54,10 +54,10 @@ public class StorageService : IStorageService
     }
 
     /// <inheritdoc cref="IStorageService.SaveFileAsync"/>
-    public async Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder)
+    public async Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder)
     {
         var validation = ValidateFile(file);
-        if (validation.IsFailure) return await Task.FromResult(Result.Failure<Foto, DomainError>(validation.Error));
+        if (validation.IsFailure) return await Task.FromResult(Result.Failure<string, DomainError>(validation.Error));
 
         try
         {
@@ -77,19 +77,18 @@ public class StorageService : IStorageService
                 Activo = true,             
                 CreatedAt = DateTime.UtcNow
             };
-            var result = await _fotoRepository.Create(fotoModel);
-            
+            await _fotoRepository.Create(fotoModel);
             using var stream = new FileStream(filePath, FileMode.Create);
             await file.CopyToAsync(stream);
 
             _logger.LogInformation("Archivo guardado: {Path}", relativePath);
             
-            return await Task.FromResult(Result.Success<Foto, DomainError>(fotoModel));
+            return await Task.FromResult(Result.Success<string, DomainError>(fileName));
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error guardando archivo");
-            return await Task.FromResult(Result.Failure<Foto, DomainError>(StorageError.ErrorGuardando()));
+            return await Task.FromResult(Result.Failure<string, DomainError>(StorageError.ErrorGuardando()));
         }
     }
 
