@@ -19,7 +19,8 @@ namespace Alquiler_Vehiculos.Controllers.Vehiculo;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
-public class VehiculoController(IVehiculoService service, IStorageService storageService) : ControllerBase {
+public class 
+    VehiculoController(IVehiculoService service, IStorageService storageService) : ControllerBase {
 
     /// <summary>
     /// Consulta todos los vehículos para el personal de la oficina.

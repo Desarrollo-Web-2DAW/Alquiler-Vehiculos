@@ -1,0 +1,5 @@
+name: Docker
+variables:
+  - name: Server
+    value: http://localhost:5216
+    description: url de la api
