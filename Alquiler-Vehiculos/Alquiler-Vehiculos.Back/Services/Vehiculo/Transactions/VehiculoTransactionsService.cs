@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Errors.Common;
+using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
@@ -115,9 +116,7 @@ public sealed class VehiculoTransactionsService(
                 if (!fotoEliminada && !await EstaDeBajaAsync(fotoAnterior))
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
-                        new BusinessRuleError(
-                            "ACTUALIZACION_FOTO",
-                            "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
+                        FotoError.NoSePudoDarDeBaja(fotoAnterior));
                 }
             }
 
@@ -142,7 +141,7 @@ public sealed class VehiculoTransactionsService(
                 if (fotoRestaurada == null)
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
-                        new BusinessRuleError("RESTAURACION_FOTO", "No se pudo restaurar la foto asociada al vehículo."));
+                        FotoError.NoSePudoRestaurar(restaurado.FotoFk));
                 }
             }
             return Result.Success<VehiculoModel, DomainError>(restaurado);

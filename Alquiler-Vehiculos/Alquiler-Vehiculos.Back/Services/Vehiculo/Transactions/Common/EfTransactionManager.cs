@@ -1,10 +1,8 @@
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Errors.Common;
-using Alquiler_Vehiculos.Services.Vehiculo.Transactions.Common;
 using CSharpFunctionalExtensions;
-using Microsoft.EntityFrameworkCore;
 
-namespace Alquiler_Vehiculos.Infrastructure;
+namespace Alquiler_Vehiculos.Services.Vehiculo.Transactions.Common;
 
 /// <summary>
 /// Implementación de <see cref="ITransactionManager"/> sobre EF Core y PostgreSQL.

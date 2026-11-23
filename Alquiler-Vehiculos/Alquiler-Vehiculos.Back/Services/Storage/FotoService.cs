@@ -14,8 +14,11 @@ public class FotoService(IFotoRepository repository, IStorageService storage) : 
                 ["archivo"] = ["Debe proporcionar una imagen con contenido."]
             });
         }
-
-        return await storage.SaveFileAsync(archivo, "vehiculos");
+        var fotoRuta = await storage.SaveFileAsync(archivo, "vehiculos");
+        if (fotoRuta.IsFailure) return fotoRuta.Error;
+        var foto = await repository.GetById(fotoRuta.Value);
+        if (foto == null) return FotoError.FotoNotFound(fotoRuta.Value);
+        return foto;
     }
 
     public async Task<IEnumerable<Foto>> GetAll() {
