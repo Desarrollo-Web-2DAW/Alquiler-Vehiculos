@@ -1,0 +1,43 @@
+meta {
+  name: [018] OFICINA - Actualizar sin token (401)
+  type: http
+  seq: 2
+}
+
+put {
+  url: {{baseUrl}}/api/oficina
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "nombre": "Oficina Central Leganés",
+    "direccion": "Avenida de la Universidad 1, 28911 Leganés, Madrid",
+    "telefono": "+34 916 000 111",
+    "email": "oficina@alquiler.local",
+    "diaInicio": 1,
+    "diaFin": 5,
+    "horaApertura": "09:00:00",
+    "horaCierre": "20:00:00"
+  }
+}
+
+script:post-response {
+  test("Actualizar oficina sin token - Status 401 Unauthorized", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: actualizar la oficina exige autenticación JWT.
+}
