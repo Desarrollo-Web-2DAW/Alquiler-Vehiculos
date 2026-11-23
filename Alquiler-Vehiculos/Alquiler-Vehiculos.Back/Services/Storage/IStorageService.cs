@@ -11,7 +11,7 @@ namespace Alquiler_Vehiculos.Services.Storage
     public interface IStorageService {
     
         /// <summary>
-        /// Almacena el archivo recibido en la carpeta indicada y devuelve su ubicación relativa.
+        /// Almacena el archivo recibido en la carpeta indicada y devuelve su nombre generado.
         /// </summary>
         /// <param name="file">Archivo enviado a la API que se quiere almacenar.</param>
         /// <param name="folder">Carpeta del almacenamiento en la que se guardará.</param>

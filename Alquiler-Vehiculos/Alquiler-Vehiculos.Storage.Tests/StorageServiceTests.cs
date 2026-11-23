@@ -46,7 +46,7 @@ public class StorageServiceTests : StorageTestBase {
     [TestCase("mi-coche.JPG", "IMAGE/JPEG", ".jpg")]
     [TestCase("mi coche.png", "image/png", ".png")]
     [TestCase("coche.gif", "image/gif", ".gif")]
-    public async Task SaveFileAsync_ArchivoValido_GuardaContenidoYDevuelveFoto(string nombre, string tipo, string extension) {
+    public async Task SaveFileAsync_ArchivoValido_GuardaContenidoYDevuelveNombre(string nombre, string tipo, string extension) {
         // Arrange
         var servicio = CrearServicio();
         byte[] datos = [1, 2, 3, 4];
@@ -59,7 +59,11 @@ public class StorageServiceTests : StorageTestBase {
 
         // Assert
         resultado.IsSuccess.Should().BeTrue();
-        var foto = resultado.Value;
+        var nombreGuardado = resultado.Value;
+        nombreGuardado.Should().MatchRegex(@"^\d{14}_[a-f0-9]{8}_[A-Za-z_]+\.(jpg|png|gif)$");
+        File.ReadAllBytes(Path.Combine(RootPath, "uploads", "vehiculos", nombreGuardado)).Should().Equal(datos);
+        await using var lectura = CrearContextoDeLectura();
+        var foto = await lectura.Fotos.SingleAsync(f => f.Nombre == nombreGuardado);
         foto.Nombre.Should().MatchRegex(@"^\d{14}_[a-f0-9]{8}_[A-Za-z_]+\.(jpg|png|gif)$");
         foto.Extension.Should().Be(extension);
         foto.Tamano.Should().Be(datos.Length);
@@ -69,7 +73,6 @@ public class StorageServiceTests : StorageTestBase {
         foto.UpdatedAt.Should().BeNull();
         foto.DeletedAt.Should().BeNull();
         File.ReadAllBytes(Path.Combine(RootPath, "uploads", "vehiculos", foto.Nombre)).Should().Equal(datos);
-        await using var lectura = CrearContextoDeLectura();
         var guardada = await lectura.Fotos.SingleAsync(f => f.Ruta == foto.Ruta);
         guardada.Nombre.Should().Be(foto.Nombre);
         guardada.Extension.Should().Be(extension);
@@ -139,8 +142,11 @@ public class StorageServiceTests : StorageTestBase {
 
         // Assert
         resultado.IsSuccess.Should().Be(valido);
-        if (valido) resultado.Value.Tamano.Should().Be(tamano);
-        else resultado.Error.Should().Be(StorageError.ArchivoMuyGrande());
+        if (valido) {
+            await using var lectura = CrearContextoDeLectura();
+            var foto = await lectura.Fotos.SingleAsync(f => f.Nombre == resultado.Value);
+            foto.Tamano.Should().Be(tamano);
+        } else resultado.Error.Should().Be(StorageError.ArchivoMuyGrande());
     }
 
     [TestCase("coche.webp", "image/webp", true)]
@@ -159,8 +165,12 @@ public class StorageServiceTests : StorageTestBase {
 
         // Assert
         resultado.IsSuccess.Should().Be(valido);
-        if (valido) resultado.Value.Ruta.Should().StartWith("/imagenes/vehiculos/");
-        else resultado.Error.Should().Be(StorageError.ExtensionNoPermitida());
+        if (valido) {
+            await using var lectura = CrearContextoDeLectura();
+            var foto = await lectura.Fotos.SingleAsync(f => f.Nombre == resultado.Value);
+            foto.Ruta.Should().Be($"/imagenes/vehiculos/{resultado.Value}");
+            File.Exists(Path.Combine(RootPath, "imagenes", "vehiculos", resultado.Value)).Should().BeTrue();
+        } else resultado.Error.Should().Be(StorageError.ExtensionNoPermitida());
     }
 
     [Test]

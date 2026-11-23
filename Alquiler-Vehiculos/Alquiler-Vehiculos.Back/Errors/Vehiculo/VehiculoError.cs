@@ -29,6 +29,16 @@ public static class VehiculoError
     }
 
     /// <summary>
+    /// Crea un error cuando no se encuentra un vehículo por su matrícula.
+    /// </summary>
+    /// <param name="matricula">Matrícula del vehículo buscado.</param>
+    /// <returns>Una instancia de <see cref="NotFoundError"/> (HTTP 404).</returns>
+    public static NotFoundError NotFoundVehiculoMatricula(string matricula)
+    {
+        return new NotFoundError("VEHICULO_NO_ENCONTRADO", $"Vehículo con matrícula '{matricula}' no encontrado");
+    }
+
+    /// <summary>
     /// Crea un error de tipo <see cref="BadRequestError"/> cuando la primera letra del código ACRISS no corresponde a una categoría válida.
     /// </summary>
     /// <returns>Una instancia de <see cref="BadRequestError"/> (HTTP 400).</returns>

@@ -55,7 +55,8 @@ public class FotoServiceTests {
         var error = StorageError.ExtensionNoPermitida();
         _storage.Setup(s => s.IsEmpty(archivo)).Returns(false);
         _storage.Setup(s => s.SaveFileAsync(archivo, "vehiculos")).ReturnsAsync(correcto
-            ? Result.Success<Foto, DomainError>(foto) : Result.Failure<Foto, DomainError>(error));
+            ? Result.Success<string, DomainError>(Nombre) : Result.Failure<string, DomainError>(error));
+        _repository.Setup(r => r.GetById(Nombre)).ReturnsAsync(foto);
 
         // Act
         var resultado = await _service.Create(archivo);
@@ -66,6 +67,29 @@ public class FotoServiceTests {
         else resultado.Error.Should().Be(error);
         _storage.Verify(s => s.IsEmpty(archivo), Times.Once);
         _storage.Verify(s => s.SaveFileAsync(archivo, "vehiculos"), Times.Once);
+        _repository.Verify(r => r.GetById(Nombre), correcto ? Times.Once() : Times.Never());
+        _repository.Verify(r => r.Create(It.IsAny<Foto>()), Times.Never);
+    }
+
+    [Test]
+    public async Task Create_ArchivoGuardadoSinMetadatos_DevuelveFotoNoEncontrada() {
+        // Arrange
+        using var contenido = new MemoryStream([1, 2, 3]);
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", Nombre);
+        _storage.Setup(s => s.IsEmpty(archivo)).Returns(false);
+        _storage.Setup(s => s.SaveFileAsync(archivo, "vehiculos"))
+            .ReturnsAsync(Result.Success<string, DomainError>(Nombre));
+        _repository.Setup(r => r.GetById(Nombre)).ReturnsAsync((Foto?)null);
+
+        // Act
+        var resultado = await _service.Create(archivo);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(FotoError.FotoNotFound(Nombre));
+        _storage.Verify(s => s.IsEmpty(archivo), Times.Once);
+        _storage.Verify(s => s.SaveFileAsync(archivo, "vehiculos"), Times.Once);
+        _repository.Verify(r => r.GetById(Nombre), Times.Once);
         _repository.Verify(r => r.Create(It.IsAny<Foto>()), Times.Never);
     }
 

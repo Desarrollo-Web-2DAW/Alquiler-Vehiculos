@@ -15,7 +15,10 @@ public class FotoService(IFotoRepository repository, IStorageService storage) : 
             });
         }
 
-        return await storage.SaveFileAsync(archivo, "vehiculos");
+        var guardada = await storage.SaveFileAsync(archivo, "vehiculos");
+        if (guardada.IsFailure) return guardada.Error;
+
+        return await GetById(guardada.Value);
     }
 
     public async Task<IEnumerable<Foto>> GetAll() {

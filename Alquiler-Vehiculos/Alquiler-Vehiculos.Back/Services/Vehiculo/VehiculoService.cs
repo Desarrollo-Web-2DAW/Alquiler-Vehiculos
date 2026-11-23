@@ -27,8 +27,8 @@ public class VehiculoService(
     CreateVehiculoValidator createVehiculoValidator,
     UpdateVehiculoValidator updateVehiculoValidator,
     IConcesionarioRepository concesionarioRepository
-    ) : IVehiculoService
-{
+    ) : IVehiculoService {
+    
     private const string ClaveVehiculo = "vehiculo:id:";
     private const string ClaveMatricula = "vehiculo:matricula:";
 
@@ -64,6 +64,24 @@ public class VehiculoService(
 
         var dto = vehiculo.ToDto();
         await cache.SetAsync(ClaveVehiculo + key, dto);
+        await cache.SetAsync(ClaveMatricula + vehiculo.Matrícula, dto);
+
+        return Result.Success<VehiculoDto, DomainError>(dto);
+    }
+    
+    
+    /// <inheritdoc cref="IVehiculoService.GetByMatricula" />
+    public async Task<Result<VehiculoDto, DomainError>> GetByMatricula(string matricula) {
+        Log.Debug("Consultando vehículo con matricula {Matricula}", matricula);
+
+        var cached = await cache.GetAsync<VehiculoDto>(ClaveMatricula + matricula);
+        if (cached is not null) return Result.Success<VehiculoDto, DomainError>(cached);
+
+        var vehiculo = await repository.GetByMatricula(matricula);
+        if (vehiculo is null) return Result.Failure<VehiculoDto, DomainError>(VehiculoError.NotFoundVehiculoMatricula(matricula));
+
+        var dto = vehiculo.ToDto();
+        await cache.SetAsync(ClaveVehiculo + dto.Id, dto);
         await cache.SetAsync(ClaveMatricula + vehiculo.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);

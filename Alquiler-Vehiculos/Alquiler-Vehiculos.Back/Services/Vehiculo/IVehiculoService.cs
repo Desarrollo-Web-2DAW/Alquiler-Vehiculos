@@ -8,6 +8,13 @@ namespace Alquiler_Vehiculos.Services.Vehiculo;
 public interface IVehiculoService : ICrudService<CreateVehiculoDto, UpdateVehiculoDto, VehiculoDto, string>
 {
     /// <summary>
+    /// Obtiene un vehículo por su matrícula.
+    /// </summary>
+    /// <param name="matricula">Matrícula del vehículo que se quiere consultar.</param>
+    /// <returns>El vehículo encontrado o el correspondiente error.</returns>
+    Task<Result<VehiculoDto, DomainError>> GetByMatricula(string matricula);
+
+    /// <summary>
     /// Obtiene una página de vehículos y el total de registros disponibles.
     /// </summary>
     /// <param name="page">Número de página (1-based).</param>
