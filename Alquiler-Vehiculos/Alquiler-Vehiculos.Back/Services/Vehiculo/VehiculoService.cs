@@ -1,13 +1,16 @@
 using Alquiler_Vehiculos.Cache;
+using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Mappers.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
+using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using CSharpFunctionalExtensions;
 using Serilog;
@@ -26,7 +29,8 @@ public class VehiculoService(
     ICacheService cache,
     CreateVehiculoValidator createVehiculoValidator,
     UpdateVehiculoValidator updateVehiculoValidator,
-    IConcesionarioRepository concesionarioRepository
+    IConcesionarioRepository concesionarioRepository,
+    QueryRequestVehiculoValidator queryRequestVehiculoValidator
     ) : IVehiculoService {
     
     private const string ClaveVehiculo = "vehiculo:id:";
@@ -85,6 +89,43 @@ public class VehiculoService(
         await cache.SetAsync(ClaveMatricula + vehiculo.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);
+    }
+
+    /// <inheritdoc cref="IVehiculoService.GetByFilters" />
+    public async Task<Result<IEnumerable<QueryResponseVehiculoDto>, DomainError>> GetByFilters(QueryRequestVehiculoDto request, bool esAdmin = false) {
+        Log.Debug("Consultando el catálogo de vehículos por filtros");
+
+        var validationResult = await queryRequestVehiculoValidator.ValidateAsync(request);
+        if (!validationResult.IsValid) {
+            var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
+            return ValidationError.WithFieldErrors(errorsDictionary);
+        }
+
+        if (request.FechaRecogida.HasValue && request.FechaDevolucion.HasValue) {
+            // TODO: integrar aquí la consulta real de disponibilidad y la comprobación
+            // del horario de oficina cuando el equipo defina el contrato correspondiente.
+            // Es una dependencia pendiente, no un error en un rango válido del cliente.
+            return new InternalError("La disponibilidad por fechas aún no está integrada con el módulo de reservas.");
+        }
+
+        var vehiculos = await repository.GetByFilters(request);
+
+        // TODO: cuando exista el contrato de disponibilidad por fechas, consultar ese módulo
+        // y contar como libres las unidades cuyos IDs aparezcan en su resultado.
+        // No se deben quitar los ocupados antes de agrupar: también forman parte del total.
+        var grupos = vehiculos
+            .GroupBy(v => new { v.Marca, v.Modelo, v.Carroceria })
+            .Select(grupo => new QueryResponseVehiculoDto {
+                Marca = grupo.Key.Marca,
+                Modelo = grupo.Key.Modelo,
+                Categoria = grupo.Key.Carroceria.ToString(),
+                UnidadesTotales = grupo.Count(),
+                UnidadesLibres = grupo.Count(v => v.Activo && v.Estado == EstadoVehiculo.Disponible)
+            });
+
+        // Solo el administrador conserva también los grupos sin unidades libres.
+        if (!esAdmin) grupos = grupos.Where(grupo => grupo.UnidadesLibres > 0);
+        return Result.Success<IEnumerable<QueryResponseVehiculoDto>, DomainError>(grupos.ToList());
     }
 
     /// <inheritdoc cref="IVehiculoService.Create" />

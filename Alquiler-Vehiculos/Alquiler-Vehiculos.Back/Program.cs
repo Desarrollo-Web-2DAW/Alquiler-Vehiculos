@@ -21,6 +21,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
 using Alquiler_Vehiculos.Middleware;
+using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
 using Serilog;
 using Serilog.Events;
 
@@ -119,6 +120,7 @@ try {
     builder.Services.AddScoped<IFotoRepository, FotoRepository>();
     builder.Services.AddScoped<CreateVehiculoValidator>();
     builder.Services.AddScoped<UpdateVehiculoValidator>();
+    builder.Services.AddScoped<QueryRequestVehiculoValidator>();
     builder.Services.AddScoped<CreateConcesionarioValidator>();
     builder.Services.AddScoped<UpdateConcesionarioValidator>();
 

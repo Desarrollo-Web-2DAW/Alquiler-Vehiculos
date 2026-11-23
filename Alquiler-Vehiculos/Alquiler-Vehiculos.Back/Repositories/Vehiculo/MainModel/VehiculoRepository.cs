@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Errors.Common;
+using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Data.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
@@ -114,6 +115,74 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
         return await context.Vehiculos.Where(f => f.Activo).OrderBy(f => f.Matrícula)
             .AsNoTracking()
             .Include(f => f.Foto)
+            .ToListAsync();
+    }
+
+    /// <inheritdoc cref="IVehiculoRepository.GetByFilters" />
+    /// <remarks>
+    /// Los filtros se acumulan sin ejecutar la consulta hasta ToListAsync.
+    /// No carga fotografías, porque los recuentos del catálogo no necesitan sus datos.
+    /// Las fechas y la visibilidad por perfil se resuelven en el servicio.
+    /// El servicio debe validar las clasificaciones y devolver 400 si no son válidas;
+    /// este método devuelve una colección vacía si recibe una clasificación no admitida.
+    /// </remarks>
+    public async Task<IEnumerable<VehiculoModel>> GetByFilters(QueryRequestVehiculoDto request) {
+        logger.LogDebug("Consultando vehículos por filtros");
+
+        var query = context.Vehiculos.AsNoTracking();
+
+        if (!string.IsNullOrEmpty(request.Marca)) {
+            var marca = request.Marca.ToLower();
+            query = query.Where(v => v.Marca.ToLower().Contains(marca));
+        }
+
+        if (!string.IsNullOrEmpty(request.Modelo)) {
+            var modelo = request.Modelo.ToLower();
+            query = query.Where(v => v.Modelo.ToLower().Contains(modelo));
+        }
+
+        // Convertimos cada clasificación solo cuando se ha indicado ese filtro.
+        if (!string.IsNullOrEmpty(request.Categoria)) {
+            if (int.TryParse(request.Categoria, out _)
+                || !Enum.TryParse<TipoCarroceria>(request.Categoria, true, out var categoria)
+                || !Enum.IsDefined(categoria)) return [];
+
+            query = query.Where(v => v.Carroceria == categoria);
+        }
+
+        if (!string.IsNullOrEmpty(request.Estado)) {
+            if (int.TryParse(request.Estado, out _)
+                || !Enum.TryParse<EstadoVehiculo>(request.Estado, true, out var estado)
+                || !Enum.IsDefined(estado)) return [];
+
+            query = query.Where(v => v.Estado == estado);
+        }
+
+        if (!string.IsNullOrEmpty(request.Combustible)) {
+            if (int.TryParse(request.Combustible, out _)
+                || !Enum.TryParse<TipoCombustible>(request.Combustible, true, out var combustible)
+                || !Enum.IsDefined(combustible)) return [];
+
+            query = query.Where(v => v.Combustible == combustible);
+        }
+
+        if (!string.IsNullOrEmpty(request.Transmision)) {
+            if (int.TryParse(request.Transmision, out _)
+                || !Enum.TryParse<TipoTransmision>(request.Transmision, true, out var transmision)
+                || !Enum.IsDefined(transmision)) return [];
+
+            query = query.Where(v => v.Transmision == transmision);
+        }
+
+        if (request.PlazasMinimas.HasValue) query = query.Where(v => v.Plazas >= request.PlazasMinimas.Value);
+
+        if (request.MaleteroLitrosMinimos.HasValue) query = query.Where(v => v.MaleteroLitros >= request.MaleteroLitrosMinimos.Value);
+
+        if (request.AutonomiaKmMinima.HasValue) query = query.Where(v => v.AutonomiaKm >= request.AutonomiaKmMinima.Value);
+
+        // Se conservan los ocupados para que el servicio pueda contar el total del grupo.
+        return await query
+            .OrderBy(v => v.Matrícula)
             .ToListAsync();
     }
 

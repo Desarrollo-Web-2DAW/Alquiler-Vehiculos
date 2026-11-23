@@ -57,12 +57,14 @@ public record QueryRequestVehiculoDto {
     public int? AutonomiaKmMinima { get; set; }
 
     /// <summary>
-    /// Fecha y hora de recogida del rango para el que se consulta disponibilidad.
+    /// Fecha y hora de recogida para consultar disponibilidad. Debe tener la zona horaria
+    /// resuelta a UTC y acompañarse de FechaDevolucion.
     /// </summary>
     public DateTime? FechaRecogida { get; set; }
 
     /// <summary>
-    /// Fecha y hora de devolución del rango para el que se consulta disponibilidad.
+    /// Fecha y hora de devolución del rango solicitado, con la zona horaria resuelta a UTC.
+    /// Debe ser de un día posterior a la recogida y la duración no puede superar 30 días.
     /// </summary>
     public DateTime? FechaDevolucion { get; set; }
 }
