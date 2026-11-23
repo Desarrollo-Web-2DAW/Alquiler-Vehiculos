@@ -3,5 +3,3 @@ variables:
   - name: Server
     value: http://localhost:5216
     description: url del servidor
-  - secret: true
-    name: AdminToken

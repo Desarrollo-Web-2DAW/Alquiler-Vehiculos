@@ -1,4 +1,5 @@
-﻿using Alquiler_Vehiculos.Models.Usuarios.Clientes;
+using Alquiler_Vehiculos.Models.Oficina;
+using Alquiler_Vehiculos.Models.Usuarios.Clientes;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
 using Alquiler_Vehiculos.Models.Usuarios;
 using Microsoft.AspNetCore.Identity;
@@ -18,6 +19,7 @@ public class AppDbContextUsuarios(DbContextOptions<AppDbContextUsuarios> options
     public DbSet<Cliente> Clientes { get; set; } = null!;
     /// <summary>Trabajadores asociados a las cuentas de usuario.</summary>
     public DbSet<Trabajador> Trabajadores { get; set; } = null!;
+    public DbSet<Oficina> Oficinas { get; set; } = null!;
 
     /// <summary>
     /// Configura las tablas de Identity y del dominio de usuarios y sus índices únicos.
@@ -56,6 +58,18 @@ public class AppDbContextUsuarios(DbContextOptions<AppDbContextUsuarios> options
         modelBuilder.Entity<Trabajador>(entity => {
             entity.HasIndex(t => t.Email).IsUnique();
             entity.HasIndex(t => t.Dni).IsUnique();
+        });
+
+        // Oficina única (RF-11): restricción CHECK sobre la clave fija + FK restrictiva al responsable (CU-18).
+        modelBuilder.Entity<Oficina>(entity => {
+            entity.ToTable("oficina", t => t.HasCheckConstraint(
+                "CK_oficina_unica",
+                $"\"Id\" = '{Oficina.OficinaUnicaId}'"));
+
+            entity.HasOne(o => o.Responsable)
+                .WithMany()
+                .HasForeignKey(o => o.ResponsableId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

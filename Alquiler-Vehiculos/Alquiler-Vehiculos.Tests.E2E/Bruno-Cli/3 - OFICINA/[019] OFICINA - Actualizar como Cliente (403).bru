@@ -1,0 +1,51 @@
+meta {
+  name: [019] OFICINA - Actualizar como Cliente (403)
+  type: http
+  seq: 3
+}
+
+put {
+  url: {{baseUrl}}/api/oficina
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+body:json {
+  {
+    "nombre": "Oficina Central Leganés",
+    "direccion": "Avenida de la Universidad 1",
+    "ciudad": "Leganés",
+    "codigoPostal": "28911",
+    "telefono": "+34 916 000 111",
+    "email": "oficina@alquiler.local",
+    "latitud": 40.3319,
+    "longitud": -3.7635,
+    "diaInicio": 1,
+    "diaFin": 5,
+    "horaApertura": "09:00:00",
+    "horaCierre": "20:00:00"
+  }
+}
+
+script:post-response {
+  test("Actualizar oficina como Cliente - Status 403 Forbidden", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: un Cliente no puede modificar los datos ni el horario de la oficina.
+}

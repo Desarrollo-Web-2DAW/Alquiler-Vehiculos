@@ -1,36 +1,95 @@
-name: alquiler-vehiculos
-
+# Desarrollo y despliegue local con un solo comando (RNF-05).
+# - Solo infraestructura (para dotnet run + bru --env local):
+#     docker compose up -d postgres redis mailpit
+# - Stack completo con la API en http://localhost:8080 (para bru --env desarrollo):
+#     docker compose up -d --build
 services:
   postgres:
     image: postgres:17-alpine
-    ports:
-      - "127.0.0.1:5433:5432"
+    container_name: alquiler-vehiculos-postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD antes de arrancar}
-      POSTGRES_DB: alquiler
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-
-  mongodb:
-    image: mongo:7.0
+      POSTGRES_DB: ${POSTGRES_DB:-alquiler}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports:
-      - "127.0.0.1:27018:27017"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: alquiler
-      MONGO_INITDB_ROOT_PASSWORD: ${POSTGRES_PASSWORD:?Configura POSTGRES_PASSWORD antes de arrancar}
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
-      - mongodb-data:/data/db
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-alquiler}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - alquiler-network
 
-  # SMTP local opcional y bandeja de captura de correo (RF-36).
+  redis:
+    image: redis:7.4-alpine
+    container_name: alquiler-vehiculos-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - alquiler-network
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: alquiler-vehiculos-mailpit
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "1025:1025"   # SMTP (a lo que apunta Email:Host/Port en desarrollo)
+      - "8025:8025"   # Bandeja web para ver los correos sin salir de la máquina
     restart: unless-stopped
+    networks:
+      - alquiler-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Alquiler-Vehiculos/Alquiler-Vehiculos.Back/Dockerfile
+      args:
+        BUILD_CONFIGURATION: ${BUILD_CONFIGURATION:-Release}
+    container_name: alquiler-vehiculos-api
+    environment:
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Development}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-alquiler};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres}
+      - Redis__ConnectionString=redis:6379
+      - Jwt__Key=${JWT_KEY:-ClaveDesarrolloDockerSoloPruebasMinimo32Chars!}
+      - Email__Host=${EMAIL_HOST:-mailpit}
+      - Email__Port=${EMAIL_PORT:-1025}
+      - Email__Security=${EMAIL_SECURITY:-None}
+      - Email__Username=${EMAIL_USERNAME:-}
+      - Email__Password=${EMAIL_PASSWORD:-}
+      - Email__From=${EMAIL_FROM:-no-reply@alquilervehiculos.local}
+      - Email__UseSmtp=${EMAIL_USE_SMTP:-true}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - api_logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - alquiler-network
+
+networks:
+  alquiler-network:
+    driver: bridge
 
 volumes:
-  postgres-data:
-  mongodb-data:
+  postgres_data:
+  api_logs:

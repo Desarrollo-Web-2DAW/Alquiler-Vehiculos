@@ -9,4 +9,5 @@ public static class PolicyNames {
     public const string Cliente = "RequireClienteRole";
     public const string Trabajador = "RequireTrabajadorRole";
     public const string Responsable = "RequireResponsableRole";
+    public const string Mecanico = "RequireMecanico";
 }

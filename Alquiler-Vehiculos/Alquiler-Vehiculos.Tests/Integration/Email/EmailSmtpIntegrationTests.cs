@@ -134,7 +134,7 @@ public class EmailSmtpIntegrationTests {
         // Assert
         await EsperarAsync(async () => {
             var bandeja = await _api.GetFromJsonAsync<Bandeja>("/api/v1/messages");
-            return bandeja is not null && bandeja.Total >= 1;
+            return bandeja is not null && bandeja.Messages.Any(m => m.Subject.Contains("REF-E2E"));
         }, "que el correo llegue a la bandeja");
         await worker.StopAsync(CancellationToken.None);
 
