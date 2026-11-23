@@ -172,4 +172,51 @@ sequenceDiagram
 
 - **Integración con Clientes (`feature/clientes/controlador`):** conectar los validadores de letra oficial de DNI/NIE/pasaporte en `SignupValidator` y alinear código HTTP de menor de edad (`400`, RF-13).
 - **Integración con Vehículos (`feature/Vehiculo/seed`):** unificar `DbContext` (evitar duplicar `AppDbContextUsuarios`) y contrato de `DomainError` antes del merge a `dev`.
-- **Oficina única (RF-11):** necesaria antes de validar horarios de recogida/devolución en el bloque de Reservas (CU-18, CU-22).
+
+---
+
+## Tarea: Módulo de Oficina Única, Horario Semanal y Responsable de Operaciones (RF-11 · CU-18 · CU-22 · RF-34 · RI-03)
+
+> **Fecha de registro:** 23/11/2026 · **Rama:** `feature/Oficina` → `dev` · **Estado:** implementado y verificado (`235/235` tests en verde, `0` warnings, pendiente de commit/revisión final).
+
+### 1. Qué incluye
+
+- **Modelo (`Models/Oficina/Oficina.cs`) y migración (`20261123120000_AddOficina`):** tabla `oficina` en `AppDbContextUsuarios` con clave fija `OficinaUnicaId`, restricción `CHECK ("Id" = '11111111-1111-1111-1111-111111111111')` para garantizar fila única en PostgreSQL y FK obligatoria `ResponsableId` hacia `trabajadores` con `DeleteBehavior.Restrict`.
+- **Siembra idempotente (`IdentitySeeder.SeedOficinaAsync` · RI-03):** crea la oficina única (*Oficina Central Leganés*, Lunes a Viernes de `09:00` a `20:00`) vinculada al responsable semilla (`responsable@alquiler.local`).
+- **Validadores y regla uniforme de email (`UpdateOficinaValidator`, `CambiarResponsableValidator`, `LoginValidator`, `SignupValidator`):** validación de rango de días (`DiaFin >= DiaInicio` con semana española Lunes=1..Domingo=7), rango horario (`HoraCierre > HoraApertura`) y regex estricta de dominio de email (`^[^@\s]+@[^@\s]+\.[^@\s]{2,}$`) unificada en los tres validadores.
+- **Servicio (`IOficinaService` / `OficinaService`) y Controlador (`OficinaController`):** sin `POST` ni `DELETE` (recurso singleton). Expone además `EsResponsableAsync(Guid)` para Trabajadores (**CU-18**) y `EstaAbiertaAsync(DateTime)` para Reservas (**CU-22**).
+
+| Método | Ruta | Acceso / Política | Respuestas HTTP |
+|---|---|---|---|
+| `GET` | `/api/oficina` | Público (`[AllowAnonymous]`) | `200`, `404` |
+| `PUT` | `/api/oficina` | `PolicyNames.Responsable` (`Responsable`, `Admin`) | `200`, `400`, `401`, `403`, `404` |
+| `PATCH` | `/api/oficina/responsable` | `PolicyNames.Admin` | `200`, `400`, `401`, `403`, `404`, `422` |
+
+### 2. Decisiones de diseño
+
+**D11 — Recurso único en REST (`/api/oficina` sin `{id}`) y tabla *singleton* con clave fija + `CHECK` en PostgreSQL.**
+- *Justificación:* la empresa solo tiene una oficina (`RF-11`), por lo que en REST no tiene sentido exponer `POST`, `DELETE` ni `{id}` en la URL ni en el DTO de respuesta. Sin embargo, EF Core exige clave primaria para entidades editables; fijarla a un `Guid` constante reforzado con `CK_oficina_unica` garantiza a nivel de base de datos que nunca puedan existir dos filas.
+- *Alternativa descartada:* CRUD multi-oficina con `/api/oficinas/{id}` o entidad `[Keyless]` (que sería de solo lectura en EF Core).
+
+**D12 — Horario estructurado con `TimeOnly` + `DayOfWeek` en lugar de `DateTime` o texto libre.**
+- *Justificación:* `DateTime` representa un instante concreto del calendario y arrastra fecha falsa y zonas horarias; el horario semanal de una oficina se repite cada semana. `TimeOnly` (mapeado nativamente a `time` en PostgreSQL) + `DiaInicio`/`DiaFin` (`System.DayOfWeek` normalizado Lunes=1..Domingo=7) permiten validar recogidas/devoluciones con `EstaAbierta(DateTime)` (**CU-22**) y generar `HorarioFormateado` para la API y las plantillas de correo (**RF-34**).
+- *Alternativa descartada:* guardar `DateTime` con fecha ficticia o un `string` libre imposible de validar en Reservas.
+
+**D13 — Responsable obligatorio de tipo `Operaciones` con sincronización transaccional de roles Identity (`CU-18`).**
+- *Justificación:* por lógica de negocio real, quien dirige la oficina debe ser un trabajador activo de tipo `Operaciones` (el tipo `Mecanico` corresponde al taller, `RF-12`). Intentar designar a un trabajador inactivo o mecánico devuelve `422 Unprocessable Entity` (`TRABAJADOR_INACTIVO` / `RESPONSABLE_DEBE_SER_OPERACIONES`). El relevo se ejecuta en transacción ACID actualizando `Oficina.ResponsableId` y sincronizando el rol `Responsable` en Identity (el saliente vuelve a `Trabajador` si no es `Admin`). Además, la FK `RESTRICT` y `EsResponsableAsync` blindan **CU-18**.
+- *Alternativa descartada:* permitir `ResponsableId` nullable o permitir que un `Mecanico` dirija la oficina.
+
+**D14 — Validación estricta de dominio de email unificada (`Oficina`, `Login` y `Signup`).**
+- *Justificación:* `.EmailAddress()` por defecto en FluentValidation (`AspNetCoreCompatible`) acepta cadenas sin punto de dominio como `"pepe@sinpunto"`. Añadir la regex `^[^@\s]+@[^@\s]+\.[^@\s]{2,}$` en `UpdateOficinaValidator`, `LoginValidator` y `SignupValidator` garantiza una regla coherente y realista en toda la API manteniendo compatibilidad con `.com`, `.es` y los correos semilla `.local`.
+- *Alternativa descartada:* aplicar la regla estricta solo en `Oficina`, generando inconsistencia con `Auth`.
+
+### 3. Pruebas del módulo (`+29` tests C# → `235/235` totales + `5` peticiones Bruno)
+
+| Capa | Fichero | Tests | Qué verifica |
+|---|---|---:|---|
+| Unitaria | `Unit/Oficina/OficinaModelTests.cs` | 6 | `EstaAbierta` (dentro/fuera de hora, sábado cerrado, Lunes a Domingo) y `HorarioFormateado` |
+| Unitaria | `Unit/Oficina/OficinaControllerTests.cs` | 6 | Mapeo HTTP (`200`, `400`, `404`, `422`) doblando `IOficinaService` con `Moq` |
+| Unitaria | `Unit/Validators/OficinaValidatorsTests.cs` | 9 | Email estricto sin dominio, `HoraCierre <= HoraApertura`, `DiaFin < DiaInicio`, Lunes–Domingo y `Guid.Empty` |
+| Integración | `Integration/Oficina/OficinaIntegrationTests.cs` | 8 | Testcontainers PostgreSQL + `WebApplicationFactory`: `GET` público (`200`), `PUT` (`401`, `403` Cliente/Trabajador/Mecánico, `200` Responsable), `PATCH /responsable` (`403` no Admin, `422` Mecánico, `200` Operaciones + `EsResponsableAsync`) |
+| E2E | `Alquiler-Vehiculos.Tests.E2E/Bruno-Cli/3 - OFICINA/` | 5 | `[017]` GET público `200`, `[018]` PUT sin token `401`, `[019]` PUT Cliente `403`, `[020]` PUT Responsable `200`, `[021]` PATCH responsable como Responsable `403` |
+
