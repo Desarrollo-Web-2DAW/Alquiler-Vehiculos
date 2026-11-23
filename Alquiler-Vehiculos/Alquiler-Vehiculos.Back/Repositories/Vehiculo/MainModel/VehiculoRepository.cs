@@ -188,4 +188,28 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
 
         return actualizado;
     }
+
+    /// <inheritdoc cref="IVehiculoRepository.SoftDeleteSiEstado" />
+    public async Task<bool> SoftDeleteSiEstado(string key, EstadoVehiculo estadoEsperado)
+    {
+        logger.LogInformation(
+            "Baja condicional de Vehiculo {Id} exigiendo estado {Estado}", key, estadoEsperado);
+
+        var ahora = DateTime.UtcNow;
+
+        // Compare-and-set: el estado esperado va en el WHERE, así que la comprobación
+        // y la escritura son la MISMA sentencia. Entre el SELECT de la fase 1 y este
+        // UPDATE no queda hueco para que otro proceso meta un cambio.
+        // No se usa ni AsNoTracking ni entidad rastreada: ExecuteUpdate no pasa por
+        // SaveChanges y no sincroniza el ChangeTracker (aquí no hay nada rastreado).
+        var filas = await context.Vehiculos
+            .Where(v => v.Id == key && v.Activo && v.Estado == estadoEsperado)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(v => v.Activo, false)
+                .SetProperty(v => v.Estado, EstadoVehiculo.Retirado)
+                .SetProperty(v => v.UpdatedAt, ahora)
+                .SetProperty(v => v.DeletedAt, ahora));
+
+        return filas > 0;
+    }
 }

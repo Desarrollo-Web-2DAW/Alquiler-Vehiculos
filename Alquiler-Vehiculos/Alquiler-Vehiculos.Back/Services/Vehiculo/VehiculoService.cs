@@ -4,6 +4,8 @@ using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Errors.Vehiculo;
 using Alquiler_Vehiculos.Mappers.Vehiculo;
+using Alquiler_Vehiculos.Models.Storage;
+using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
@@ -26,8 +28,7 @@ public class VehiculoService(
     ICacheService cache,
     CreateVehiculoValidator createVehiculoValidator,
     UpdateVehiculoValidator updateVehiculoValidator,
-    IConcesionarioRepository concesionarioRepository
-    ) : IVehiculoService
+    IConcesionarioRepository concesionarioRepository) : IVehiculoService
 {
     private const string ClaveVehiculo = "vehiculo:id:";
     private const string ClaveMatricula = "vehiculo:matricula:";
@@ -73,7 +74,7 @@ public class VehiculoService(
     public async Task<Result<VehiculoDto, DomainError>> Create(CreateVehiculoDto item)
     {
         Log.Debug("Creando vehículo con matrícula {Matricula}", item.Matricula);
-        
+
         var validationResult = await createVehiculoValidator.ValidateAsync(item);
         if (!validationResult.IsValid)
         {
@@ -90,10 +91,10 @@ public class VehiculoService(
         if (!await concesionarioRepository.ExistById(item.Concesionario))
             return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
 
-        var foto= await fotoRepository.GetById(item.Foto);
-        if (foto is null) return FotoError.FotoNotFound(item.Foto);
+        var foto = await ObtenerFotoActivaAsync(item.Foto);
+        if (foto.IsFailure) return Result.Failure<VehiculoDto, DomainError>(foto.Error);
 
-        var vehiculo = item.ToVehiculo(foto);
+        var vehiculo = item.ToVehiculo(foto.Value);
         if (vehiculo.IsFailure) return vehiculo.Error;
 
         var creado = await repository.Create(vehiculo.Value);
@@ -133,17 +134,18 @@ public class VehiculoService(
         if (!await concesionarioRepository.ExistById(item.Concesionario))
             return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
 
-        var foto = await fotoRepository.GetById(item.Foto);
-        if (foto is null) return FotoError.FotoNotFound(item.Foto);
+        var foto = await ObtenerFotoActivaAsync(item.Foto);
+        if (foto.IsFailure) return Result.Failure<VehiculoDto, DomainError>(foto.Error);
 
-        var mapeadoResult = item.ToVehiculoModel(foto);
+        var mapeadoResult = item.ToVehiculoModel(foto.Value);
         if (mapeadoResult.IsFailure)
         {
             return Result.Failure<VehiculoDto, DomainError>(mapeadoResult.Error);
         }
 
         var mapeado = mapeadoResult.Value;
-        
+
+        // Se conserva Id, auditoría, Estado y Activo: el PUT no realiza transiciones ni bajas.
         var vehiculo = existente with
         {
             Matrícula = mapeado.Matrícula,
@@ -219,5 +221,27 @@ public class VehiculoService(
         await cache.SetAsync(ClaveMatricula + result.Value.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);
+    }
+
+    /// <summary>
+    /// Recupera la foto indicada exigiendo que sea la <b>activa</b>.
+    /// </summary>
+    /// <remarks>
+    /// Un vehículo solo puede apuntar a una foto viva: <see cref="Foto.Activo"/> es la
+    /// fuente de verdad, no las referencias. Una foto dada de baja se trata como inexistente,
+    /// de modo que el vehículo nunca queda con una imagen retirada.
+    /// </remarks>
+    /// <param name="nombre">Clave de la foto.</param>
+    /// <returns>La foto activa, o <see cref="FotoError.FotoNotFound"/> si no existe o está de baja.</returns>
+    private async Task<Result<Foto, DomainError>> ObtenerFotoActivaAsync(string nombre)
+    {
+        var foto = await fotoRepository.GetById(nombre);
+
+        if (foto is null || !foto.Activo || foto.DeletedAt is not null)
+        {
+            return Result.Failure<Foto, DomainError>(FotoError.FotoNotFound(nombre));
+        }
+
+        return Result.Success<Foto, DomainError>(foto);
     }
 }
