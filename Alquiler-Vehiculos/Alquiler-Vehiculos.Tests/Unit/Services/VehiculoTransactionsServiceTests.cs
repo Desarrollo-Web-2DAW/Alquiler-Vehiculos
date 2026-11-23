@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Vehiculo;
+using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Models.Vehiculo;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
@@ -173,7 +174,7 @@ public class VehiculoTransactionsServiceTests
         // Arrange
         var vehiculo = CrearVehiculo();
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(vehiculo);
-        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
+        _repository.Setup(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible)).ReturnsAsync(true);
 
         // Act
         var resultado = await _service.DeleteAsync(VehiculoId);
@@ -188,7 +189,8 @@ public class VehiculoTransactionsServiceTests
         _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
         _parteTallerService.Verify(
             p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
-        _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
+        _repository.Verify(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible), Times.Once);
+        _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         VerificarTransaccionEjecutada();
     }
@@ -198,7 +200,7 @@ public class VehiculoTransactionsServiceTests
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo(fotoFk: string.Empty));
-        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
+        _repository.Setup(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible)).ReturnsAsync(true);
 
         // Act
         var resultado = await _service.DeleteAsync(VehiculoId);
@@ -206,6 +208,10 @@ public class VehiculoTransactionsServiceTests
         // Assert
         resultado.IsSuccess.Should().BeTrue();
 
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible), Times.Once);
+        _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        VerificarTransaccionEjecutada();
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
     }
 
@@ -214,7 +220,7 @@ public class VehiculoTransactionsServiceTests
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo(string.Empty));
-        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
+        _repository.Setup(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible)).ReturnsAsync(true);
 
         // Act
         var resultado = await _service.DeleteAsync(VehiculoId);
@@ -223,7 +229,8 @@ public class VehiculoTransactionsServiceTests
         resultado.IsSuccess.Should().BeTrue();
         _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
         _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
-        _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
+        _repository.Verify(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible), Times.Once);
+        _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         VerificarTransaccionEjecutada();
     }
@@ -232,8 +239,9 @@ public class VehiculoTransactionsServiceTests
     public async Task DeleteAsync_CuandoElVehiculoDesapareceAntesDeBorrar_DevuelveNotFound()
     {
         // Arrange
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
-        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(false);
+        _repository.SetupSequence(r => r.GetById(VehiculoId))
+            .ReturnsAsync(CrearVehiculo()).ReturnsAsync((VehiculoModel?)null);
+        _repository.Setup(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible)).ReturnsAsync(false);
 
         // Act
         var resultado = await _service.DeleteAsync(VehiculoId);
@@ -241,12 +249,38 @@ public class VehiculoTransactionsServiceTests
         // Assert
         resultado.Error.Should().Be(ErrorNoEncontrado());
 
-        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Exactly(2));
         _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
         VerificarTransaccionEjecutada();
 
-        _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
+        _repository.Verify(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible), Times.Once);
+        _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+    }
+
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    public async Task DeleteAsync_CambioConcurrenteDeEstado_Devuelve409SinBaja(EstadoVehiculo estado) {
+        // Arrange
+        var ultimo = CrearVehiculo();
+        ultimo.CambiarEstadoMapper(estado);
+        _repository.SetupSequence(r => r.GetById(VehiculoId))
+            .ReturnsAsync(CrearVehiculo()).ReturnsAsync(ultimo);
+        _repository.Setup(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible)).ReturnsAsync(false);
+
+        // Act
+        var resultado = await _service.DeleteAsync(VehiculoId);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(VehiculoError.NoDisponibleParaBaja(estado));
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Exactly(2));
+        _repository.Verify(r => r.SoftDeleteSiEstado(VehiculoId, EstadoVehiculo.Disponible), Times.Once);
+        _repository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+        _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+        VerificarTransaccionEjecutada();
     }
 
     [Test]
@@ -357,19 +391,50 @@ public class VehiculoTransactionsServiceTests
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
         _repository.Setup(r => r.Update(VehiculoId, datos)).ReturnsAsync(datos);
         _fotoRepository.Setup(r => r.SoftDelete(FotoId)).ReturnsAsync(false);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(new Foto { Nombre = FotoId, Activo = true });
 
         // Act
         var resultado = await _service.UpdateAsync(VehiculoId, datos);
 
         // Assert
-        resultado.Error.Should().Be(
-            new InternalError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(FotoError.NoSePudoDarDeBaja(FotoId));
 
         _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
         _repository.Verify(r => r.Update(VehiculoId, datos), Times.Once);
         VerificarTransaccionEjecutada();
 
         _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
+        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
+    }
+
+    [TestCase("ausente")]
+    [TestCase("inactiva")]
+    [TestCase("borrada")]
+    public async Task UpdateAsync_FotoAnteriorYaDeBaja_ConservaExito(string estado) {
+        // Arrange
+        var datos = CrearVehiculo(FotoNuevaId);
+        Foto? anterior = estado == "ausente" ? null : new Foto {
+            Nombre = FotoId, Activo = estado != "inactiva",
+            DeletedAt = estado == "borrada" ? new DateTime(2026, 1, 1) : null
+        };
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
+        _repository.Setup(r => r.Update(VehiculoId, datos)).ReturnsAsync(datos);
+        _fotoRepository.Setup(r => r.SoftDelete(FotoId)).ReturnsAsync(false);
+        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(anterior);
+
+        // Act
+        var resultado = await _service.UpdateAsync(VehiculoId, datos);
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+        resultado.Value.FotoFk.Should().Be(FotoNuevaId);
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.Update(VehiculoId, datos), Times.Once);
+        _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
+        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
+        _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerificarTransaccionEjecutada();
     }
 
     [TestCase("IX_Vehiculos_Matrícula", true)]
@@ -460,8 +525,8 @@ public class VehiculoTransactionsServiceTests
         var resultado = await _service.RestoreAsync(VehiculoId);
 
         // Assert
-        resultado.Error.Should().Be(
-            new InternalError("No se pudo restaurar la foto asociada al vehículo."));
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(FotoError.NoSePudoRestaurar(FotoId));
 
         _repository.Verify(r => r.Restore(VehiculoId), Times.Once);
         VerificarTransaccionEjecutada();

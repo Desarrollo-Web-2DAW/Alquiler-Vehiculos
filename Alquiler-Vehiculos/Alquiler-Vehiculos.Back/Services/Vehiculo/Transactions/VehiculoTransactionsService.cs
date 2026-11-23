@@ -16,8 +16,6 @@ namespace Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 
 /// <summary>
 /// Casos de uso transaccionales de Vehículo.
-/// No conoce EF Core: delega el límite transaccional en <see cref="ITransactionManager"/>.
-/// Los repositorios guardan cambios dentro del límite transaccional compartido.
 /// Delega el límite transaccional en <see cref="ITransactionManager"/> y traduce
 /// la restricción de matrícula duplicada a un conflicto de dominio.
 /// Los repositorios guardan cambios dentro del límite transaccional compartido.
@@ -34,8 +32,8 @@ public sealed class VehiculoTransactionsService(
     /// Enfoque mixto de concurrencia: la fase 1 solo <b>lee</b> para poder dar un mensaje
     /// claro al usuario, pero la garantía la da la fase 2, un <c>UPDATE ... WHERE Estado</c>
     /// que o afecta a una fila o a ninguna. La fase 3 (segunda escritura) queda vacía en este
-    /// caso de uso porque la baja conserva la foto; cuando exista <c>Reserva</c>, su insert
-    /// irá aquí dentro, en la misma transacción.
+    /// caso de uso porque la baja conserva la foto. Sigue pendiente integrar la comprobación
+    /// de reservas vivas cuando exista el contrato del módulo de reservas (RF-01).
     /// </remarks>
     public Task<Result<VehiculoModel, DomainError>> DeleteAsync(string id, CancellationToken ct = default)
         => transactionManager.ExecuteAsync<VehiculoModel>(async () =>
@@ -84,7 +82,6 @@ public sealed class VehiculoTransactionsService(
 
                 return Result.Failure<VehiculoModel, DomainError>(
                     VehiculoError.NoDisponibleParaBaja(ultimo.Estado));
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
 
             return Result.Success<VehiculoModel, DomainError>(vehiculo);
@@ -125,7 +122,6 @@ public sealed class VehiculoTransactionsService(
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
                         FotoError.NoSePudoDarDeBaja(fotoAnterior));
-                        new InternalError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
                 }
             }
 
@@ -160,7 +156,6 @@ public sealed class VehiculoTransactionsService(
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
                         FotoError.NoSePudoRestaurar(restaurado.FotoFk));
-                        new InternalError("No se pudo restaurar la foto asociada al vehículo."));
                 }
             }
             return Result.Success<VehiculoModel, DomainError>(restaurado);

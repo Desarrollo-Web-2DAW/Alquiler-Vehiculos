@@ -22,11 +22,10 @@ public static class FotoError
     /// durante la sustitución de su imagen.
     /// </summary>
     /// <param name="nombre">Nombre de la foto que no se pudo dar de baja.</param>
-    /// <returns>Error de tipo <see cref="BusinessRuleError"/> (HTTP 422).</returns>
-    public static BusinessRuleError NoSePudoDarDeBaja(string nombre)
+    /// <returns>Error técnico de tipo <see cref="InternalError"/> (HTTP 500).</returns>
+    public static InternalError NoSePudoDarDeBaja(string nombre)
     {
-        return new BusinessRuleError(
-            "ACTUALIZACION_FOTO",
+        return new InternalError(
             $"No se pudo actualizar el vehículo: fallo al dar de baja la foto anterior '{nombre}'.");
     }
 
@@ -35,11 +34,10 @@ public static class FotoError
     /// al reactivar el vehículo.
     /// </summary>
     /// <param name="nombre">Nombre de la foto que no se pudo restaurar.</param>
-    /// <returns>Error de tipo <see cref="BusinessRuleError"/> (HTTP 422).</returns>
-    public static BusinessRuleError NoSePudoRestaurar(string nombre)
+    /// <returns>Error técnico de tipo <see cref="InternalError"/> (HTTP 500).</returns>
+    public static InternalError NoSePudoRestaurar(string nombre)
     {
-        return new BusinessRuleError(
-            "RESTAURACION_FOTO",
+        return new InternalError(
             $"No se pudo restaurar la foto '{nombre}' asociada al vehículo.");
     }
 }

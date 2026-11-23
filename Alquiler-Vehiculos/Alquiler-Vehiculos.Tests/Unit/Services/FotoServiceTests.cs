@@ -45,29 +45,31 @@ public class FotoServiceTests {
         _repository.Verify(r => r.Create(It.IsAny<Foto>()), Times.Never);
     }
 
-    // [TestCase(true)]
-    // [TestCase(false)]
-    // public async Task Create_ArchivoConContenido_PropagaFotoOErrorDeStorage(bool correcto) {
-    //     // Arrange
-    //     using var contenido = new MemoryStream([1, 2, 3]);
-    //     var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", Nombre);
-    //     var foto = new Foto { Nombre = Nombre };
-    //     var error = StorageError.ExtensionNoPermitida();
-    //     _storage.Setup(s => s.IsEmpty(archivo)).Returns(false);
-    //     _storage.Setup(s => s.SaveFileAsync(archivo, "vehiculos")).ReturnsAsync(correcto
-    //         ? Result.Success<Foto, DomainError>(foto) : Result.Failure<Foto, DomainError>(error));
-    //
-    //     // Act
-    //     var resultado = await _service.Create(archivo);
-    //
-    //     // Assert
-    //     resultado.IsSuccess.Should().Be(correcto);
-    //     if (correcto) resultado.Value.Should().BeSameAs(foto);
-    //     else resultado.Error.Should().Be(error);
-    //     _storage.Verify(s => s.IsEmpty(archivo), Times.Once);
-    //     _storage.Verify(s => s.SaveFileAsync(archivo, "vehiculos"), Times.Once);
-    //     _repository.Verify(r => r.Create(It.IsAny<Foto>()), Times.Never);
-    // }
+    [TestCase(true)]
+    [TestCase(false)]
+    public async Task Create_ArchivoConContenido_PropagaFotoOErrorDeStorage(bool correcto) {
+        // Arrange
+        using var contenido = new MemoryStream([1, 2, 3]);
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", Nombre);
+        var foto = new Foto { Nombre = Nombre };
+        var error = StorageError.ExtensionNoPermitida();
+        _storage.Setup(s => s.IsEmpty(archivo)).Returns(false);
+        _storage.Setup(s => s.SaveFileAsync(archivo, "vehiculos")).ReturnsAsync(correcto
+            ? Result.Success<string, DomainError>(Nombre) : Result.Failure<string, DomainError>(error));
+        _repository.Setup(r => r.GetById(Nombre)).ReturnsAsync(foto);
+
+        // Act
+        var resultado = await _service.Create(archivo);
+
+        // Assert
+        resultado.IsSuccess.Should().Be(correcto);
+        if (correcto) resultado.Value.Should().BeSameAs(foto);
+        else resultado.Error.Should().Be(error);
+        _storage.Verify(s => s.IsEmpty(archivo), Times.Once);
+        _storage.Verify(s => s.SaveFileAsync(archivo, "vehiculos"), Times.Once);
+        _repository.Verify(r => r.GetById(Nombre), correcto ? Times.Once() : Times.Never());
+        _repository.Verify(r => r.Create(It.IsAny<Foto>()), Times.Never);
+    }
 
     [Test]
     public async Task GetAll_FotosConDistintosEstados_DevuelveSoloActivasSinFechaDeBaja() {

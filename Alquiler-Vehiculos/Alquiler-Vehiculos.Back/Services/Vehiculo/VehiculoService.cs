@@ -31,8 +31,6 @@ public class VehiculoService(
     ICacheService cache,
     CreateVehiculoValidator createVehiculoValidator,
     UpdateVehiculoValidator updateVehiculoValidator,
-    IConcesionarioRepository concesionarioRepository) : IVehiculoService
-{
     IConcesionarioRepository concesionarioRepository,
     QueryRequestVehiculoValidator queryRequestVehiculoValidator
     ) : IVehiculoService {

@@ -40,8 +40,8 @@ No repitas la configuración inicial con otra contraseña sobre los volúmenes e
   catálogo todavía no tiene migraciones ni inicialización de esquema en el arranque.
 - Detener dependencias conservando sus datos: `docker compose stop`.
 
-La compilación no garantiza todavía el arranque: el catálogo depende de
-`ITransactionManager`, cuya implementación no está en esta copia. También falta
+La compilación no garantiza todavía el arranque: aunque `ITransactionManager` ya
+tiene su implementación `EfTransactionManager` registrada, todavía falta
 aprovisionar el esquema del catálogo y configurar un Redis accesible.
 
 La clave JWT se configura mediante User Secrets en desarrollo o `Jwt__Key` en el

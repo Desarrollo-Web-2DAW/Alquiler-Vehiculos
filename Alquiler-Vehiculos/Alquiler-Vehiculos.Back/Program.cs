@@ -12,6 +12,7 @@ using Alquiler_Vehiculos.Services.Vehiculo;
 using Alquiler_Vehiculos.Services.Vehiculo.Concesonario;
 using Alquiler_Vehiculos.Services.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
+using Alquiler_Vehiculos.Services.Vehiculo.Transactions.Common;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Concesionario;
 using Alquiler_Vehiculos.Services.Usuarios.Auth;
@@ -115,6 +116,7 @@ try {
     builder.Services.AddScoped<IVehiculoRepository, VehiculoRepository>();
     builder.Services.AddScoped<IVehiculoService, VehiculoService>();
     builder.Services.AddScoped<IVehiculoTransactionsService, VehiculoTransactionsService>();
+    builder.Services.AddScoped<ITransactionManager, EfTransactionManager>();
     builder.Services.AddScoped<IConcesionarioRepository, ConcesionarioRepository>();
     builder.Services.AddScoped<IConcesionarioService, ConcesionarioService>();
     builder.Services.AddScoped<IFotoRepository, FotoRepository>();
