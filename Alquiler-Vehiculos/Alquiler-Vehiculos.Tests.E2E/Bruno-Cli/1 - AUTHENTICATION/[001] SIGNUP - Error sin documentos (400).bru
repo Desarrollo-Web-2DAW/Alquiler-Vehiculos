@@ -1,0 +1,41 @@
+meta {
+  name: [001] SIGNUP - Error sin documentos (400)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/auth/signup
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "sin.doc@alquiler.local",
+    "password": "Password123!",
+    "nombre": "Sin",
+    "apellidos": "Documentos",
+    "telefono": "655000111",
+    "fechaNacimiento": "1996-08-20"
+  }
+}
+
+script:post-response {
+  test("Signup sin documentos - Status 400 Bad Request", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-14/RF-15: exige al menos un documento (DNI, NIE o pasaporte) al darse de alta.
+}

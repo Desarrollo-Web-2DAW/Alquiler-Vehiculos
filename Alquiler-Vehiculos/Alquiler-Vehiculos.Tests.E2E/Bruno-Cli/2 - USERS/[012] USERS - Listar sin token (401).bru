@@ -1,0 +1,26 @@
+meta {
+  name: [012] USERS - Listar sin token (401)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/users
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Users sin token - Status 401 Unauthorized", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: el listado de cuentas exige autenticación JWT.
+}

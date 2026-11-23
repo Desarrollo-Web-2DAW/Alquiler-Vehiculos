@@ -1,0 +1,63 @@
+meta {
+  name: [002] SIGNUP - Cliente nuevo (201)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/auth/signup
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{nuevoClienteEmail}}",
+    "password": "Password123!",
+    "nombre": "Luis",
+    "apellidos": "Vega Moreno",
+    "telefono": "655443322",
+    "fechaNacimiento": "1996-08-20",
+    "dni": "{{nuevoClienteDni}}"
+  }
+}
+
+script:pre-request {
+  const timestamp = Date.now();
+  const numDni = String(10000000 + (timestamp % 89999999));
+  const letras = "TRWAGMYFPDXBNJZSQVHLCKE";
+  const letra = letras[parseInt(numDni, 10) % 23];
+
+  bru.setVar("nuevoClienteEmail", `e2e.${timestamp}@alquiler.local`);
+  bru.setVar("nuevoClienteDni", `${numDni}${letra}`);
+}
+
+script:post-response {
+  test("Signup Cliente - Status 201 Created", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Signup Cliente - Devuelve token y rol Cliente", function () {
+    const body = res.getBody();
+    expect(body.token).to.be.a("string").and.not.be.empty;
+    expect(body.email).to.equal(bru.getVar("nuevoClienteEmail"));
+    expect(body.role).to.equal("Cliente");
+  });
+
+  if (res.getStatus() === 201) {
+    bru.setVar("nuevoClienteToken", res.getBody().token);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Alta pública de cliente (CU-01, RF-13, RF-46). Guarda nuevoClienteToken para /me.
+}

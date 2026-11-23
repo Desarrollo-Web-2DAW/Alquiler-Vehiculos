@@ -148,7 +148,7 @@ Estado de las pruebas (`dotnet test`): **Total: 27 · OK: 22 · KO: 0 · Omitida
 
 ## 8. Revisión de tests y cobertura (20/11/2026)
 
-Revisión del código y de las pruebas según las convenciones de calidad del proyecto y el enunciado de Práctica 4, todo aplicado en esta rama.
+Revisión del código y de las pruebas según las convenciones de calidad del proyecto y el enunciado de Práctica 4.
 
 **Tests alineados con las convenciones de testing del proyecto:**
 
@@ -168,8 +168,8 @@ Revisión del código y de las pruebas según las convenciones de calidad del pr
 
 **Resultados (`dotnet test`):**
 
-- Unitarias: **Total: 35 · OK: 35 · KO: 0**.
-- Suite completa con integración (Redis de verdad en contenedor): **Total: 43 · OK: 43 · KO: 0 · Omitidas: 0**.
+- Unitarias de caché: **35/35 OK**.
+- Suite completa con integración (Redis de verdad en contenedor): **43/43 OK · 0 omitidas**.
 - Cobertura del módulo `Cache/` (`dotnet test --collect:"XPlat Code Coverage"`): **181/181 líneas (100 %)**.
 
 **Resoluciones y nuevos pendientes:**
@@ -177,6 +177,124 @@ Revisión del código y de las pruebas según las convenciones de calidad del pr
 - Resuelto: decisión D12 (FluentAssertions adoptado; Moq no hace falta) y el aviso de `Microsoft.OpenApi` (actualizado el paquete).
 - Siguen abiertos: tabla **evento → etiquetas invalidadas** (D4), servicio Redis en el `compose.yaml` (RNF-05) y la integración con el servicio de disponibilidad.
 - Nuevo pendiente: decidir si el contrato `ICacheService` mantiene sus adiciones (`ExistsAsync`, `GetOrSetAsync`, `RemoveByTagAsync`, `ClearAsync`, `PruneAsync` y `CancellationToken`) frente al contrato base (solo `Get`/`Set`/`Remove` sin token), y citar la decisión en la memoria.
+
+---
+
+## Tarea: notificaciones por correo electrónico
+
+> **Fecha de registro:** 18/11/2026 · **Rama:** `feature/notifications/Mail` · **Estado:** módulo implementado y documentado, pendiente de pruebas e integración con los servicios del grupo.
+
+### Alcance y requisitos que cubre
+
+| Requisito | Relación con el correo |
+|---|---|
+| **RF-34** | Correos en los pasos importantes de la reserva: los 8 eventos de la tabla del enunciado (alta, pago, caducidad, cancelación, recogida, devolución, reembolso y arreglo de taller) |
+| **RF-35** | El envío **nunca bloquea ni rompe la reserva**: el correo se encola y, si el servidor falla, el error queda registrado para reintentarlo |
+| **RF-36** | En desarrollo se ve el correo sin salir de la máquina (Mailpit); en producción apunta a un servidor real con credenciales en configuración |
+| **CU-17 (ampliación)** | Correo caído durante una racha de pagos: cada cliente recibe **exactamente un** aviso (ni cero ni dos) |
+| **CU-12, CU-23, CU-24 (acuerdos de equipo)** | Avisos al cliente por avería durante el alquiler, vehículo no listo y devolución tardía |
+| **RNF-09** | Registros con `ILogger` sin datos sensibles: solo tipo de evento y código de referencia, nunca el correo del destinatario |
+
+---
+
+## 1. Investigación: envío de correos en la API
+
+- **Implementaciones de ejemplo estudiadas**: una con `IEmailService` + `MailKitEmailService` (MailKit/MimeKit, con `ISmtpClient` inyectable para pruebas), `MemoryEmailService` (mock con `SentEmails`), `EmailQueueService` (`ConcurrentQueue` + `SemaphoreSlim`) y `EmailBackgroundWorker` (`BackgroundService` que dequeúa y envía), con su configuración SMTP tipada; otra con el mismo esqueleto pero con `Channel<T>` en vez de cola manual, plantillas HTML generadas desde C#, pipeline **Polly** (retry + circuit breaker + timeout) y registro de servicios por entornos.
+- **Carencias comunes** que nuestro diseño resuelve: la cola vive solo en memoria (se pierde al reiniciar la app), un fallo de envío se traga el mensaje sin reintentos, no hay control de duplicados (ni cero ni dos no está garantizado) y en desarrollo solo se loguea el correo en vez de poder *verlo*.
+
+## 2. Decisiones tomadas
+
+Cada decisión con su justificación y la alternativa descartada (versión completa con diagramas en `doc/Notificaciones-Email-Memoria.md`).
+
+**D1 — Patrón *outbox*: el correo se encola y lo envía un worker en segundo plano.**
+- *Justificación:* RF-35 exige que el correo nunca bloquee la reserva y que el error quede registrado para reintentarlo. El outbox deja constancia del mensaje y su estado (`Pendiente`, `Enviado`, `Fallido`).
+- *Alternativas descartadas:* envío directo desde el servicio de negocio (un SMTP caído retrasa o rompe la petición) y cola solo en memoria tipo `Channel`/`ConcurrentQueue` (los mensajes se pierden al reiniciar).
+
+**D2 — Clave de idempotencia por evento (`{Tipo}:{CodigoReferencia}`).**
+- *Justificación:* CU-17 pide "ni cero ni dos"; ante reinicios o dobles llamadas, el segundo encolado con la misma clave se descarta.
+- *Alternativa descartada:* confiar en que cada evento se notifica una sola vez.
+
+**D3 — Reintentos con backoff exponencial (30 s · 60 s · 120 s…, máx. 5) en el worker.**
+- *Justificación:* cumple RF-35 sin saturar un servidor caído; al agotar intentos el mensaje queda `Fallido` y auditable.
+- *Alternativa descartada:* Polly con *circuit breaker* (reintentos con apertura de circuito), válida como ampliación pero añade dependencia para lo que el worker resuelve con pocas líneas.
+
+**D4 — Cuenta SMTP real del proyecto como envío activo, con Mailpit disponible para desarrollo.**
+- *Justificación:* el equipo decide enviar con la cuenta real del proyecto; RF-36 pide además *ver* el correo en desarrollo sin salir de la máquina, y Mailpit (contenedor en `compose.yaml`, SMTP 1025 y bandeja web 8025) cubre ese escenario como alternativa comentada en la configuración de desarrollo.
+- *Alternativas descartadas:* `MemoryEmailService` que solo loguea y MailHog (abandonado).
+
+**D5 — Plantillas HTML como ficheros con marcadores `{{Propiedad}}` y bloques `{{#each}}`.**
+- *Justificación:* el equipo pidió plantillas en HTML, CSS, JavaScript y Bootstrap; como ficheros se editan y previsualizan sin recompilar.
+- *Alternativas descartadas:* HTML embebido en strings de C# y motores tipo Razor/Scriban (dependencia extra para condicionales que no necesitamos).
+
+**D6 — MailKit para SMTP.**
+- *Alternativa descartada:* `System.Net.Mail.SmtpClient` (obsoleto) y proveedores externos tipo SendGrid (atan el proyecto a un servicio de pago).
+
+**D7 — `IEmailOutboxStore` con implementación en memoria, lista para EF Core.**
+- *Justificación:* la BBDD transaccional no está decidida; al fijar EF Core solo se añade una implementación nueva (tabla con índice único sobre `ClaveIdempotencia`) sin tocar el resto.
+- *Alternativa descartada:* EF Core desde el día uno, que depende de una decisión que no es nuestra.
+
+**D8 — Configuración tipada `EmailSettings` (sección `Email`) con secretos fuera del repositorio.**
+- *Justificación:* RNF-03; la contraseña va en *user-secrets* en desarrollo y en la variable de entorno `Email__Password` en producción, nunca en el repositorio. `Email:UseSmtp=false` conmuta al servicio simulado para pruebas.
+- *Alternativa descartada:* cadenas sueltas y credenciales en el código.
+
+## 3. Diseño del flujo (boceto)
+
+Evento de negocio → DTO de notificación (`Dto/Email`) → plantilla renderizada → mensaje en la cola (outbox, con clave de idempotencia) → `EmailBackgroundWorker` (cada 10 s toma los pendientes cuyo reintento vence) → `MailKitEmailService` → Mailpit/SMTP. Los tres diagramas de secuencia (flujo normal, reintento y CU-17) están en `doc/Notificaciones-Email-Memoria.md`, validados con un parser real de Mermaid.
+
+## 4. Estructura en el proyecto (implementada)
+
+```
+Alquiler-Vehiculos.Back/
+  Models/Email/        TipoNotificacion, EstadoEmailOutbox, EmailOutboxMessage, TiposEventos
+  Dto/Email/           NotificacionEmailBase + un DTO por evento + LineaEmailDto
+  Services/Email/      IEmailNotifier/EmailNotifier (nunca lanza excepción),
+                       IEmailTemplateRenderer/EmailTemplateRenderer,
+                       IEmailOutboxStore/InMemoryEmailOutboxStore,
+                       EmailBackgroundWorker,
+                       IEmailService/MailKitEmailService/MemoryEmailService
+  Infrastructure/      EmailSettings (config tipada) + EmailConfig (registro DI)
+  Templates/Email/     11 plantillas HTML (una por evento) + assets/email.css
+compose.yaml           Mailpit: SMTP 1025 y bandeja web 8025
+doc/Notificaciones-Email-Memoria.md   documentación para la memoria
+```
+
+## 5. Plan de trabajo
+
+1. ~~Investigar y comparar implementaciones de envío de correo de ejemplo~~ (hecho).
+2. ~~Contratos y DTOs de los 11 eventos~~ (hecho).
+3. ~~Renderizador de plantillas y plantillas HTML con Bootstrap~~ (hecho).
+4. ~~Cola outbox con idempotencia + worker con reintentos~~ (hecho).
+5. ~~Configuración por entornos, Mailpit y registro en DI~~ (hecho).
+6. ~~Documentación para la memoria (diagramas y decisiones)~~ (hecho).
+7. Pruebas: unitarias de render/notifier/worker e integración con Mailpit (pendiente).
+8. Integración con los servicios de reserva, pago, taller y tareas programadas cuando existan (pendiente, depende del grupo).
+
+## 6. Registro de implementación (18/11/2026)
+
+- Paquete **MailKit 4.18.2**: se descartó la 4.13.0 porque NuGet reporta vulnerabilidades conocidas en MailKit/MimeKit de esa línea.
+- Resuelto el aviso heredado que quedaba en el apartado 7 de la tarea de caché: `Microsoft.AspNetCore.OpenApi` actualizado a 10.0.15, que elimina la vulnerabilidad de `Microsoft.OpenApi` 2.0.0. La solución compila con **0 errores y 0 advertencias**.
+- Diagramas Mermaid de la memoria revisados con un parser real: se corrigieron dos fallos (paréntesis en etiqueta de flecha del diagrama de arquitectura y una declaración de `participant` sin la palabra clave en el diagrama de secuencia).
+- Merge de `origin/dev` (módulo de caché) en esta rama: conflictos resueltos combinando ambos módulos en `Program.cs` (registros `AddCache` y `AddEmailNotifications`), `appsettings*.json` (secciones `Email`, `Cache` y `Redis`) y `.csproj` (paquetes MailKit, StackExchange.Redis y OpenApi).
+
+**Configuración con cuenta real (20/11/2026):** el envío se configura con la cuenta del proyecto (`funkopopapi@gmail.com`) por SMTP con TLS (`smtp.gmail.com:587`). La contraseña de aplicación queda **fuera del repositorio** (RNF-03): *user-secrets* en desarrollo y variable de entorno `Email__Password` en producción. Se añade `appsettings.Production.json` para la configuración por entornos (RNF-05) y se mantiene comentada la alternativa de Mailpit para la captura local de RF-36. No se registran credenciales en el código, en la configuración versionada ni en esta bitácora.
+
+## 7. Pendientes
+
+- ~~Pruebas del módulo (la estrategia está tabulada en `doc/Notificaciones-Email-Memoria.md`, apartado 7)~~ (hecho: ver apartado 8).
+- Pasar `IEmailOutboxStore` a EF Core cuando el grupo fije la BBDD transaccional.
+- Acordar con el grupo los puntos de llamada: **evento → método de `IEmailNotifier`** (una línea por evento; tabla en la memoria).
+- Decisión a documentar: los clientes de correo reales (Outlook, Gmail) no soportan Bootstrap ni JavaScript; si se exige envío a buzones reales, generar variante con estilos *inline*.
+- Añadir los servicios de Mailpit y Redis al `docker compose` definitivo (RNF-05): hoy hay `compose.yaml` solo con Mailpit.
+
+## 8. Pruebas y cobertura (20/11/2026)
+
+Pruebas del módulo de correo siguiendo la convención de pruebas del proyecto: NUnit + FluentAssertions, patrón AAA con sus comentarios (`// Arrange`, `// Act`, `// Assert`), `Category("Unit")` y `Category("Integration")`, nombres `Método_Escenario_Resultado`, dobles a mano salvo donde hace falta un doble de interfaz (Moq con su `Verify`) e integración con servicios reales en contenedor.
+
+- **Unitarias (40, todas OK)**: renderizador de plantillas (marcadores, listas, formatos y las 11 plantillas), notificador (los 11 eventos, idempotencia y resiliencia ante fallos), worker (envío, reintentos con backoff, agotamiento de intentos y cancelación), cola outbox, servicio simulado, envío SMTP (autenticación, modos de seguridad y propagación de fallos), DTOs y registro en el contenedor.
+- **Integración (2, OK) contra Mailpit en contenedor** con Testcontainers: envío real con MailKit por el camino de producción (sin cliente simulado) y flujo completo notificador → cola → worker verificado en la bandeja, incluida la comprobación de no duplicados de CU-17.
+- **Cobertura del módulo de correo**: **365/365 líneas (100 %)** con `dotnet test --collect:"XPlat Code Coverage"`.
+
+Requisitos cubiertos por las pruebas: **RF-34**, **RF-35**, **RF-36** y **CU-17** (y los avisos de CU-12, CU-23 y CU-24 a través de sus plantillas).
 
 ---
 
@@ -236,3 +354,46 @@ La extensión `UseGlobalExceptionHandler()` permite incorporar el middleware al 
 ## 4. Alcance de la tarea
 
 Esta tarea comprende exclusivamente el middleware de gestión global de excepciones (`GlobalExceptionHandler`). No incluye la implementación de `SecurityHeadersMiddleware` ni `RateLimitMiddleware`.
+
+---
+
+## Tarea: partes de taller
+
+_**Fecha de registro:**_ 22/11/2026 · _**Rama:**_ `feature/taller` · _**Estado:**_ núcleo del parte implementado, probado y documentado; las integraciones con vehículos y reservas esperan a esos módulos.
+
+### Alcance y requisitos que cubre
+
+| Requisito | Relación con el taller |
+|---|---|
+| **RF-08** | Partes de taller: cada entrada al taller abre un parte con `Id`, `Fecha`, `QuienLoTramita`, `Descripcion`, `Vehiculo` y `Estado` (`Abierto`/`Cerrado`); solo se cierra al terminar la reparación y no se reabren. Es un documento interno: los clientes no lo ven (RF-46) |
+| **RF-12** | Solo un trabajador de tipo `Mecanico` (y activo) abre y cierra partes |
+| **RF-01** | Consulta `TienePartesAbiertosAsync`: la comprobación de «sin partes abiertos» antes de dar de baja un vehículo (si no, 409) |
+| **CU-07** | Ida y vuelta del taller: abrir parte, meter el vehículo en `Mantenimiento` y devolverlo al día siguiente cerrando el parte (la transición del vehículo llega con su módulo) |
+| **CU-08** | Vehículos en taller con su fecha de entrada: partes abiertos ordenados por fecha |
+
+### Implementación
+
+- `Models/Taller/ParteTaller` + `Enums/Taller/EstadoParte`: modelo con los campos del enunciado y máquina de estados mínima (`Abierto` → `Cerrado`, sin reabrir: cada entrada al taller es un parte nuevo).
+- `Services/Taller/ParteTallerService` con patrón `Result<T, DomainError>` y los errores de dominio del patrón del proyecto (`ConflictError` 409, `ForbiddenError` 403, `BusinessRuleError` 422, `NotFoundError` 404). Orden de comprobaciones: permiso del tramitador → datos → reglas de negocio.
+- `Repositories/Taller`: contrato `IParteTallerRepository` con implementación en memoria, donde la regla «un solo parte abierto por vehículo» es atómica. Cuando se fije la base de datos transaccional, la implementación de EF Core la garantizará con un índice único parcial (igual que la idempotencia del outbox de correo).
+- `Validators/Taller/AbrirParteValidator` (FluentValidation): identificador de vehículo de 11 caracteres (RF-01) y descripción obligatoria con límite de longitud.
+- Registro en el contenedor con `Infrastructure/TallerConfig.AddTallerServices()`: una línea en `Program.cs`.
+- `Errors/Taller/ParteTallerError`: códigos estables `PARTE_NO_ENCONTRADA`, `PARTE_ABIERTA_EXISTENTE`, `PARTE_YA_CERRADA` y `SOLO_MECANICO`.
+
+### Decisiones
+
+- **Relación con el vehículo:** el parte guarda su identificador corto de 11 caracteres (RF-01); la clave foránea y las transiciones `Disponible` ↔ `Mantenimiento` se cablean cuando se fusione el módulo de vehículos. Así el núcleo del taller no depende de ramas en curso.
+- **Procedimiento de taller con reservas afectadas (RF-07)** documentado en `doc/Partes-Taller-Memoria.md` con la prioridad propuesta: reasignar a un vehículo equivalente de la misma categoría → aplazar el arreglo → cancelar con aviso y reembolso. Su implementación espera al servicio de reservas; los correos de aviso ya están implementados en el módulo de notificaciones.
+
+### Pruebas y cobertura
+
+- **38 pruebas unitarias** (servicio, repositorio, validador y registro en DI) siguiendo las convenciones del proyecto: NUnit + FluentAssertions, patrón AAA con sus comentarios, `Category("Unit")`, nombres `Método_Escenario_Resultado` y dobles a mano.
+- **Cobertura del módulo de taller: 211/211 líneas (100 %)** con `dotnet test --collect:"XPlat Code Coverage"`.
+- Suite completa de la rama: **96/96 OK · 0 omitidas**.
+
+### Pendientes
+
+- Endpoints REST de partes: pendientes de la superficie de API que fije el equipo y de la matriz de permisos (RF-46).
+- Transiciones del vehículo a `Mantenimiento` y vuelta al abrir/cerrar partes (RF-05, RF-33) cuando se fusione el módulo de vehículos.
+- RF-07 (entrar en taller con reservas vivas) y CU-12 (avería durante el alquiler) cuando exista el servicio de reservas.
+- Eventos en tiempo real `EntradaTaller`/`SalidaTaller` (RF-37) y semilla con partes en distintos estados (RI-03).

@@ -1,0 +1,39 @@
+meta {
+  name: [015] USERS - Listar como Admin (200)
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/users
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Users como Admin - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Users como Admin - Devuelve los 5 perfiles semilla", function () {
+    const body = res.getBody();
+    expect(body).to.be.an("array");
+    expect(body.length).to.be.at.least(5);
+    const admin = body.find(u => u.role === "Admin");
+    expect(admin).to.not.be.undefined;
+    bru.setVar("adminUserId", admin.id);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: el Admin consulta todas las cuentas y guarda adminUserId para probar ULTIMO_ADMIN.
+}
