@@ -7,6 +7,7 @@ using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Testcontainers.PostgreSql;
+using OficinaEntity = Alquiler_Vehiculos.Models.Oficina.Oficina;
 
 namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 
@@ -354,5 +355,63 @@ public class TrabajadorRepositoryTests {
         // Assert
         porEmailBorrado.Should().BeNull();
         porEmailInexistente.Should().BeNull();
+    }
+    [Test]
+    public async Task EsResponsableOficinaAsync_CuandoEsResponsable_DevuelveTrue() {
+        // Arrange
+        var responsable = CrearTrabajador(email: "responsable@empresa.es", dni: "12345678Z");
+        await using (var dbSeed = CrearContexto()) {
+            dbSeed.Trabajadores.Add(responsable);
+            dbSeed.Oficinas.Add(new OficinaEntity {
+                Id = OficinaEntity.OficinaUnicaId,
+                Nombre = "Oficina Central",
+                Direccion = "Calle Mayor 1",
+                Telefono = "916000111",
+                Email = "oficina@empresa.es",
+                ResponsableId = responsable.Id
+            });
+            await dbSeed.SaveChangesAsync();
+        }
+
+        await using var db = CrearContexto();
+        var repo = new TrabajadorRepository(db, NullLogger<TrabajadorRepository>.Instance);
+
+        // Act
+        var esResponsable = await repo.EsResponsableOficinaAsync(responsable.Id);
+
+        // Assert
+        esResponsable.Should().BeTrue();
+    }
+
+    [Test]
+    public async Task EsResponsableOficinaAsync_CuandoNoEsResponsable_DevuelveFalse() {
+        // Arrange
+        var responsable = CrearTrabajador(email: "responsable@empresa.es", dni: "12345678Z");
+        var otroTrabajador = CrearTrabajador(
+            nombre: "Carlos",
+            email: "carlos@empresa.es",
+            dni: "11111111H");
+
+        await using (var dbSeed = CrearContexto()) {
+            dbSeed.Trabajadores.AddRange(responsable, otroTrabajador);
+            dbSeed.Oficinas.Add(new OficinaEntity {
+                Id = OficinaEntity.OficinaUnicaId,
+                Nombre = "Oficina Central",
+                Direccion = "Calle Mayor 1",
+                Telefono = "916000111",
+                Email = "oficina@empresa.es",
+                ResponsableId = responsable.Id
+            });
+            await dbSeed.SaveChangesAsync();
+        }
+
+        await using var db = CrearContexto();
+        var repo = new TrabajadorRepository(db, NullLogger<TrabajadorRepository>.Instance);
+
+        // Act
+        var esResponsable = await repo.EsResponsableOficinaAsync(otroTrabajador.Id);
+
+        // Assert
+        esResponsable.Should().BeFalse();
     }
 }

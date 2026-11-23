@@ -120,8 +120,7 @@ public class TrabajadorRepository(AppDbContextUsuarios db, ILogger<TrabajadorRep
     }
 
     public async Task<bool> EsResponsableOficinaAsync(Guid trabajadorId) {
-        return await Task.FromResult(false);
-        
+        return await db.Oficinas.AsNoTracking().AnyAsync(o => o.ResponsableId == trabajadorId);
     }
 
     public async Task<bool> TieneReservasVivasAsync(Guid trabajadorId) {
