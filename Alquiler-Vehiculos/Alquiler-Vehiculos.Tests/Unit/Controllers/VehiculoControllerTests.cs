@@ -12,6 +12,7 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using System.Security.Claims;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Controllers;
 
@@ -85,7 +86,7 @@ public class VehiculoControllerTests {
     [TestCase(true)]
     public async Task ConsultarORestaurar_Exito_Devuelve200ConDto(bool restaurar) {
         // Arrange
-        var dto = new VehiculoDto { Id = Id };
+        var dto = new VehiculoDto { Id = Id, IsActivo = true, Estado = nameof(EstadoVehiculo.Disponible) };
         if (restaurar) _service.Setup(s => s.Restore(Id)).ReturnsAsync(Result.Success<VehiculoDto, DomainError>(dto));
         else _service.Setup(s => s.GetById(Id)).ReturnsAsync(Result.Success<VehiculoDto, DomainError>(dto));
 
@@ -260,6 +261,51 @@ public class VehiculoControllerTests {
         // Assert
         resultado.Result.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(status);
         _service.Verify(s => s.GetByFilters(request, admin), Times.Once);
+        _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
+    }
+
+    private static IEnumerable<TestCaseData> CasosVisibilidad() {
+        foreach (var porMatricula in new[] { false, true })
+        foreach (var perfil in new[] {
+            (Rol: "", Autenticado: false), (Rol: "Cliente", Autenticado: true),
+            (Rol: "Trabajador", Autenticado: true), (Rol: "Responsable", Autenticado: true),
+            (Rol: "Admin", Autenticado: true), (Rol: "Admin", Autenticado: false)
+        })
+        foreach (var estado in Enum.GetValues<EstadoVehiculo>())
+        foreach (var activo in new[] { false, true }) {
+            var personal = perfil.Autenticado && perfil.Rol is "Trabajador" or "Responsable" or "Admin";
+            var visible = personal || (activo && estado == EstadoVehiculo.Disponible);
+            yield return new TestCaseData(porMatricula, perfil.Rol, perfil.Autenticado, estado, activo, visible);
+        }
+    }
+
+    [TestCaseSource(nameof(CasosVisibilidad))]
+    public async Task ConsultarUnidad_PerfilYEstado_RespetaVisibilidad(
+        bool porMatricula, string rol, bool autenticado, EstadoVehiculo estado, bool activo, bool visible) {
+        // Arrange
+        var dto = new VehiculoDto { Id = Id, Matricula = "1234BCD", IsActivo = activo, Estado = estado.ToString() };
+        _controller.ControllerContext = new ControllerContext {
+            HttpContext = new DefaultHttpContext {
+                User = new ClaimsPrincipal(new ClaimsIdentity(
+                    [new Claim(ClaimTypes.Role, rol)], autenticado ? "Test" : null))
+            }
+        };
+        if (porMatricula) _service.Setup(s => s.GetByMatricula(dto.Matricula)).ReturnsAsync(Result.Success<VehiculoDto, DomainError>(dto));
+        else _service.Setup(s => s.GetById(Id)).ReturnsAsync(Result.Success<VehiculoDto, DomainError>(dto));
+
+        // Act
+        var resultado = porMatricula ? await _controller.GetByMatricula(dto.Matricula) : await _controller.GetById(Id);
+
+        // Assert
+        if (visible) resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(dto);
+        else {
+            var error = porMatricula ? VehiculoError.NotFoundVehiculoMatricula(dto.Matricula) : VehiculoError.NotFoundVehiculo(Id);
+            resultado.Result.Should().BeOfType<NotFoundObjectResult>().Which.Value.Should().BeEquivalentTo(new {
+                code = error.Code, message = error.Message
+            });
+        }
+        _service.Verify(s => s.GetById(Id), porMatricula ? Times.Never() : Times.Once());
+        _service.Verify(s => s.GetByMatricula(dto.Matricula), porMatricula ? Times.Once() : Times.Never());
         _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
     }
 

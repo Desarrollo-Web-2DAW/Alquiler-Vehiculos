@@ -1,6 +1,8 @@
 ﻿using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Enums.Usuarios;
+using Alquiler_Vehiculos.Errors.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Extensions;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Services.Storage;
@@ -16,31 +18,31 @@ namespace Alquiler_Vehiculos.Controllers.Vehiculo;
 /// </summary>
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Policy = PolicyNames.Admin)]
+[Authorize]
 public class VehiculoController(IVehiculoService service, IStorageService storageService) : ControllerBase {
 
     /// <summary>
-    /// Consulta todos los vehículos.
+    /// Consulta todos los vehículos para el personal de la oficina.
     /// </summary>
+    [Authorize(Policy = PolicyNames.Trabajador)]
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<IEnumerable<VehiculoDto>>> GetAll() {
         return Ok(await service.GetAll());
     }
 
     /// <summary>
-    /// Consulta los vehículos mediante paginación para administración.
+    /// Consulta los vehículos mediante paginación para el personal de la oficina.
     /// </summary>
+    [Authorize(Policy = PolicyNames.Trabajador)]
     [HttpGet("paged")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<IEnumerable<VehiculoDto>>> GetPaged(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 10) {
-
-        if (page < 1 || pageSize < 1) {
-            return BadRequest("La página y el tamaño deben ser mayores que cero.");
-        }
-
+    public async Task<ActionResult<IEnumerable<VehiculoDto>>> GetPaged([FromQuery] int page = 1, [FromQuery] int pageSize = 10) {
+        if (page < 1 || pageSize < 1) return BadRequest("La página y el tamaño deben ser mayores que cero.");
         var (items, totalItems) = await service.GetPaged(page, pageSize);
 
         return Ok(new {
@@ -60,10 +62,10 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> GetById(string id) {
-        return (await service.GetById(id)).Match(
-            response => Ok(response),
-            error => error.ToHttpResult<VehiculoDto>()
-        );
+        var result = await service.GetById(id);
+        if (result.IsFailure) return result.Error.ToHttpResult<VehiculoDto>();
+        if (!PuedeVerVehiculo(result.Value)) return VehiculoError.NotFoundVehiculo(id).ToHttpResult<VehiculoDto>();
+        return Ok(result.Value);
     }
 
     /// <summary>
@@ -75,9 +77,9 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> GetByMatricula(string matricula) {
         var result = await service.GetByMatricula(matricula);
-        return result.IsSuccess
-            ? Ok(result.Value)
-            : result.Error.ToHttpResult<VehiculoDto>();
+        if (result.IsFailure) return result.Error.ToHttpResult<VehiculoDto>();
+        if (!PuedeVerVehiculo(result.Value)) return VehiculoError.NotFoundVehiculoMatricula(matricula).ToHttpResult<VehiculoDto>();
+        return Ok(result.Value);
     }
 
     /// <summary>
@@ -92,20 +94,20 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     [ProducesResponseType(typeof(IEnumerable<QueryResponseVehiculoDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IEnumerable<QueryResponseVehiculoDto>>> GetByFilters(
-        [FromQuery] QueryRequestVehiculoDto request) {
+    public async Task<ActionResult<IEnumerable<QueryResponseVehiculoDto>>> GetByFilters([FromQuery] QueryRequestVehiculoDto request) {
         // El perfil procede del usuario autenticado, nunca de un parámetro de la petición.
         var esAdmin = User.IsInRole(nameof(RolUsuario.Admin));
         var result = await service.GetByFilters(request, esAdmin);
-        return result.IsSuccess
-            ? Ok(result.Value)
-            : result.Error.ToHttpResult<IEnumerable<QueryResponseVehiculoDto>>();
+        return result.IsSuccess ? Ok(result.Value) : result.Error.ToHttpResult<IEnumerable<QueryResponseVehiculoDto>>();
     }
 
     /// <summary>
     /// Crea un vehículo recibiendo los datos campo por campo y archivo adjunto.
     /// </summary>
+    [Authorize(Policy = PolicyNames.Admin)]
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -147,17 +149,17 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
             Concesionario = concesionario
         };
         
-        return (await service.Create(dto)).Match(
-            response => CreatedAtAction(nameof(GetById), new { id = response.Id }, response),
-            error => error.ToHttpResult<VehiculoDto>()
-        );
+        return (await service.Create(dto)).Match(response => CreatedAtAction(nameof(GetById), new { id = response.Id }, response),error => error.ToHttpResult<VehiculoDto>());
     }
 
     
     /// <summary>
     /// Actualiza un vehículo recibiendo los datos campo por campo y un archivo adjunto.
     /// </summary>
+    [Authorize(Policy = PolicyNames.Trabajador)]
     [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -182,8 +184,7 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     {
         var rutaFoto = await storageService.SaveFileAsync(foto, "vehiculos");
 
-        if (rutaFoto.IsFailure)
-            return rutaFoto.Error.ToHttpResult();
+        if (rutaFoto.IsFailure) return rutaFoto.Error.ToHttpResult();
 
         var dto = new UpdateVehiculoDto {
             Foto = rutaFoto.Value,
@@ -200,37 +201,46 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
             FechaUltimaRevision = fechaUltimaRevision,
             Concesionario = concesionario
         };
-
-        return (await service.Update(dto, id)).Match(
-            response => Ok(response),
-            error => error.ToHttpResult<VehiculoDto>()
-        );
+        return (await service.Update(dto, id)).Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
     }
 
 
     /// <summary>
     /// Desactiva un vehículo mediante una baja lógica.
     /// </summary>
+    [Authorize(Policy = PolicyNames.Admin)]
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<bool>> Delete(string id) {
-        return (await service.SoftDelete(id)).Match(
-            response => Ok(response),
-            error => error.ToHttpResult<bool>()
-        );
+        return (await service.SoftDelete(id)).Match(response => Ok(response), error => error.ToHttpResult<bool>());
     }
 
     /// <summary>
     /// Restaura un vehículo previamente desactivado.
     /// </summary>
+    [Authorize(Policy = PolicyNames.Admin)]
     [HttpPatch("{id}/restore")]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> Restore(string id) {
-        return (await service.Restore(id)).Match(
-            response => Ok(response),
-            error => error.ToHttpResult<VehiculoDto>()
-        );
+        return (await service.Restore(id)).Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
+    }
+
+    /// <summary>
+    /// El personal identificado consulta la unidad y su histórico; el catálogo público
+    /// y el cliente solo ven unidades activas y disponibles (RF-46).
+    /// </summary>
+    private bool PuedeVerVehiculo(VehiculoDto vehiculo) {
+        var esPersonal = User?.Identity?.IsAuthenticated == true && (
+            User.IsInRole(nameof(RolUsuario.Trabajador)) ||
+            User.IsInRole(nameof(RolUsuario.Responsable)) ||
+            User.IsInRole(nameof(RolUsuario.Admin)));
+
+        return esPersonal || (vehiculo.IsActivo && vehiculo.Estado == nameof(EstadoVehiculo.Disponible));
     }
 }

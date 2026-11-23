@@ -38,6 +38,58 @@ POST de fotos recibe `multipart/form-data` con el campo `archivo`. El nombre gen
 
 ## Errores
 
+### Permisos de vehículos (RF-46)
+
+La distribución siguiente es una decisión provisional del proyecto: RF-46 permite
+al trabajador gestionar vehículos, pero no enumera cada operación. Se reserva la
+incorporación y retirada de flota al administrador; el personal consulta unidades
+y modifica sus datos. No es una matriz literal proporcionada por el enunciado.
+
+| Método | Ruta | Público/Cliente | Trabajador | Responsable | Admin |
+|---|---|---|---|---|---|
+| GET | `/api/Vehiculo` | No | Sí | Sí | Sí |
+| GET | `/api/Vehiculo/paged` | No | Sí | Sí | Sí |
+| GET | `/api/Vehiculo/{id}` | Sí | Sí | Sí | Sí |
+| GET | `/api/Vehiculo/matricula/{matricula}` | Sí | Sí | Sí | Sí |
+| GET | `/api/Vehiculo/search` | Sí | Sí | Sí | Sí |
+| POST | `/api/Vehiculo` | No | No | No | Sí |
+| PUT | `/api/Vehiculo/{id}` | No | Sí | Sí | Sí |
+| DELETE | `/api/Vehiculo/{id}` | No | No | No | Sí |
+| PATCH | `/api/Vehiculo/{id}/restore` | No | No | No | Sí |
+
+Se utiliza `[Authorize]` como protección general y una política en cada acción
+interna. Las tres consultas públicas mantienen `[AllowAnonymous]`. La política
+`PolicyNames.Trabajador` ya incluye Trabajador, Responsable y Admin. No se mantiene
+una política Admin en la clase porque impediría el acceso del trabajador.
+
+Modelo: [ProductosController de 15-ProductosIdentity](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/15-ProductosIdentity/ProductosTest/Controllers/ProductosController.cs),
+con permisos distintos por acción, y UD02 §17.5 para reutilizar políticas existentes.
+Se descarta abrir las escrituras al cliente o copiar literalmente los roles ADMIN/USER
+del ejemplo, que no son los perfiles de esta práctica.
+
+Los tests unitarios comprueban los atributos y las políticas, no respuestas HTTP
+reales. Sigue pendiente demostrar 401 sin sesión y 403 sin permiso contra la API.
+En consultas por ID y matrícula, el controller comprueba además la visibilidad:
+público y cliente solo reciben unidades con `IsActivo = true` y estado `Disponible`.
+Si la unidad no es visible se devuelve 404 con el mismo error de dominio que si
+no existiera; es una decisión del proyecto para no exponer datos de la flota interna,
+no un código exigido expresamente por RF-46 para este caso.
+Trabajador, Responsable y Admin autenticados pueden consultar cualquier estado,
+incluidas unidades dadas de baja. La comprobación se hace después del servicio,
+también cuando este recupera el DTO desde la caché; no se guardan vistas filtradas
+por perfil bajo una clave de caché compartida.
+
+En búsquedas agrupadas se mantiene RF-06: solo Admin ve grupos sin unidades libres;
+el resto no recibe esos grupos. El recuento total incluye unidades ocupadas, sin
+convertirlas en unidades disponibles. La disponibilidad por fechas sigue pendiente.
+
+Guía para la comprobación dentro de la acción: [UD02 §17.7, autorización basada en recursos](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/17-autorizacion.md#177-autorización-basada-en-recursos).
+Se adapta la comprobación de rol y del recurso a la visibilidad de vehículos de
+RF-46, sin introducir handlers ni modificar los contratos de servicio.
+
+Por preferencia de Lucia se conserva la validación de matrícula en los validadores
+de alta y modificación; no se extrae una clase independiente en esta tarea.
+
 Se reutiliza `DomainErrorExtensions`, sin convertir todos los fallos en 400 ni todas las reglas en 409.
 
 | HTTP | Caso |
