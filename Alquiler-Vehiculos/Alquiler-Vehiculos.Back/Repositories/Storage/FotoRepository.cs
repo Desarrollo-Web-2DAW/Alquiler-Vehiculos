@@ -9,8 +9,21 @@ namespace Alquiler_Vehiculos.Repositories.Storage;
 /// Repositorio de Fotos que implementa las operaciones CRUD
 /// utilizando Entity Framework Core, usando el Nombre como clave primaria.
 /// </summary>
-public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> logger) : IFotoRepository
-{
+public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> logger) : IFotoRepository {
+    
+    /// <inheritdoc cref="IFotoRepository.SoftDeleteSiNoAsociada" />
+    public async Task<bool> SoftDeleteSiNoAsociada(string name) {
+        var fecha = DateTime.UtcNow;
+        
+        var filas = await context.Fotos
+            .Where(f => f.Nombre == name && !context.Vehiculos.Any(v => v.FotoFk == f.Nombre))
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(f => f.Activo, false)
+                .SetProperty(f => f.DeletedAt, fecha)
+                .SetProperty(f => f.UpdatedAt, fecha));
+        return filas > 0;
+    }
+
     /// <inheritdoc cref="IFotoRepository.Create" />
     public async Task<Foto> Create(Foto item) {
         logger.LogInformation("Creando Foto: {nombre}", item.Nombre);

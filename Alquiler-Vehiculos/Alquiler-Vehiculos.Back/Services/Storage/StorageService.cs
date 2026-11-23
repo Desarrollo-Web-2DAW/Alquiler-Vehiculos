@@ -59,9 +59,10 @@ public class StorageService : IStorageService
         var validation = ValidateFile(file);
         if (validation.IsFailure) return await Task.FromResult(Result.Failure<string, DomainError>(validation.Error));
 
+        string? fileName = null;
         try
         {
-            var fileName = GenerateUniqueFilename(file.FileName);
+            fileName = GenerateUniqueFilename(file.FileName);
             var mainFolderPath = Path.Combine(_rootPath, folder);
             if (!Directory.Exists(mainFolderPath)) Directory.CreateDirectory(mainFolderPath);
 
@@ -88,7 +89,30 @@ public class StorageService : IStorageService
         catch (Exception e)
         {
             _logger.LogError(e, "Error guardando archivo");
+            if (fileName is not null) await DescartarFotoAsync(fileName);
             return await Task.FromResult(Result.Failure<string, DomainError>(StorageError.ErrorGuardando()));
+        }
+    }
+
+    /// <inheritdoc cref="IStorageService.DescartarFotoAsync" />
+    public async Task<Result<bool, DomainError>> DescartarFotoAsync(string nombre) {
+        try {
+            if (string.IsNullOrWhiteSpace(nombre) || nombre.Contains("..") ||
+                nombre.Contains('/') || nombre.Contains('\\') || Path.IsPathRooted(nombre)) {
+                _logger.LogError("No se puede descartar la foto: el identificador no es un nombre válido.");
+                return ValidationError.Create("El identificador debe ser un nombre de foto, no una ruta.");
+            }
+
+            if (await _fotoRepository.SoftDeleteSiNoAsociada(nombre)) return true;
+            var foto = await _fotoRepository.GetById(nombre);
+            if (foto is null || !foto.Activo || foto.DeletedAt is not null) return true;
+
+            // Puede haberse confirmado el vehículo antes de fallar una operación posterior (p. ej., caché).
+            _logger.LogWarning("Se conserva la foto {Nombre}: está asociada a un vehículo.", nombre);
+            return new ConflictError("FOTO_ASOCIADA", "No se descarta una foto asociada a un vehículo.");
+        } catch (Exception e) {
+            _logger.LogError(e, "No se pudo descartar la foto {Nombre}; requiere revisión.", nombre);
+            return StorageError.ErrorEliminando();
         }
     }
 
@@ -157,7 +181,8 @@ public class StorageService : IStorageService
     /// <returns>Éxito sin un valor asociado, o el primer error detectado.</returns>
     private UnitResult<DomainError> ValidateFile(IFormFile file)
     {
-
+        if (file is null || file.Length == 0)
+            return UnitResult.Failure<DomainError>(ValidationError.Create("Debe proporcionar una imagen con contenido."));
         if (file.Length > _maxFileSize) return UnitResult.Failure<DomainError>(StorageError.ArchivoMuyGrande());
 
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();

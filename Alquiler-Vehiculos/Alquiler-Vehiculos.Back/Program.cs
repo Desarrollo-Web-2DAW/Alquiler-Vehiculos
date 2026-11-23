@@ -132,6 +132,13 @@ try {
 
     // ── PIPELINE DE MIDDLEWARES ───────────────────────────────────────────────
     var app = builder.Build();
+    var isDevelopment = app.Environment.IsDevelopment();
+
+    // ── ALMACENAMIENTO Y CATÁLOGO: esquema y semillas ─────────────────────────
+    // El almacenamiento se prepara antes de sembrar las fotos. Las migraciones
+    // del catálogo se aplican siempre y las semillas solo en Development.
+    app.InitializeStorage(app.Configuration, isDevelopment);
+    await app.InitializeCatalogoAsync(isDevelopment);
 
     app.UseGlobalExceptionHandler();
 

@@ -51,14 +51,49 @@ public class FotosController(IFotoService service, IStorageService storage) : Co
     public async Task<ActionResult> GetArchivo(string nombre) {
         var result = await service.GetById(nombre);
         if (result.IsFailure) return result.Error.ToHttpResult();
-        
-        var relativa = Path.Combine("vehiculos", result.Value.Nombre);
-        if (!storage.FileExists(relativa)) return FotoError.FotoNotFound(nombre).ToHttpResult();
+        return ServirArchivo(result.Value);
+    }
 
+    /// <summary>Consulta interna de metadatos, incluidas fotos retiradas del catálogo.</summary>
+    [Authorize(Policy = PolicyNames.Trabajador)]
+    [HttpGet("historico/{nombre}")]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<Foto>> GetHistorico(string nombre) {
+        return (await service.GetHistoricoById(nombre)).Match(
+            response => Ok(response), error => error.ToHttpResult<Foto>());
+    }
+
+    /// <summary>
+    /// Descarga interna de una foto histórica conservada en disco.
+    /// </summary>
+    [Authorize(Policy = PolicyNames.Trabajador)]
+    [HttpGet("historico/{nombre}/archivo")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult> GetArchivoHistorico(string nombre) {
+        var result = await service.GetHistoricoById(nombre);
+        if (result.IsFailure) return result.Error.ToHttpResult();
+        return ServirArchivo(result.Value);
+    }
+
+    private ActionResult ServirArchivo(Foto foto) {
+        var relativa = Path.Combine("vehiculos", foto.Nombre);
+        if (!storage.FileExists(relativa)) return FotoError.FotoNotFound(foto.Nombre).ToHttpResult();
         var provider = new FileExtensionContentTypeProvider();
-        if (!provider.TryGetContentType(result.Value.Nombre, out var contentType)) contentType = "application/octet-stream";
-
-        return File(System.IO.File.OpenRead(storage.GetFullPath(relativa)), contentType);
+        if (!provider.TryGetContentType(foto.Nombre, out var contentType)) contentType = "application/octet-stream";
+        try {
+            return File(System.IO.File.OpenRead(storage.GetFullPath(relativa)), contentType);
+        } catch (FileNotFoundException) {
+            return FotoError.FotoNotFound(foto.Nombre).ToHttpResult();
+        } catch (DirectoryNotFoundException) {
+            return FotoError.FotoNotFound(foto.Nombre).ToHttpResult();
+        }
     }
 
     /// <summary>

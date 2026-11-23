@@ -17,6 +17,12 @@ namespace Alquiler_Vehiculos.Services.Storage
         /// <param name="folder">Carpeta del almacenamiento en la que se guardará.</param>
         /// <returns>El nombre de la foto si se guarda correctamente, o con el error ocurrido.</returns>
         Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder);
+
+        /// <summary>
+        /// Retira una subida fallida sin borrar su fichero ni desactivar fotos asociadas a vehículos.
+        /// Los fallos se registran para revisión; no deben reemplazar el error original del vehículo.
+        /// </summary>
+        Task<Result<bool, DomainError>> DescartarFotoAsync(string nombre);
     
         /// <summary>
         /// Borra del almacenamiento el archivo identificado por su ruta relativa.

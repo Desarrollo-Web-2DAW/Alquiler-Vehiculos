@@ -2,6 +2,7 @@
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Enums.Usuarios;
 using Alquiler_Vehiculos.Errors.Vehiculo;
+using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Extensions;
 using Alquiler_Vehiculos.Infrastructure;
@@ -150,7 +151,8 @@ public class
             Concesionario = concesionario
         };
         
-        return (await service.Create(dto)).Match(response => CreatedAtAction(nameof(GetById), new { id = response.Id }, response),error => error.ToHttpResult<VehiculoDto>());
+        var result = await EjecutarConFotoAsync(rutaFoto.Value, () => service.Create(dto));
+        return result.Match(response => CreatedAtAction(nameof(GetById), new { id = response.Id }, response), error => error.ToHttpResult<VehiculoDto>());
     }
 
     
@@ -202,7 +204,8 @@ public class
             FechaUltimaRevision = fechaUltimaRevision,
             Concesionario = concesionario
         };
-        return (await service.Update(dto, id)).Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
+        var result = await EjecutarConFotoAsync(rutaFoto.Value, () => service.Update(dto, id));
+        return result.Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
     }
 
 
@@ -230,6 +233,21 @@ public class
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> Restore(string id) {
         return (await service.Restore(id)).Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
+    }
+
+    /// <summary>
+    /// Si falla el vehículo se retira únicamente la subida nueva, nunca su foto anterior.
+    /// </summary>
+    private async Task<Result<VehiculoDto, DomainError>> EjecutarConFotoAsync(
+        string nombre, Func<Task<Result<VehiculoDto, DomainError>>> operacion) {
+        try {
+            var result = await operacion();
+            if (result.IsFailure) await storageService.DescartarFotoAsync(nombre);
+            return result;
+        } catch {
+            await storageService.DescartarFotoAsync(nombre);
+            throw;
+        }
     }
 
     /// <summary>

@@ -73,7 +73,7 @@ public static class VehiculoSeeder {
             if (foto is null) {
                 throw new InvalidOperationException($"Falta la foto activa de la flota para {vehiculo.Matrícula}.");
             }
-            preparados[i] = vehiculo with { ConesionarioFk = concesionario.Id, FotoFk = foto.Ruta, Foto = foto };
+            preparados[i] = vehiculo with { ConesionarioFk = concesionario.Id, FotoFk = foto.Nombre, Foto = foto };
         }
 
         return preparados;

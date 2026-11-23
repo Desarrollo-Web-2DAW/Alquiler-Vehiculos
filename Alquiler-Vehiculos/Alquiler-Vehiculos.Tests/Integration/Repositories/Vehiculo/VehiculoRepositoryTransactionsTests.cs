@@ -87,4 +87,63 @@ public partial class VehiculoRepositoryTests {
         guardado.Estado.Should().Be(EstadoVehiculo.Disponible);
         guardado.DeletedAt.Should().BeNull();
     }
+
+    [Test]
+    public async Task ExecuteAsync_OperacionNula_LanzaArgumentNullException() {
+        // Arrange
+        await using var db = CrearContexto();
+        var manager = new EfTransactionManager(db, NullLogger<EfTransactionManager>.Instance);
+
+        // Act
+        Func<Task> act = () => manager.ExecuteAsync<VehiculoModel>(null!);
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentNullException>();
+        db.Database.CurrentTransaction.Should().BeNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_TransaccionAmbiente_LaReutilizaSinConfirmarPorSuCuenta() {
+        // Arrange
+        var original = await GuardarVehiculo();
+        await using var db = CrearContexto();
+        var repository = new VehiculoRepository(db, NullLogger<VehiculoRepository>.Instance);
+        var manager = new EfTransactionManager(db, NullLogger<EfTransactionManager>.Instance);
+        await using var ambiente = await db.Database.BeginTransactionAsync();
+
+        // Act
+        var resultado = await manager.ExecuteAsync<VehiculoModel>(async () => {
+            await repository.SoftDeleteSiEstado(original.Id, EstadoVehiculo.Disponible);
+            return Result.Success<VehiculoModel, DomainError>(original);
+        });
+
+        // Assert
+        resultado.IsSuccess.Should().BeTrue();
+        db.Database.CurrentTransaction.Should().BeSameAs(ambiente);
+        await ambiente.RollbackAsync();
+        await using var lectura = CrearContexto();
+        var guardado = await lectura.Vehiculos.SingleAsync();
+        guardado.Activo.Should().BeTrue();
+        guardado.DeletedAt.Should().BeNull();
+    }
+
+    [Test]
+    public async Task ExecuteAsync_FalloAlRevertir_ConservaLaExcepcionOriginal() {
+        // Arrange
+        await using var db = CrearContexto();
+        var manager = new EfTransactionManager(db, NullLogger<EfTransactionManager>.Instance);
+
+        // Act
+        Func<Task> act = () => manager.ExecuteAsync<VehiculoModel>(async () => {
+            // La transacción queda cerrada antes del catch, así que el reintento de
+            // reversión falla y se registra sin ocultar la excepción que provocó el fallo.
+            await db.Database.CurrentTransaction!.RollbackAsync();
+            throw new InvalidOperationException("Fallo tras revertir la transacción");
+        });
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Fallo tras revertir la transacción");
+        db.Database.CurrentTransaction.Should().BeNull();
+    }
 }

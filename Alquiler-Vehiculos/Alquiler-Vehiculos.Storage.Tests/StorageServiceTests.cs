@@ -9,7 +9,7 @@ namespace Alquiler_Vehiculos.Storage.Tests;
 
 [TestFixture]
 [Category("Integration")]
-public class StorageServiceTests : StorageTestBase {
+public partial class StorageServiceTests : StorageTestBase {
     private static FormFile Archivo(Stream contenido, string nombre = "coche.jpg", string tipo = "image/jpeg") =>
         new(contenido, 0, contenido.Length, "file", nombre) { Headers = new HeaderDictionary(), ContentType = tipo };
 
@@ -121,7 +121,7 @@ public class StorageServiceTests : StorageTestBase {
         // Assert
         resultado.IsFailure.Should().BeTrue();
         resultado.Error.Should().Be(StorageError.TipoContenidoNoPermitido());
-        archivo.VerifyGet(f => f.Length, Times.Once);
+        archivo.VerifyGet(f => f.Length, Times.Exactly(2));
         archivo.VerifyGet(f => f.FileName, Times.Once);
         archivo.VerifyGet(f => f.ContentType, Times.Once);
         archivo.Verify(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Never);

@@ -11,6 +11,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
+using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
@@ -32,7 +33,8 @@ public class VehiculoService(
     CreateVehiculoValidator createVehiculoValidator,
     UpdateVehiculoValidator updateVehiculoValidator,
     IConcesionarioRepository concesionarioRepository,
-    QueryRequestVehiculoValidator queryRequestVehiculoValidator
+    QueryRequestVehiculoValidator queryRequestVehiculoValidator,
+    IMarcaRepository marcaRepository
     ) : IVehiculoService {
     
     private const string ClaveVehiculo = "vehiculo:id:";
@@ -151,6 +153,9 @@ public class VehiculoService(
         if (!await concesionarioRepository.ExistById(item.Concesionario))
             return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
 
+        var catalogo = await ValidarMarcaModeloAsync(item.Marca, item.Modelo);
+        if (catalogo.IsFailure) return catalogo.Error;
+
         var foto = await ObtenerFotoActivaAsync(item.Foto);
         if (foto.IsFailure) return Result.Failure<VehiculoDto, DomainError>(foto.Error);
 
@@ -193,6 +198,9 @@ public class VehiculoService(
 
         if (!await concesionarioRepository.ExistById(item.Concesionario))
             return ValidationError.Create($"El concesionario con ID '{item.Concesionario}' no existe.");
+
+        var catalogo = await ValidarMarcaModeloAsync(item.Marca, item.Modelo);
+        if (catalogo.IsFailure) return catalogo.Error;
 
         var foto = await ObtenerFotoActivaAsync(item.Foto);
         if (foto.IsFailure) return Result.Failure<VehiculoDto, DomainError>(foto.Error);
@@ -281,6 +289,28 @@ public class VehiculoService(
         await cache.SetAsync(ClaveMatricula + result.Value.Matrícula, dto);
 
         return Result.Success<VehiculoDto, DomainError>(dto);
+    }
+
+    /// <summary>
+    /// Comprueba la combinación contra las marcas activas y sus modelos del catálogo.
+    /// Los nombres deben coincidir con los almacenados; no se alteran datos históricos.
+    /// </summary>
+    private async Task<Result<bool, DomainError>> ValidarMarcaModeloAsync(string nombreMarca, string nombreModelo) {
+        var marcas = await marcaRepository.GetAll();
+        var marca = marcas.FirstOrDefault(m => !m.IsDeleted && m.Nombre == nombreMarca);
+        if (marca is null) {
+            return ValidationError.WithFieldErrors(new Dictionary<string, string[]> {
+                [nameof(CreateVehiculoDto.Marca)] = ["La marca indicada no existe o está dada de baja."]
+            });
+        }
+
+        if (!marca.ModelosDisponibles.Contains(nombreModelo)) {
+            return ValidationError.WithFieldErrors(new Dictionary<string, string[]> {
+                [nameof(CreateVehiculoDto.Modelo)] = [$"El modelo indicado no pertenece a la marca '{marca.Nombre}'."]
+            });
+        }
+
+        return Result.Success<bool, DomainError>(true);
     }
 
     /// <summary>

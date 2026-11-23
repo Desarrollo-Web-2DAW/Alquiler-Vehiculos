@@ -6,7 +6,9 @@ using CSharpFunctionalExtensions;
 
 namespace Alquiler_Vehiculos.Services.Storage;
 
-/// <summary>Conserva los ficheros físicos aunque se dé de baja su entrada del catálogo.</summary>
+/// <summary>
+/// Conserva los ficheros físicos aunque se dé de baja su entrada del catálogo.
+/// </summary>
 public class FotoService(IFotoRepository repository, IStorageService storage) : IFotoService {
     public async Task<Result<Foto, DomainError>> Create(IFormFile? archivo) {
         if (archivo is null || storage.IsEmpty(archivo)) {
@@ -27,13 +29,20 @@ public class FotoService(IFotoRepository repository, IStorageService storage) : 
     }
 
     public async Task<Result<Foto, DomainError>> GetById(string nombre) {
+        var result = await GetHistoricoById(nombre);
+        if (result.IsFailure) return result.Error;
+        if (!result.Value.Activo || result.Value.DeletedAt is not null) return FotoError.FotoNotFound(nombre);
+        return result.Value;
+    }
+
+    public async Task<Result<Foto, DomainError>> GetHistoricoById(string nombre) {
         if (string.IsNullOrWhiteSpace(nombre) || nombre.Contains("..") ||
             nombre.Contains('/') || nombre.Contains('\\') || Path.IsPathRooted(nombre)) {
             return ValidationError.Create("El identificador debe ser un nombre de foto, no una ruta.");
         }
 
         var foto = await repository.GetById(nombre);
-        if (foto is null || !foto.Activo || foto.DeletedAt is not null)
+        if (foto is null)
             return FotoError.FotoNotFound(nombre);
 
         return foto;

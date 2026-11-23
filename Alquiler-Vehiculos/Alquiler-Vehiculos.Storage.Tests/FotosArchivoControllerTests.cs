@@ -6,12 +6,44 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Storage.Tests;
 
 [TestFixture]
 [Category("Integration")]
 public class FotosArchivoControllerTests : StorageTestBase {
+    [Test]
+    public async Task GetArchivoHistorico_FotoDadaDeBaja_ConservaContenidoSinAccesoPublico() {
+        // Arrange
+        var storage = CrearServicio();
+        var service = new FotoService(new FotoRepository(Db, NullLogger<FotoRepository>.Instance), storage);
+        var controller = new FotosController(service, storage);
+        byte[] datos = [1, 2, 3, 4];
+        using var contenido = new MemoryStream(datos);
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", "foto.jpg") {
+            Headers = new HeaderDictionary(), ContentType = "image/jpeg"
+        };
+        var creada = await service.Create(archivo);
+        creada.IsSuccess.Should().BeTrue();
+        (await service.SoftDelete(creada.Value.Nombre)).IsSuccess.Should().BeTrue();
+
+        // Act
+        var publico = await controller.GetArchivo(creada.Value.Nombre);
+        var historico = await controller.GetArchivoHistorico(creada.Value.Nombre);
+
+        // Assert
+        publico.Should().BeOfType<NotFoundObjectResult>();
+        var respuesta = historico.Should().BeOfType<FileStreamResult>().Subject;
+        await using var stream = respuesta.FileStream;
+        using var copia = new MemoryStream();
+        await stream.CopyToAsync(copia);
+        copia.ToArray().Should().Equal(datos);
+        respuesta.ContentType.Should().Be("image/jpeg");
+        await using var lectura = CrearContextoDeLectura();
+        (await lectura.Fotos.SingleAsync()).Activo.Should().BeFalse();
+    }
+
     [TestCase("coche.jpg", "image/jpeg")]
     [TestCase("coche.png", "image/png")]
     [TestCase("coche.sinmime", "application/octet-stream")]

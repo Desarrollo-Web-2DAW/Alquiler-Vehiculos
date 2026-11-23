@@ -26,7 +26,7 @@ public sealed class EfTransactionManager(
     PostgreDbContext context,
     ILogger<EfTransactionManager> logger) : ITransactionManager
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="ITransactionManager.ExecuteAsync{T}" />
     /// <remarks>
     /// Se considera éxito únicamente un <see cref="Result{T,E}"/> en estado exitoso:
     /// un fallo de negocio no lanza excepción y por eso se revierte de forma explícita.

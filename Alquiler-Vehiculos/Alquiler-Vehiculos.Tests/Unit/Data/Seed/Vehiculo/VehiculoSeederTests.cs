@@ -172,7 +172,7 @@ public class VehiculoSeederTests {
             var preparado = preparados[i];
             preparado.ConesionarioFk.Should().Be(_concesionarios.Single(c => c.Nombre == concesionariosEsperados[i]).Id);
             preparado.Foto.Should().BeSameAs(_fotos.Single(f => f.Nombre == $"seed-{preparado.Matrícula}.jpg"));
-            preparado.FotoFk.Should().Be(preparado.Foto.Ruta);
+            preparado.FotoFk.Should().Be(preparado.Foto.Nombre);
             preparado.Marca.Should().Be(vehiculos[i].Marca);
             preparado.Estado.Should().Be(vehiculos[i].Estado);
         }
@@ -181,7 +181,7 @@ public class VehiculoSeederTests {
     }
 
     [Test]
-    public void PrepararVehiculos_CarpetaPersonalizada_AsociaLasRutasConfiguradas() {
+    public void PrepararVehiculos_CarpetaPersonalizada_ConservaLaRutaYAsociaElNombreDeLaFoto() {
         // Arrange
         var fotos = _fotos.Select(f => f with { Ruta = f.Ruta.Replace("/uploads/", "/imagenes/") }).ToArray();
 
@@ -189,7 +189,8 @@ public class VehiculoSeederTests {
         var preparados = VehiculoSeeder.PrepararVehiculos(_vehiculos, _marcas, _concesionarios, fotos, "imagenes");
 
         // Assert
-        preparados.Should().OnlyContain(v => v.FotoFk.StartsWith("/imagenes/vehiculos/"));
+        preparados.Should().OnlyContain(v => v.FotoFk == v.Foto.Nombre &&
+            v.Foto.Ruta.StartsWith("/imagenes/vehiculos/"));
     }
 
     [TestCase("Toyota")]

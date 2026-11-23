@@ -36,13 +36,13 @@ No repitas la configuración inicial con otra contraseña sobre los volúmenes e
 - No hay interfaz Swagger ni endpoint GraphQL habilitados actualmente. Un 404 en
   `/`, `/swagger` o `/graphql` no significa que el back esté apagado.
 - PostgreSQL usa el puerto **5433** y MongoDB el **27018**.
-- Usuarios aplica sus migraciones al arrancar sin borrar datos. El contexto de
-  catálogo todavía no tiene migraciones ni inicialización de esquema en el arranque.
+- Usuarios y catálogo aplican sus migraciones al arrancar sin borrar datos. Las
+  semillas del catálogo solo se ejecutan en `Development`.
 - Detener dependencias conservando sus datos: `docker compose stop`.
 
-La compilación no garantiza todavía el arranque: aunque `ITransactionManager` ya
-tiene su implementación `EfTransactionManager` registrada, todavía falta
-aprovisionar el esquema del catálogo y configurar un Redis accesible.
+El esquema del catálogo ya se aprovisiona al arrancar con sus migraciones. Para
+que la aplicación funcione por completo sigue haciendo falta un Redis accesible:
+la caché es la única implementación registrada, sin alternativa en memoria.
 
 La clave JWT se configura mediante User Secrets en desarrollo o `Jwt__Key` en el
 entorno; no se guarda en `appsettings.json`. La clave que estuvo versionada debe
@@ -67,6 +67,40 @@ Mailpit ofrece SMTP en `localhost:1025` y la bandeja en `http://localhost:8025`.
 Para usarlo hay que configurar `Email:Host=localhost`, `Email:Port=1025`,
 `Email:Security=None` y credenciales vacías en el entorno local; añadir el
 contenedor no cambia por sí solo la configuración SMTP de la aplicación.
+
+## Arranque del catálogo: esquema, imágenes y semillas
+
+Al arrancar, `Program.cs` ejecuta dos extensiones del proyecto:
+
+1. `InitializeStorage` prepara `uploads` y, en `Development`, copia desde
+   `SeedImages` solo las imágenes que todavía no existen. **No borra** los archivos
+   almacenados: RF-48 exige conservar el histórico de fotos, también las descartadas.
+2. `InitializeCatalogoAsync` aplica las migraciones pendientes del contexto del
+   catálogo y, solo en `Development`, ejecuta las semillas en orden: fotos, marcas,
+   concesionarios y vehículos. El índice de marcas de MongoDB se sigue creando
+   después, desde `Program.cs`, sin borrar documentos.
+
+El almacenamiento se prepara antes de sembrar porque `FotoSeeder` lee el tamaño real
+de cada archivo en `uploads/vehiculos`; si falta una imagen, el arranque falla con un
+mensaje que pide preparar primero el almacenamiento. Cada seeder comprueba su tabla o
+colección y no duplica datos existentes.
+
+Las imágenes iniciales están en `Alquiler-Vehiculos.Back/SeedImages/vehiculos/` con
+el nombre `seed-<matrícula>.jpg` y son marcadores de posición sustituibles. La
+carpeta destino y el resto del almacenamiento se configuran en la sección `Storage`
+de `appsettings.json` (`UploadPath`, límites y `Folders:Vehiculos`). En producción no
+se copian imágenes ni se siembran datos; solo se aplican las migraciones.
+
+Para cambiar el esquema del catálogo, genera la migración con el contexto del
+catálogo desde la raíz del repositorio:
+
+```powershell
+dotnet ef migrations add NombreMigracion --context PostgreDbContext --output-dir Migrations/Catalogo --project Alquiler-Vehiculos/Alquiler-Vehiculos.Back --startup-project Alquiler-Vehiculos/Alquiler-Vehiculos.Back
+```
+
+`dotnet ef` necesita las cadenas de conexión y `Jwt:Key` configuradas (User Secrets o
+variables de entorno). El contexto de usuarios mantiene sus migraciones en
+`Migrations/`; las del catálogo están en `Migrations/Catalogo/`.
 
 ## Pruebas
 
@@ -129,8 +163,13 @@ modificación completa y baja lógica con `Result` y errores de validación por 
 el alta la recibe y el PUT la sustituye completa; los validadores existentes
 exigen al menos un modelo y rechazan nombres vacíos. No equivale al stock de vehículos.
 Cambiar esta lista o dar de baja la marca no modifica ni borra los vehículos existentes.
-Los vehículos conservan Marca y Modelo como texto; su validación contra este catálogo
-en las altas/modificaciones de vehículos no está implementada por este servicio.
+Los vehículos conservan Marca y Modelo como texto. `VehiculoService` comprueba en
+altas y modificaciones que la marca esté activa y que el modelo pertenezca a su
+lista `ModelosDisponibles`. Los nombres deben coincidir exactamente con el catálogo,
+incluidas mayúsculas y espacios; no se crean marcas o modelos automáticamente.
+Una marca desconocida/inactiva o un modelo ajeno devuelve 400 con detalle en
+`Marca` o `Modelo`, sin persistir el vehículo ni cambiar su caché. La comprobación
+no transforma ni borra vehículos históricos al editar o desactivar una marca.
 
 Pruebas de servicio de RF-09: `MarcaServiceTests` (CRUD, validación de modelos,
 errores y caché). No sustituyen las pruebas de endpoints y permisos pendientes.
@@ -143,6 +182,14 @@ Rutas, permisos, errores, referencias de clase y límites de la conservación de
 
 Las bajas son lógicas. El nuevo endpoint de fotos conserva el fichero físico;
 la subida independiente no lo asigna automáticamente a un vehículo.
+
+Si falla el alta/modificación de un vehículo, se intenta dar de baja la subida
+nueva sin borrar bytes y solo si ningún vehículo la referencia, incluido el
+histórico. El error original se mantiene; los fallos de descarte se registran
+para revisión, sin reintentos automáticos. El personal consulta las fotos retiradas
+en `/api/Fotos/historico/{nombre}` y descarga su fichero añadiendo `/archivo`.
+Las rutas públicas siguen mostrando solo fotos activas. La política conserva
+también los bytes descartados y no implementa una purga de disco.
 
 Este cambio no convierte documentos antiguos cuyo `_id` sea numérico. Si ya hay
 marcas guardadas con ese formato, requieren una migración de datos antes de leerlas

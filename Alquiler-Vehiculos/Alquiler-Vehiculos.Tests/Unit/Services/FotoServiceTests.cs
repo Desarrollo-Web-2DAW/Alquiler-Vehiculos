@@ -146,6 +146,28 @@ public class FotoServiceTests {
         _repository.Verify(r => r.GetById(Nombre), Times.Once);
     }
 
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task GetHistoricoById_FotoRetirada_SoloLaConsultaInternaLaDevuelve(bool fechaDeBaja) {
+        // Arrange
+        var foto = new Foto { Nombre = Nombre, Activo = fechaDeBaja,
+            DeletedAt = fechaDeBaja ? new DateTime(2026, 1, 1) : null };
+        _repository.Setup(r => r.GetById(Nombre)).ReturnsAsync(foto);
+
+        // Act
+        var publico = await _service.GetById(Nombre);
+        var historico = await _service.GetHistoricoById(Nombre);
+
+        // Assert
+        publico.IsFailure.Should().BeTrue();
+        publico.Error.Should().Be(FotoError.FotoNotFound(Nombre));
+        historico.IsSuccess.Should().BeTrue();
+        historico.Value.Should().BeSameAs(foto);
+        _repository.Verify(r => r.GetById(Nombre), Times.Exactly(2));
+        _repository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        _storage.Verify(s => s.DeleteFileAsync(It.IsAny<string>()), Times.Never);
+    }
+
     [TestCase(true)]
     [TestCase(false)]
     public async Task SoftDelete_FotoExistente_PropagaResultadoSinEliminarFichero(bool borrada) {
