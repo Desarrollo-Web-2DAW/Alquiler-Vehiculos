@@ -27,6 +27,7 @@ try {
     builder.Services.AddCache(builder.Configuration);
     builder.Services.AddEmailNotifications(builder.Configuration);
     builder.Services.AddTallerServices();
+    builder.Services.AddOficinaServices();
 
     var app = builder.Build();
 

@@ -1,9 +1,11 @@
 using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Enums.Usuarios;
+using Alquiler_Vehiculos.Models.Oficina;
 using Alquiler_Vehiculos.Models.Usuarios;
 using Alquiler_Vehiculos.Models.Usuarios.Clientes;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 namespace Alquiler_Vehiculos.Infrastructure;
 
@@ -68,6 +70,8 @@ public static class IdentitySeeder {
             fechaIngreso: new DateOnly(2022, 1, 15),
             tipo: TipoTrabajador.Operaciones,
             rol: nameof(RolUsuario.Responsable));
+
+        await SeedOficinaAsync(sp, configuration, logger);
     }
 
     private static async Task SeedRolesAsync(IServiceProvider sp, ILogger logger) {
@@ -241,6 +245,42 @@ public static class IdentitySeeder {
         }
 
         logger.LogInformation("Rol {Role} asignado a {UserId}", role, user.Id);
+    }
+
+    private static async Task SeedOficinaAsync(
+        IServiceProvider sp, IConfiguration configuration, ILogger logger) {
+        var db = sp.GetRequiredService<AppDbContextUsuarios>();
+        if (await db.Oficinas.AnyAsync(o => o.Id == Oficina.OficinaUnicaId)) return;
+
+        var responsableEmail = configuration["Seed:ResponsableEmail"]?.Trim().ToLowerInvariant();
+        var responsable = !string.IsNullOrWhiteSpace(responsableEmail)
+            ? await db.Trabajadores.FirstOrDefaultAsync(t => t.Email == responsableEmail)
+            : null;
+
+        responsable ??= await db.Trabajadores
+            .FirstOrDefaultAsync(t => t.Activo && !t.IsDeleted && t.Tipo == TipoTrabajador.Operaciones);
+
+        if (responsable is null) {
+            logger.LogWarning("Seed de oficina omitido: no hay ningún trabajador de Operaciones activo");
+            return;
+        }
+
+        var oficina = new Oficina {
+            Id = Oficina.OficinaUnicaId,
+            Nombre = "Oficina Central Leganés",
+            Direccion = "Avenida de la Universidad 1, 28911 Leganés, Madrid",
+            Telefono = "+34 916 000 111",
+            Email = "oficina@alquiler.local",
+            DiaInicio = DayOfWeek.Monday,
+            DiaFin = DayOfWeek.Friday,
+            HoraApertura = new TimeOnly(9, 0),
+            HoraCierre = new TimeOnly(20, 0),
+            ResponsableId = responsable.Id
+        };
+
+        db.Oficinas.Add(oficina);
+        await db.SaveChangesAsync();
+        logger.LogInformation("Oficina única sembrada con responsable {ResponsableId}", responsable.Id);
     }
 
     private static void LogErrores(ILogger logger, string contexto, IEnumerable<IdentityError> errores) {

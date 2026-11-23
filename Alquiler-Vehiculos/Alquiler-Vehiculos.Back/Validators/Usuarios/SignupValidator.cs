@@ -12,6 +12,8 @@ public class SignupValidator : AbstractValidator<SignupDto> {
         RuleFor(x => x.Email)
             .NotEmpty().WithMessage("El email es obligatorio")
             .EmailAddress().WithMessage("Debe ser un email válido")
+            .Matches(@"^[^@\s]+@[^@\s]+\.[^@\s]{2,}$")
+                .WithMessage("El email debe tener un dominio válido (por ejemplo, usuario@dominio.com)")
             .MaximumLength(150);
 
         RuleFor(x => x.Password)
