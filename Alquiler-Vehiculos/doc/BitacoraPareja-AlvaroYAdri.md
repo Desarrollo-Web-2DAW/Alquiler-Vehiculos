@@ -391,9 +391,330 @@ _**Fecha de registro:**_ 22/11/2026 · _**Rama:**_ `feature/taller` · _**Estado
 - **Cobertura del módulo de taller: 211/211 líneas (100 %)** con `dotnet test --collect:"XPlat Code Coverage"`.
 - Suite completa de la rama: **96/96 OK · 0 omitidas**.
 
-### Pendientes
+---
 
-- Endpoints REST de partes: pendientes de la superficie de API que fije el equipo y de la matriz de permisos (RF-46).
-- Transiciones del vehículo a `Mantenimiento` y vuelta al abrir/cerrar partes (RF-05, RF-33) cuando se fusione el módulo de vehículos.
-- RF-07 (entrar en taller con reservas vivas) y CU-12 (avería durante el alquiler) cuando exista el servicio de reservas.
-- Eventos en tiempo real `EntradaTaller`/`SalidaTaller` (RF-37) y semilla con partes en distintos estados (RI-03).
+# Tarea: notificaciones en tiempo real con SignalR
+
+**Fecha de registro:** 23/11/2026 · **Rama:** `feature/notifications/signalr` · **Estado:** infraestructura de SignalR implementada y conexión con los eventos de taller integrada; pendientes los emisores dependientes de Reservas y Vehículos y las pruebas específicas.
+
+### Alcance y requisitos que cubre
+
+| Requisito | Relación con SignalR |
+|---|---|
+| **RF-37** | Notificaciones en tiempo real para el personal: reserva creada, cambio de estado de reserva, vehículo disponible, reserva caducada y entrada/salida de vehículos del taller. |
+| **RF-38** | Caducidad automática de reservas pendientes de pago cada minuto. SignalR deberá comunicar el evento de reserva caducada cuando exista la tarea de negocio correspondiente. |
+| **RF-46** | El personal de oficina puede visualizar los eventos en tiempo real. El acceso se restringe a Trabajador, Responsable y Admin. |
+
+La implementación se centra en la infraestructura de comunicación, la autorización, la conexión desde la aplicación cliente y la integración con los eventos de taller que ya tienen operaciones de negocio.
+
+Los eventos de reservas y disponibilidad de vehículos quedan preparados para conectarse cuando estén terminados esos módulos. No se crean servicios ni operaciones ficticias para adelantarse a su implementación.
+
+---
+
+## 1. Investigación: organización de SignalR
+
+He utilizado SignalR de ASP.NET Core para implementar la comunicación en tiempo real entre la API y la aplicación cliente Razor Pages.
+
+La solución se organiza en torno a estos elementos:
+
+- **Hub (`NotificacionesHub`)**: punto de conexión al que se conectan los clientes autorizados.
+- **Grupo de destinatarios**: agrupa las conexiones del personal de oficina para enviar una notificación a todos sus integrantes sin tener que gestionar individualmente cada conexión.
+- **Contexto del Hub (`IHubContext`)**: permite enviar eventos desde los servicios de la aplicación sin depender directamente de una conexión concreta.
+- **Extensión de envío (`NotificacionesHubExtensions`)**: centraliza el envío de notificaciones al grupo de trabajadores.
+- **Catálogo de eventos (`NotificacionEventos`)**: mantiene los nombres de los eventos en un único lugar para evitar cadenas duplicadas y errores tipográficos.
+
+La comunicación se realiza desde el backend hacia los clientes conectados. No se exponen métodos del Hub para que los clientes puedan incorporarse arbitrariamente a grupos.
+
+---
+
+## 2. Decisiones tomadas
+
+Cada decisión responde a una necesidad concreta del proyecto y evita introducir dependencias innecesarias.
+
+**D1 — Un único Hub para las notificaciones del personal.**
+
+- *Justificación:* todos los eventos de RF-37 están dirigidos al personal de oficina. Un único Hub simplifica la conexión, la autorización y el mantenimiento.
+- *Alternativa descartada:* crear un Hub independiente para cada tipo de notificación, porque dividiría una funcionalidad que comparte destinatarios y configuración.
+
+**D2 — Grupo común `trabajadores-oficina`.**
+
+- *Justificación:* permite distribuir cada evento a todos los trabajadores de oficina conectados mediante `Clients.Group(...)`.
+- *Implementación:* al establecer una conexión, `NotificacionesHub.OnConnectedAsync()` incorpora automáticamente la conexión al grupo.
+- *Alternativa descartada:* enviar individualmente a cada usuario o gestionar manualmente la pertenencia desde el cliente.
+
+**D3 — Autorización mediante la política existente `PolicyNames.Trabajador`.**
+
+- *Justificación:* la política ya admite los roles Trabajador, Responsable y Admin, que son los destinatarios de las notificaciones.
+- *Implementación:* el Hub utiliza `[Authorize(Policy = PolicyNames.Trabajador)]`.
+- *Alternativa descartada:* crear una política específica duplicando los mismos roles o permitir conexiones sin autenticar.
+
+**D4 — Autenticación JWT para la conexión SignalR.**
+
+- *Justificación:* el backend ya utiliza JWT Bearer y la aplicación cliente utiliza autenticación mediante cookies. Se necesita trasladar el token JWT de la sesión autenticada al cliente SignalR sin exponerlo en el código HTML.
+- *Implementación:* se ha creado el endpoint protegido `/auth/signalr-token` en Clients, que obtiene el JWT del claim `access_token` de la identidad autenticada. El endpoint responde con `Cache-Control: no-store`.
+- *Alternativa descartada:* almacenar el JWT en almacenamiento accesible desde JavaScript o incluirlo directamente en la página.
+
+**D5 — Transporte Long Polling.**
+
+- *Justificación:* se ha utilizado `HttpTransportType.LongPolling` para la conexión actual, que permite enviar el token mediante la cabecera de autorización.
+- *Implicación:* no ha sido necesario añadir `OnMessageReceived` a la configuración general de JWT para extraer `access_token` de la URL. Si se cambia a WebSockets o Server-Sent Events, habrá que revisar ese mecanismo de autenticación.
+- *Alternativa descartada:* modificar innecesariamente la configuración general de autenticación del proyecto para una necesidad que el transporte actual no presenta.
+
+**D6 — Configuración CORS específica para SignalR.**
+
+- *Justificación:* el frontend y la API funcionan en orígenes distintos durante el desarrollo. La conexión necesita permitir las credenciales y las cabeceras correspondientes.
+- *Implementación:* política `SignalR`, con el origen `http://localhost:5232`, `AllowAnyHeader()`, `AllowAnyMethod()` y `AllowCredentials()`.
+- *Implicación:* la política debe ejecutarse antes de autenticación y autorización en el pipeline HTTP para que las peticiones preflight no reciban un 401.
+
+**D7 — Catálogo centralizado de nombres de eventos.**
+
+- *Justificación:* evita que los servicios y el cliente utilicen nombres diferentes para un mismo evento.
+- *Implementación:* clase estática `NotificacionEventos` con las seis constantes de RF-37.
+- *Alternativa descartada:* mantener los nombres como cadenas independientes en cada servicio.
+
+**D8 — Reconexión automática y reintento de la conexión inicial.**
+
+- *Justificación:* `withAutomaticReconnect()` gestiona las desconexiones posteriores a una conexión establecida, pero no reintenta por sí solo un fallo inicial de `connection.start()`.
+- *Implementación:* se combina la reconexión automática de SignalR con un reintento manual cada cinco segundos cuando falla la conexión inicial o se agotan los intentos automáticos.
+- *Alternativa descartada:* confiar exclusivamente en `withAutomaticReconnect()`, porque dejaría sin cubrir los fallos de conexión iniciales.
+
+**D9 — URL del Hub obtenida desde configuración.**
+
+- *Justificación:* evitar direcciones del backend escritas directamente en JavaScript y facilitar los cambios de entorno.
+- *Implementación:* Razor Pages obtiene `Api:BaseUrl` mediante `IConfiguration`, construye la ruta `/hubs/notificaciones` y la expone mediante el atributo `data-hub-url`.
+- *Alternativa descartada:* mantener `http://localhost:5216/hubs/notificaciones` fija en el archivo JavaScript.
+
+**D10 — Envío de eventos desde los servicios mediante `IHubContext`.**
+
+- *Justificación:* los servicios de negocio pueden publicar notificaciones sin depender del ciclo de vida de una conexión SignalR.
+- *Implementación:* se utiliza `IHubContext<NotificacionesHub>` y una extensión genérica para enviar eventos al grupo de trabajadores.
+- *Alternativa descartada:* introducir referencias directas al Hub dentro de los servicios o enviar desde los controladores.
+
+---
+
+## 3. Diseño del flujo
+
+Flujo de conexión:
+
+1. El trabajador inicia sesión en Clients.
+2. La aplicación obtiene el JWT almacenado en el claim `access_token` de la cookie autenticada.
+3. SignalR solicita `/auth/signalr-token` mediante `accessTokenFactory`.
+4. El cliente establece la conexión con `/hubs/notificaciones`.
+5. El backend valida el JWT y la política `PolicyNames.Trabajador`.
+6. `NotificacionesHub.OnConnectedAsync()` incorpora la conexión a `trabajadores-oficina`.
+7. Cuando un servicio de negocio genera un evento, utiliza `IHubContext` para distribuirlo al grupo.
+8. El JavaScript recibe el evento y lo presenta en la página de notificaciones.
+
+Flujo de una notificación:
+
+**Operación de negocio → persistencia correcta → `IHubContext` → grupo `trabajadores-oficina` → evento SignalR → cliente Razor Pages → notificación visual.**
+
+Los eventos de taller se integran después de la operación correspondiente. Los emisores de reservas y disponibilidad se incorporarán cuando existan las operaciones de negocio definitivas.
+
+---
+
+## 4. Estructura en el proyecto
+
+```text
+Alquiler-Vehiculos.Back/
+  Realtime/
+    NotificacionesHub.cs
+    NotificacionesHubExtensions.cs
+    NotificacionEventos.cs
+
+  Infrastructure/
+    SignalRExtensions.cs
+
+  Services/
+    Taller/
+      ParteTallerService.cs
+
+Alquiler-Vehiculos.Clients/
+  Pages/
+    Notificaciones.cshtml
+    Notificaciones.cshtml.cs
+
+  wwwroot/
+    js/
+      notificaciones.js
+    css/
+      notificaciones.css
+```
+
+### Responsabilidad de cada archivo
+
+- `NotificacionesHub.cs`: Hub protegido por la política de trabajadores y asignación automática al grupo de oficina.
+- `NotificacionesHubExtensions.cs`: extensión genérica `SendToTrabajadoresAsync<T>()` para enviar notificaciones a todos los integrantes del grupo.
+- `NotificacionEventos.cs`: catálogo de los seis nombres de evento.
+- `SignalRExtensions.cs`: registro de SignalR, configuración de CORS y opciones del Hub, además de la extensión para mapear el endpoint.
+- `Notificaciones.cshtml`: página Razor que presenta el estado de conexión y el contenedor de notificaciones.
+- `notificaciones.js`: obtención del token, conexión, reconexión y recepción de eventos.
+- `notificaciones.css`: presentación visual de las notificaciones.
+
+---
+
+## 5. Implementación
+
+### 5.1. Hub y grupo de destinatarios
+
+Se ha creado `NotificacionesHub`, protegido mediante:
+
+```csharp
+[Authorize(Policy = PolicyNames.Trabajador)]
+```
+
+El Hub incorpora automáticamente cada conexión autenticada al grupo:
+
+```csharp
+public const string GrupoTrabajadoresOficina = "trabajadores-oficina";
+```
+
+La incorporación se realiza en `OnConnectedAsync()`, sin permitir que el cliente elija libremente a qué grupo incorporarse.
+
+### 5.2. Extensión para enviar notificaciones
+
+Se ha implementado `SendToTrabajadoresAsync<T>()`, que utiliza:
+
+```csharp
+hubContext.Clients
+    .Group(NotificacionesHub.GrupoTrabajadoresOficina)
+    .SendAsync(nombreEvento, datos, cancellationToken);
+```
+
+De esta forma, cualquier servicio puede publicar una notificación utilizando el nombre del evento y sus datos, sin conocer los detalles de las conexiones activas.
+
+### 5.3. Catálogo de eventos
+
+Se han definido los seis eventos previstos en RF-37:
+
+| Constante | Nombre enviado |
+|---|---|
+| `ReservaCreada` | `ReservaCreada` |
+| `EstadoReservaCambiado` | `EstadoReservaCambiado` |
+| `VehiculoDisponible` | `VehiculoDisponible` |
+| `ReservaCaducada` | `ReservaCaducada` |
+| `VehiculoEntradaTaller` | `VehiculoEntradaTaller` |
+| `VehiculoSalidaTaller` | `VehiculoSalidaTaller` |
+
+Los nombres se mantienen centralizados para que los emisores y receptores utilicen el mismo identificador.
+
+### 5.4. Configuración y registro
+
+En `SignalRExtensions.cs` se ha implementado:
+
+- Registro de SignalR mediante `AddSignalR()`.
+- Configuración de `EnableDetailedErrors = true`.
+- Tamaño máximo de mensaje de 4 KB.
+- Intervalo de mantenimiento de conexión de 15 segundos.
+- Política CORS específica.
+- Mapeo del Hub en `/hubs/notificaciones`.
+
+En `Program.cs` se han incorporado:
+
+```csharp
+builder.Services.AddRealtimeSignalR();
+```
+
+Y, en el pipeline:
+
+```csharp
+app.UseCors(SignalRExtensions.CorsPolicy);
+```
+
+antes de autenticación y autorización.
+
+Finalmente, se mapea el Hub:
+
+```csharp
+app.MapSignalRHubs();
+```
+
+### 5.5. Integración con autenticación en Clients
+
+Se ha añadido el endpoint protegido `/auth/signalr-token`, que obtiene el JWT desde el claim `access_token` de la sesión autenticada.
+
+La página de notificaciones utiliza `IConfiguration` para obtener `Api:BaseUrl` y construir la dirección del Hub. Así, el JavaScript no necesita conocer la dirección concreta de la API.
+
+La conexión se realiza con el cliente oficial de SignalR para JavaScript, cargado desde CDN.
+
+### 5.6. Reconexión
+
+El cliente incorpora:
+
+- Estado visual de conexión: conectando, conectado, reconectando y desconectado.
+- `withAutomaticReconnect()` para recuperar conexiones interrumpidas.
+- Reintentos manuales cada cinco segundos cuando falla la conexión inicial.
+- Reintentos manuales cuando se agotan los intentos automáticos.
+
+La conexión comprueba que se encuentra en estado `Disconnected` antes de iniciar un nuevo intento.
+
+### 5.7. Integración de los eventos de taller
+
+Se ha integrado SignalR en `ParteTallerService`, utilizando `IHubContext<NotificacionesHub>`.
+
+- `AbrirParteAsync`: después de persistir correctamente el parte, emite `VehiculoEntradaTaller`.
+- `CerrarParteAsync`: después de actualizar correctamente el parte, emite `VehiculoSalidaTaller`.
+
+Los datos enviados contienen:
+
+- `VehiculoId`.
+- `Descripcion`.
+- `Fecha`.
+
+No se incluyen datos personales del trabajador.
+
+En el cliente se reciben ambos eventos y se muestran con un título, una descripción y la fecha correspondiente.
+
+**Límite funcional:** cerrar un parte no implica por sí mismo cambiar el estado del vehículo a Disponible. Esa transición pertenece a la integración con el módulo de vehículos y no se ha inventado ni añadido al servicio de taller.
+
+---
+
+## 6. Registro de implementación (23/11/2026)
+
+- Se implementó el Hub `NotificacionesHub`, protegido por `PolicyNames.Trabajador`.
+- Se creó el grupo `trabajadores-oficina` y la incorporación automática de conexiones autenticadas.
+- Se creó la extensión genérica `SendToTrabajadoresAsync<T>()`.
+- Se centralizaron los seis nombres de evento en `NotificacionEventos`.
+- Se registró SignalR en el backend mediante `AddRealtimeSignalR()` y se mapeó `/hubs/notificaciones`.
+- Se configuró CORS para el origen de Clients y se corrigió el orden del pipeline, colocando `UseCors()` antes de autenticación y autorización.
+- Se añadió el endpoint `/auth/signalr-token` en Clients para proporcionar el JWT a SignalR sin incluirlo en el HTML.
+- Se creó la página `Notificaciones.cshtml` y sus recursos CSS y JavaScript.
+- Se implementó la recepción visual de los eventos de entrada y salida del taller.
+- Se añadió la reconexión automática y el mecanismo de reintento manual para fallos de conexión iniciales.
+- Se sustituyó la URL fija del Hub en JavaScript por una dirección construida desde `Api:BaseUrl` en Razor Pages.
+- Se comprobó que la conexión llegaba al estado `Conectado`.
+- Se comprobó la compilación del proyecto Backend y, tras el cambio de URL configurable, la compilación de Clients también terminó correctamente.
+- Se comprobó el registro de `AddRealtimeSignalR()` junto a `AddTallerServices()` en la configuración de pruebas del taller.
+
+**Resultado de compilación comprobado:**
+
+- Backend: compilación correcta.
+- Clients: compilación correcta, `net10.0`, sin errores ni advertencias en la salida compartida.
+
+---
+
+## 7. Pendientes e integración con el grupo
+
+La infraestructura de comunicación está implementada. Quedan pendientes las integraciones que necesitan operaciones de negocio todavía no disponibles.
+
+| Evento | Integración pendiente |
+|---|---|
+| `ReservaCreada` | Emisión desde la operación real de creación de reservas. |
+| `EstadoReservaCambiado` | Emisión desde la operación real que modifica el estado de una reserva. |
+| `ReservaCaducada` | Emisión desde la tarea programada de RF-38 cuando caduque una reserva. |
+| `VehiculoDisponible` | Emisión desde la operación real que restablezca la disponibilidad del vehículo. |
+| `VehiculoEntradaTaller` | Integrado en `AbrirParteAsync`. |
+| `VehiculoSalidaTaller` | Integrado en `CerrarParteAsync`. |
+
+**Pendientes concretos:**
+
+- Integrar los cuatro emisores cuando estén terminados los módulos de Reservas y Vehículos.
+- Acordar los datos definitivos de cada evento con sus respectivas operaciones de negocio, sin inventar DTOs ni propiedades antes de conocerlas.
+- Completar la integración de RF-38 con la tarea de caducidad de reservas.
+- Revisar el tratamiento de fallos de envío de SignalR para que una notificación no convierta una operación ya persistida en un falso fallo.
+- Realizar pruebas específicas de SignalR, separadas de las pruebas unitarias de Taller.
+- Comprobar la recepción de los seis eventos de extremo a extremo cuando estén disponibles todos los emisores.
+
+**Alcance respetado:** no se han creado servicios, repositorios, controladores ni operaciones ficticias de reservas o vehículos. Tampoco se han modificado las configuraciones generales de autenticación de otros compañeros para resolver necesidades que no exige el transporte actual.
+
+La integración final de los emisores se realizará cuando estén disponibles las operaciones reales, manteniendo esta infraestructura común de SignalR.

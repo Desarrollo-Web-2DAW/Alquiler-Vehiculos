@@ -1,29 +1,23 @@
 @page
 @model NotificacionesModel
-
+@inject IConfiguration Configuration
 @{
     ViewData["Title"] = "Notificaciones";
 }
-
-<div class="container">
+<div id="notificaciones-page"
+     class="container"
+     data-hub-url="@(Configuration["Api:BaseUrl"]!.TrimEnd('/') + "/hubs/notificaciones")">
     <h1>Notificaciones en tiempo real</h1>
-    <p>
-        Estado de conexión:
-        <span id="connection-status" class="badge bg-secondary">
-            Desconectado
-        </span>
+    <p>Estado de conexión:
+        <span id="connection-status" class="badge bg-secondary">Desconectado</span>
     </p>
     <div id="notifications-container" class="mt-4" role="log" aria-live="polite" aria-relevant="additions">
-        <p class="text-muted">
-            Esperando notificaciones...
-        </p>
+        <p class="text-muted">Esperando notificaciones...</p>
     </div>
 </div>
-
 @section Styles {
-    <link rel="stylesheet" href="~/css/notificaciones.css" asp-append-version="true"/>
+    <link rel="stylesheet" href="~/css/notificaciones.css" asp-append-version="true" />
 }
-
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@10.0.0/dist/browser/signalr.min.js"></script>
     <script src="~/js/notificaciones.js" asp-append-version="true"></script>

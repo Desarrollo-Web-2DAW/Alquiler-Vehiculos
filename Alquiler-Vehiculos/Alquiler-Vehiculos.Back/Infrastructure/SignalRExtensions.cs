@@ -2,16 +2,20 @@ using Alquiler_Vehiculos.Realtime;
 
 namespace Alquiler_Vehiculos.Infrastructure;
 
-/// <summary>
-///     Configuración de SignalR.
-/// </summary>
 public static class SignalRExtensions {
-    /// <summary>
-    ///     Configura el Hub de notificaciones de SignalR.
-    /// </summary>
-    /// <param name="services">Colección de servicios.</param>
-    /// <returns>IServiceCollection.</returns>
+    public const string CorsPolicy = "SignalR";
+
     public static IServiceCollection AddRealtimeSignalR(this IServiceCollection services) {
+        services.AddCors(options => {
+            options.AddPolicy(CorsPolicy, policy => {
+                policy
+                    .WithOrigins("http://localhost:5232")
+                    .AllowAnyHeader()
+                    .AllowAnyMethod()
+                    .AllowCredentials();
+            });
+        });
+
         services.AddSignalR()
             .AddHubOptions<NotificacionesHub>(options => {
                 options.EnableDetailedErrors = true;
@@ -22,16 +26,9 @@ public static class SignalRExtensions {
         return services;
     }
 
-    /// <summary>
-    ///     Mapea el endpoint del Hub de notificaciones.
-    /// </summary>
-    /// <param name="app">Application builder.</param>
-    /// <returns>Application builder.</returns>
     public static IApplicationBuilder MapSignalRHubs(this IApplicationBuilder app) {
         var webApp = (WebApplication)app;
-
         webApp.MapHub<NotificacionesHub>("/hubs/notificaciones");
-
         return app;
     }
 }

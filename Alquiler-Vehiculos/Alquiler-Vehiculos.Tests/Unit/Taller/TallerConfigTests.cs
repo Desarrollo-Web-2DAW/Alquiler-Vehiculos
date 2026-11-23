@@ -24,6 +24,7 @@ public class TallerConfigTests {
         // Arrange
         var servicios = new ServiceCollection();
         servicios.AddLogging();
+        servicios.AddRealtimeSignalR();
         servicios.AddTallerServices();
 
         // Act

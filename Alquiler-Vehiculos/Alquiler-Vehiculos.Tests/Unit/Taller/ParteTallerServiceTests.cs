@@ -3,11 +3,14 @@ using Alquiler_Vehiculos.Enums.Taller;
 using Alquiler_Vehiculos.Enums.Usuarios;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
+using Alquiler_Vehiculos.Realtime;
 using Alquiler_Vehiculos.Repositories.Taller;
 using Alquiler_Vehiculos.Services.Taller;
 using Alquiler_Vehiculos.Validators.Taller;
 using FluentAssertions;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Taller;
 
@@ -22,14 +25,32 @@ namespace Alquiler_Vehiculos.Tests.Unit.Taller;
 public class ParteTallerServiceTests {
     private InMemoryParteTallerRepository _repositorio = null!;
     private ParteTallerService _servicio = null!;
+    private Mock<IHubContext<NotificacionesHub>> _hubContext = null!;
+    private Mock<IHubClients> _hubClients = null!;
+    private Mock<IClientProxy> _clientProxy = null!;
+
 
     [SetUp]
     public void Setup() {
         _repositorio = new InMemoryParteTallerRepository();
+
+        _clientProxy = new Mock<IClientProxy>();
+        _hubClients = new Mock<IHubClients>();
+        _hubContext = new Mock<IHubContext<NotificacionesHub>>();
+
+        _hubClients
+            .Setup(c => c.Group(NotificacionesHub.GrupoTrabajadoresOficina))
+            .Returns(_clientProxy.Object);
+
+        _hubContext
+            .Setup(h => h.Clients)
+            .Returns(_hubClients.Object);
+
         _servicio = new ParteTallerService(
             _repositorio,
             new AbrirParteValidator(),
-            NullLogger<ParteTallerService>.Instance);
+            NullLogger<ParteTallerService>.Instance,
+            _hubContext.Object);
     }
 
     private static Trabajador Mecanico() {

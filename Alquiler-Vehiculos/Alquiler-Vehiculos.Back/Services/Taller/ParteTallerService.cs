@@ -9,6 +9,8 @@ using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
 using Alquiler_Vehiculos.Repositories.Taller;
 using CSharpFunctionalExtensions;
 using FluentValidation;
+using Alquiler_Vehiculos.Realtime;
+using Microsoft.AspNetCore.SignalR;
 
 namespace Alquiler_Vehiculos.Services.Taller;
 
@@ -23,7 +25,8 @@ namespace Alquiler_Vehiculos.Services.Taller;
 public class ParteTallerService(
     IParteTallerRepository repository,
     IValidator<AbrirParteDto> abrirParteValidator,
-    ILogger<ParteTallerService> logger
+    ILogger<ParteTallerService> logger,
+    IHubContext<NotificacionesHub> hubContext
 ) : IParteTallerService {
     public async Task<Result<ParteTallerDto, DomainError>> AbrirParteAsync(
         Trabajador tramitador, AbrirParteDto dto, CancellationToken ct = default) {
@@ -52,6 +55,14 @@ public class ParteTallerService(
                 dto.VehiculoId);
             return Result.Failure<ParteTallerDto, DomainError>(ParteTallerError.ParteAbiertaExistente(dto.VehiculoId));
         }
+        
+        await EnviarNotificacionAsync(
+            NotificacionEventos.VehiculoEntradaTaller,
+            new {
+                parte.VehiculoId,
+                parte.Descripcion,
+                Fecha = parte.Fecha
+            });
 
         logger.LogInformation(
             "Parte {ParteId} abierto para el vehículo {VehiculoId} por el trabajador {TrabajadorId}",
@@ -80,6 +91,14 @@ public class ParteTallerService(
 
         parte.Estado = EstadoParte.Cerrado;
         await repository.ActualizarAsync(parte, ct);
+        
+        await EnviarNotificacionAsync(
+            NotificacionEventos.VehiculoSalidaTaller,
+            new {
+                parte.VehiculoId,
+                parte.Descripcion,
+                Fecha = DateTime.UtcNow
+            });
 
         logger.LogInformation(
             "Parte {ParteId} cerrado para el vehículo {VehiculoId} por el trabajador {TrabajadorId}",
@@ -146,5 +165,22 @@ public class ParteTallerService(
                 }));
         }
         return Result.Success<bool, DomainError>(true);
+    }
+    
+    private async Task EnviarNotificacionAsync<T>(
+        string nombreEvento,
+        T datos) {
+        try {
+            await hubContext.SendToTrabajadoresAsync(
+                nombreEvento,
+                datos,
+                CancellationToken.None);
+        }
+        catch (Exception ex) {
+            logger.LogError(
+                ex,
+                "No se pudo enviar la notificación SignalR {NombreEvento}",
+                nombreEvento);
+        }
     }
 }
