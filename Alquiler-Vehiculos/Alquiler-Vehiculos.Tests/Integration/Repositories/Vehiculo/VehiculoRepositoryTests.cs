@@ -9,7 +9,7 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [TestFixture]
 [Category("Integration")]
 [NonParallelizable]
-public class VehiculoRepositoryTests : RepositoryTestBase {
+public partial class VehiculoRepositoryTests : RepositoryTestBase {
     [Test]
     public async Task Create_MatriculaDeVehiculoDeBaja_ContinuaReservada()
     {

@@ -17,6 +17,7 @@ public class QueryRequestVehiculoValidator : AbstractValidator<QueryRequestVehic
     public QueryRequestVehiculoValidator() {
         RuleFor(v => v.Categoria)
             .Must(texto => !int.TryParse(texto, out _)
+                && !texto!.Contains(',')
                 && Enum.TryParse<TipoCarroceria>(texto, true, out var categoria)
                 && Enum.IsDefined(categoria))
             .WithMessage("La categoría indicada no es válida.")
@@ -24,6 +25,7 @@ public class QueryRequestVehiculoValidator : AbstractValidator<QueryRequestVehic
 
         RuleFor(v => v.Estado)
             .Must(texto => !int.TryParse(texto, out _)
+                && !texto!.Contains(',')
                 && Enum.TryParse<EstadoVehiculo>(texto, true, out var estado)
                 && Enum.IsDefined(estado))
             .WithMessage("El estado indicado no es válido.")
@@ -31,6 +33,7 @@ public class QueryRequestVehiculoValidator : AbstractValidator<QueryRequestVehic
 
         RuleFor(v => v.Combustible)
             .Must(texto => !int.TryParse(texto, out _)
+                && !texto!.Contains(',')
                 && Enum.TryParse<TipoCombustible>(texto, true, out var combustible)
                 && Enum.IsDefined(combustible))
             .WithMessage("El combustible indicado no es válido.")
@@ -38,6 +41,7 @@ public class QueryRequestVehiculoValidator : AbstractValidator<QueryRequestVehic
 
         RuleFor(v => v.Transmision)
             .Must(texto => !int.TryParse(texto, out _)
+                && !texto!.Contains(',')
                 && Enum.TryParse<TipoTransmision>(texto, true, out var transmision)
                 && Enum.IsDefined(transmision))
             .WithMessage("La transmisión indicada no es válida.")

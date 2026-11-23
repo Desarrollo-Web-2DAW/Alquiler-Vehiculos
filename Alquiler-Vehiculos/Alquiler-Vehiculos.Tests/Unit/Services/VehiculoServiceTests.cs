@@ -11,6 +11,7 @@ using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Services.Vehiculo;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
+using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
@@ -25,7 +26,7 @@ namespace Alquiler_Vehiculos.Tests.Unit.Services;
 /// </summary>
 [TestFixture]
 [Category("Unit")]
-public class VehiculoServiceTests
+public partial class VehiculoServiceTests
 {
     [Test]
     public async Task GetById_IdIgualAMatricula_UsaClavesDistintas()
@@ -166,7 +167,8 @@ public class VehiculoServiceTests
             _cache.Object,
             new CreateVehiculoValidator(),
             new UpdateVehiculoValidator(),
-            _concesionarioRepository.Object);
+            _concesionarioRepository.Object,
+            new QueryRequestVehiculoValidator());
     }
 
     private static CreateVehiculoDto CrearCreateValido() => new()

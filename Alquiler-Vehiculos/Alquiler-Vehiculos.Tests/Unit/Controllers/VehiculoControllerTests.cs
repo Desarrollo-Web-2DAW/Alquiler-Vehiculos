@@ -1,0 +1,217 @@
+using Alquiler_Vehiculos.Controllers.Vehiculo;
+using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
+using Alquiler_Vehiculos.Errors.Common;
+using Alquiler_Vehiculos.Errors.Storage;
+using Alquiler_Vehiculos.Services.Storage;
+using Alquiler_Vehiculos.Services.Vehiculo;
+using CSharpFunctionalExtensions;
+using FluentAssertions;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
+using Moq;
+
+namespace Alquiler_Vehiculos.Tests.Unit.Controllers;
+
+/// <summary>Prueba las acciones directamente; no sustituye pruebas HTTP de autenticación y permisos.</summary>
+[TestFixture]
+[Category("Unit")]
+public class VehiculoControllerTests {
+    private const string Id = "Abcdef123_-";
+    private Mock<IVehiculoService> _service = null!;
+    private Mock<IStorageService> _storage = null!;
+    private VehiculoController _controller = null!;
+
+    [SetUp]
+    public void SetUp() {
+        _service = new Mock<IVehiculoService>();
+        _storage = new Mock<IStorageService>();
+        _controller = new VehiculoController(_service.Object, _storage.Object);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task GetAll_ConOSinDatos_DevuelveColeccion(bool vacia) {
+        // Arrange
+        VehiculoDto[] items = vacia ? [] : [new() { Id = Id }];
+        _service.Setup(s => s.GetAll()).ReturnsAsync(items);
+
+        // Act
+        var resultado = await _controller.GetAll();
+
+        // Assert
+        resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(items);
+        _service.Verify(s => s.GetAll(), Times.Once);
+        _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [TestCase(0, 10)]
+    [TestCase(-1, 10)]
+    [TestCase(1, 0)]
+    [TestCase(1, -1)]
+    public async Task GetPaged_ParametrosInvalidos_Devuelve400SinConsultar(int page, int size) {
+        // Arrange
+        var controller = _controller;
+
+        // Act
+        var resultado = await controller.GetPaged(page, size);
+
+        // Assert
+        resultado.Result.Should().BeOfType<BadRequestObjectResult>();
+        _service.Verify(s => s.GetPaged(It.IsAny<int>(), It.IsAny<int>()), Times.Never);
+    }
+
+    [TestCase(0, 0)]
+    [TestCase(21, 3)]
+    public async Task GetPaged_ParametrosValidos_DevuelveMetadatos(int total, int paginas) {
+        // Arrange
+        VehiculoDto[] items = total == 0 ? [] : [new() { Id = Id }];
+        _service.Setup(s => s.GetPaged(1, 10)).ReturnsAsync((items, total));
+
+        // Act
+        var resultado = await _controller.GetPaged();
+
+        // Assert
+        resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeEquivalentTo(new {
+            Items = items, TotalItems = total, Page = 1, PageSize = 10, TotalPages = paginas
+        });
+        _service.Verify(s => s.GetPaged(1, 10), Times.Once);
+        _service.Verify(s => s.GetAll(), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task ConsultarORestaurar_Exito_Devuelve200ConDto(bool restaurar) {
+        // Arrange
+        var dto = new VehiculoDto { Id = Id };
+        if (restaurar) _service.Setup(s => s.Restore(Id)).ReturnsAsync(Result.Success<VehiculoDto, DomainError>(dto));
+        else _service.Setup(s => s.GetById(Id)).ReturnsAsync(Result.Success<VehiculoDto, DomainError>(dto));
+
+        // Act
+        var resultado = restaurar ? await _controller.Restore(Id) : await _controller.GetById(Id);
+
+        // Assert
+        resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(dto);
+        _service.Verify(s => s.Restore(Id), restaurar ? Times.Once() : Times.Never());
+        _service.Verify(s => s.GetById(Id), restaurar ? Times.Never() : Times.Once());
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Guardar_ArchivoCorrecto_ConstruyeDtoCompletoYDevuelveExito(bool actualizar) {
+        // Arrange
+        using var contenido = new MemoryStream([1, 2, 3]);
+        IFormFile foto = new FormFile(contenido, 0, contenido.Length, "foto", "coche.jpg");
+        var response = new VehiculoDto { Id = Id };
+        CreateVehiculoDto? alta = null;
+        UpdateVehiculoDto? cambio = null;
+        _storage.Setup(s => s.SaveFileAsync(foto, "vehiculos")).ReturnsAsync(Result.Success<string, DomainError>("foto-id"));
+        if (actualizar)
+            _service.Setup(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id)).Callback<UpdateVehiculoDto, string>((d, _) => cambio = d)
+                .ReturnsAsync(Result.Success<VehiculoDto, DomainError>(response));
+        else
+            _service.Setup(s => s.Create(It.IsAny<CreateVehiculoDto>())).Callback<CreateVehiculoDto>(d => alta = d)
+                .ReturnsAsync(Result.Success<VehiculoDto, DomainError>(response));
+
+        // Act
+        var resultado = await Guardar(actualizar, foto);
+
+        // Assert
+        object? dto = actualizar ? cambio : alta;
+        dto.Should().BeEquivalentTo(new {
+            Foto = "foto-id", Matricula = "1234BCD", Marca = "Renault", Modelo = "Megane", Acriss = "CDMD",
+            Color = "Rojo", PrecioBaseDia = 50m, Plazas = 5, MaleteroLitros = 400, AutonomiaKm = 600,
+            Kilometraje = 12000, FechaUltimaRevision = "2026-01-01", Concesionario = 1L
+        });
+        if (actualizar) resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(response);
+        else {
+            var creado = resultado.Result.Should().BeOfType<CreatedAtActionResult>().Subject;
+            creado.ActionName.Should().Be(nameof(VehiculoController.GetById));
+            creado.RouteValues!["id"].Should().Be(Id);
+            creado.Value.Should().BeSameAs(response);
+        }
+        _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), Times.Once);
+        _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), actualizar ? Times.Never() : Times.Once());
+        _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), actualizar ? Times.Once() : Times.Never());
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Guardar_AlmacenamientoFalla_NoLlamaAlServicio(bool actualizar) {
+        // Arrange
+        using var contenido = new MemoryStream([1]);
+        IFormFile foto = new FormFile(contenido, 0, 1, "foto", "coche.jpg");
+        _storage.Setup(s => s.SaveFileAsync(foto, "vehiculos"))
+            .ReturnsAsync(Result.Failure<string, DomainError>(StorageError.ErrorGuardando()));
+
+        // Act
+        var resultado = await Guardar(actualizar, foto);
+
+        // Assert
+        resultado.Result.Should().BeOfType<ObjectResult>().Which.StatusCode.Should().Be(500);
+        _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), Times.Once);
+        _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), Times.Never);
+        _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Delete_Exito_ConservaBooleano(bool eliminado) {
+        // Arrange
+        _service.Setup(s => s.SoftDelete(Id)).ReturnsAsync(Result.Success<bool, DomainError>(eliminado));
+
+        // Act
+        var resultado = await _controller.Delete(Id);
+
+        // Assert
+        resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().Be(eliminado);
+        _service.Verify(s => s.SoftDelete(Id), Times.Once);
+    }
+
+    private static IEnumerable<TestCaseData> Errores() {
+        foreach (var operacion in new[] { "id", "restore", "create", "update", "delete" }) {
+            yield return new TestCaseData(operacion, ValidationError.Create("Dato inválido"), 400);
+            yield return new TestCaseData(operacion, new NotFoundError("NO_EXISTE", "No existe"), 404);
+            yield return new TestCaseData(operacion, new ConflictError("CONFLICTO", "En uso"), 409);
+            yield return new TestCaseData(operacion, new BusinessRuleError("REGLA", "No permitido"), 422);
+            yield return new TestCaseData(operacion, new InternalError("Fallo interno"), 500);
+        }
+    }
+
+    [TestCaseSource(nameof(Errores))]
+    public async Task Operacion_ErrorDominio_ConservaCodigoHttp(string operacion, DomainError error, int status) {
+        // Arrange
+        using var contenido = new MemoryStream([1]);
+        IFormFile foto = new FormFile(contenido, 0, 1, "foto", "coche.jpg");
+        var fallo = Result.Failure<VehiculoDto, DomainError>(error);
+        switch (operacion) {
+            case "id": _service.Setup(s => s.GetById(Id)).ReturnsAsync(fallo); break;
+            case "restore": _service.Setup(s => s.Restore(Id)).ReturnsAsync(fallo); break;
+            case "create": _service.Setup(s => s.Create(It.IsAny<CreateVehiculoDto>())).ReturnsAsync(fallo); break;
+            case "update": _service.Setup(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id)).ReturnsAsync(fallo); break;
+            case "delete": _service.Setup(s => s.SoftDelete(Id)).ReturnsAsync(Result.Failure<bool, DomainError>(error)); break;
+        }
+        if (operacion is "create" or "update")
+            _storage.Setup(s => s.SaveFileAsync(foto, "vehiculos")).ReturnsAsync(Result.Success<string, DomainError>("foto-id"));
+
+        // Act
+        var resultado = operacion switch {
+            "id" => (await _controller.GetById(Id)).Result,
+            "restore" => (await _controller.Restore(Id)).Result,
+            "delete" => (await _controller.Delete(Id)).Result,
+            _ => (await Guardar(operacion == "update", foto)).Result
+        };
+
+        // Assert
+        resultado.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(status);
+        _service.Verify(s => s.GetById(Id), operacion == "id" ? Times.Once() : Times.Never());
+        _service.Verify(s => s.Restore(Id), operacion == "restore" ? Times.Once() : Times.Never());
+        _service.Verify(s => s.SoftDelete(Id), operacion == "delete" ? Times.Once() : Times.Never());
+        _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), operacion == "create" ? Times.Once() : Times.Never());
+        _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), operacion == "update" ? Times.Once() : Times.Never());
+        _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), operacion is "create" or "update" ? Times.Once() : Times.Never());
+    }
+
+    private Task<ActionResult<VehiculoDto>> Guardar(bool actualizar, IFormFile foto) => actualizar
+        ? _controller.Update(Id, foto, "1234BCD", "Renault", "Megane", "CDMD", "Rojo", 50m, 5, 400, 600, 12000, "2026-01-01", 1)
+        : _controller.Create(foto, "1234BCD", "Renault", "Megane", "CDMD", "Rojo", 50m, 5, 400, 600, 12000, "2026-01-01", 1);
+}

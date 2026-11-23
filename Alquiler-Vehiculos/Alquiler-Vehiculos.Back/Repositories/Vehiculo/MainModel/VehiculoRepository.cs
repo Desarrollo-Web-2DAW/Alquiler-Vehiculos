@@ -144,6 +144,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
         // Convertimos cada clasificación solo cuando se ha indicado ese filtro.
         if (!string.IsNullOrEmpty(request.Categoria)) {
             if (int.TryParse(request.Categoria, out _)
+                || request.Categoria.Contains(',')
                 || !Enum.TryParse<TipoCarroceria>(request.Categoria, true, out var categoria)
                 || !Enum.IsDefined(categoria)) return [];
 
@@ -152,6 +153,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
 
         if (!string.IsNullOrEmpty(request.Estado)) {
             if (int.TryParse(request.Estado, out _)
+                || request.Estado.Contains(',')
                 || !Enum.TryParse<EstadoVehiculo>(request.Estado, true, out var estado)
                 || !Enum.IsDefined(estado)) return [];
 
@@ -160,6 +162,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
 
         if (!string.IsNullOrEmpty(request.Combustible)) {
             if (int.TryParse(request.Combustible, out _)
+                || request.Combustible.Contains(',')
                 || !Enum.TryParse<TipoCombustible>(request.Combustible, true, out var combustible)
                 || !Enum.IsDefined(combustible)) return [];
 
@@ -168,6 +171,7 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
 
         if (!string.IsNullOrEmpty(request.Transmision)) {
             if (int.TryParse(request.Transmision, out _)
+                || request.Transmision.Contains(',')
                 || !Enum.TryParse<TipoTransmision>(request.Transmision, true, out var transmision)
                 || !Enum.IsDefined(transmision)) return [];
 
