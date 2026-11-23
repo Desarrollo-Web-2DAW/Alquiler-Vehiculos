@@ -1,0 +1,40 @@
+meta {
+  name: [021] OFICINA - Cambiar responsable como Responsable (403)
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/api/oficina/responsable
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+body:json {
+  {
+    "trabajadorId": "22222222-2222-2222-2222-222222222222"
+  }
+}
+
+script:post-response {
+  test("Cambiar responsable sin rol Admin - Status 403 Forbidden", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  CU-18 / RF-46: solo Admin puede nombrar o relevar al responsable de la oficina.
+}

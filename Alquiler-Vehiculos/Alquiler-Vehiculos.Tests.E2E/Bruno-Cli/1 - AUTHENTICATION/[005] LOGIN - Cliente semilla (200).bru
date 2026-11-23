@@ -1,0 +1,47 @@
+meta {
+  name: [005] LOGIN - Cliente semilla (200)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{clienteEmail}}",
+    "password": "{{clientePassword}}"
+  }
+}
+
+script:post-response {
+  test("Login Cliente - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Login Cliente - Devuelve token y rol Cliente", function () {
+    const body = res.getBody();
+    expect(body.token).to.be.a("string").and.not.be.empty;
+    expect(body.role).to.equal("Cliente");
+  });
+
+  if (res.getStatus() === 200) {
+    bru.setVar("clienteToken", res.getBody().token);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Login del cliente semilla (RF-46). Guarda clienteToken.
+}

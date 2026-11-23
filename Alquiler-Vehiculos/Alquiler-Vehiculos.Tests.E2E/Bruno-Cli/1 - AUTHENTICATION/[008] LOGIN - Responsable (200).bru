@@ -1,0 +1,47 @@
+meta {
+  name: [008] LOGIN - Responsable (200)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{responsableEmail}}",
+    "password": "{{responsablePassword}}"
+  }
+}
+
+script:post-response {
+  test("Login Responsable - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Login Responsable - Devuelve token y rol Responsable", function () {
+    const body = res.getBody();
+    expect(body.token).to.be.a("string").and.not.be.empty;
+    expect(body.role).to.equal("Responsable");
+  });
+
+  if (res.getStatus() === 200) {
+    bru.setVar("responsableToken", res.getBody().token);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Login del responsable de oficina semilla (RF-11, RF-46). Guarda responsableToken.
+}

@@ -1,0 +1,26 @@
+meta {
+  name: [010] ME - Sin token (401)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/auth/me
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("GetMe sin token - Status 401 Unauthorized", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: cualquier petición que exija identificación sin token responde 401.
+}
