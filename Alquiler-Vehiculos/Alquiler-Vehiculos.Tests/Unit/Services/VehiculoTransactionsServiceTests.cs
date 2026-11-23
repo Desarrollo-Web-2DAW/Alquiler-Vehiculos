@@ -13,6 +13,8 @@ using CSharpFunctionalExtensions;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Services;
 
@@ -227,7 +229,7 @@ public class VehiculoTransactionsServiceTests
     }
 
     [Test]
-    public async Task DeleteAsync_CuandoElRepositorioNoBorraElVehiculo_DevuelveBusinessRuleError()
+    public async Task DeleteAsync_CuandoElVehiculoDesapareceAntesDeBorrar_DevuelveNotFound()
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
@@ -237,7 +239,11 @@ public class VehiculoTransactionsServiceTests
         var resultado = await _service.DeleteAsync(VehiculoId);
 
         // Assert
-        resultado.Error.Should().Be(VehiculoError.BorradoError());
+        resultado.Error.Should().Be(ErrorNoEncontrado());
+
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
+        VerificarTransaccionEjecutada();
 
         _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
         _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
@@ -344,7 +350,7 @@ public class VehiculoTransactionsServiceTests
     }
 
     [Test]
-    public async Task UpdateAsync_CuandoFallaElBorradoDeLaFotoAnterior_DevuelveBusinessRuleError()
+    public async Task UpdateAsync_CuandoFallaElBorradoDeLaFotoAnterior_DevuelveInternalError()
     {
         // Arrange
         var datos = CrearVehiculo(fotoFk: FotoNuevaId);
@@ -357,9 +363,43 @@ public class VehiculoTransactionsServiceTests
 
         // Assert
         resultado.Error.Should().Be(
-            new BusinessRuleError("ACTUALIZACION_FOTO", "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
+            new InternalError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
+
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.Update(VehiculoId, datos), Times.Once);
+        VerificarTransaccionEjecutada();
 
         _fotoRepository.Verify(r => r.SoftDelete(FotoId), Times.Once);
+    }
+
+    [TestCase("IX_Vehiculos_Matrícula", true)]
+    [TestCase("OTRA_RESTRICCION", false)]
+    public async Task UpdateAsync_RestriccionUnica_SoloTraduceLaMatricula(string restriccion, bool matriculaDuplicada) {
+        // Arrange
+        var datos = CrearVehiculo(FotoNuevaId);
+        var excepcion = new DbUpdateException("Restricción única", new PostgresException(
+            "Valor duplicado", "ERROR", "ERROR", PostgresErrorCodes.UniqueViolation,
+            constraintName: restriccion));
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculo());
+        _repository.Setup(r => r.Update(VehiculoId, datos)).ThrowsAsync(excepcion);
+        Result<VehiculoModel, DomainError>? resultado = null;
+
+        // Act
+        Func<Task> act = async () => { resultado = await _service.UpdateAsync(VehiculoId, datos); };
+
+        // Assert
+        if (matriculaDuplicada) {
+            await act.Should().NotThrowAsync();
+            resultado!.Value.IsFailure.Should().BeTrue();
+            resultado.Value.Error.Should().Be(VehiculoError.VehiculoYaExiste(datos.Matrícula));
+        } else {
+            await act.Should().ThrowAsync<DbUpdateException>();
+        }
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.Update(VehiculoId, datos), Times.Once);
+        _fotoRepository.Verify(r => r.SoftDelete(It.IsAny<string>()), Times.Never);
+        _parteTallerService.Verify(p => p.TienePartesAbiertosAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerificarTransaccionEjecutada();
     }
 
     [Test]
@@ -410,7 +450,7 @@ public class VehiculoTransactionsServiceTests
     }
 
     [Test]
-    public async Task RestoreAsync_CuandoLaFotoNoSeRestaura_DevuelveBusinessRuleError()
+    public async Task RestoreAsync_CuandoLaFotoNoSeRestaura_DevuelveInternalError()
     {
         // Arrange
         _repository.Setup(r => r.Restore(VehiculoId)).ReturnsAsync(CrearVehiculo());
@@ -421,7 +461,10 @@ public class VehiculoTransactionsServiceTests
 
         // Assert
         resultado.Error.Should().Be(
-            new BusinessRuleError("RESTAURACION_FOTO", "No se pudo restaurar la foto asociada al vehículo."));
+            new InternalError("No se pudo restaurar la foto asociada al vehículo."));
+
+        _repository.Verify(r => r.Restore(VehiculoId), Times.Once);
+        VerificarTransaccionEjecutada();
 
         _fotoRepository.Verify(r => r.Restore(FotoId), Times.Once);
     }

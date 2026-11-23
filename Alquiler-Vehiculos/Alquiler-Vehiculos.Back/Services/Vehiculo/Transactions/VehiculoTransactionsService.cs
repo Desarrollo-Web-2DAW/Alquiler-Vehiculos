@@ -8,12 +8,15 @@ using Alquiler_Vehiculos.Services.Common;
 using Alquiler_Vehiculos.Services.Taller;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions.Common;
 using CSharpFunctionalExtensions;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 
 /// <summary>
 /// Casos de uso transaccionales de Vehículo.
-/// No conoce EF Core: delega el límite transaccional en <see cref="ITransactionManager"/>.
+/// Delega el límite transaccional en <see cref="ITransactionManager"/> y traduce
+/// la restricción de matrícula duplicada a un conflicto de dominio.
     /// Los repositorios guardan cambios dentro del límite transaccional compartido.
 /// </summary>
 public sealed class VehiculoTransactionsService(
@@ -53,16 +56,18 @@ public sealed class VehiculoTransactionsService(
 
             if (!await vehiculoRepository.SoftDelete(id))
             {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.BorradoError());
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
             }
             
             return Result.Success<VehiculoModel, DomainError>(vehiculo);
         }, ct);
 
     /// <inheritdoc />
-    public Task<Result<VehiculoModel, DomainError>> UpdateAsync(
+    public async Task<Result<VehiculoModel, DomainError>> UpdateAsync(
         string id, VehiculoModel datos, CancellationToken ct = default)
-        => transactionManager.ExecuteAsync(async () =>
+    {
+        try {
+            return await transactionManager.ExecuteAsync(async () =>
         {
             logger.LogInformation("Actualizando vehículo {Id}", id);
 
@@ -86,14 +91,21 @@ public sealed class VehiculoTransactionsService(
                 if (!fotoEliminada)
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
-                        new BusinessRuleError(
-                            "ACTUALIZACION_FOTO",
-                            "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
+                        new InternalError("No se pudo actualizar el vehículo: fallo al eliminar la foto anterior."));
                 }
             }
 
             return Result.Success<VehiculoModel, DomainError>(actualizado);
-        }, ct);
+            }, ct);
+        } catch (DbUpdateException ex) when (ex.InnerException is PostgresException {
+            SqlState: PostgresErrorCodes.UniqueViolation,
+            ConstraintName: "IX_Vehiculos_Matrícula"
+        }) {
+            // Se traduce después de que el gestor transaccional haya deshecho la operación.
+            // La comprobación previa del servicio no evita dos escrituras simultáneas (RF-02).
+            return VehiculoError.VehiculoYaExiste(datos.Matrícula);
+        }
+    }
 
     /// <inheritdoc />
     public Task<Result<VehiculoModel, DomainError>> RestoreAsync(string id, CancellationToken ct = default)
@@ -113,7 +125,7 @@ public sealed class VehiculoTransactionsService(
                 if (fotoRestaurada == null)
                 {
                     return Result.Failure<VehiculoModel, DomainError>(
-                        new BusinessRuleError("RESTAURACION_FOTO", "No se pudo restaurar la foto asociada al vehículo."));
+                        new InternalError("No se pudo restaurar la foto asociada al vehículo."));
                 }
             }
             return Result.Success<VehiculoModel, DomainError>(restaurado);

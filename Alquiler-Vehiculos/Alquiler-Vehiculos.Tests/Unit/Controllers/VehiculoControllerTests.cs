@@ -1,5 +1,8 @@
 using Alquiler_Vehiculos.Controllers.Vehiculo;
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
+using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Query;
+using Alquiler_Vehiculos.Errors.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Services.Storage;
@@ -174,7 +177,13 @@ public class VehiculoControllerTests {
             yield return new TestCaseData(operacion, new ConflictError("CONFLICTO", "En uso"), 409);
             yield return new TestCaseData(operacion, new BusinessRuleError("REGLA", "No permitido"), 422);
             yield return new TestCaseData(operacion, new InternalError("Fallo interno"), 500);
+            yield return new TestCaseData(operacion, new UnauthorizedError("SIN_SESION", "Sin identificar"), 401);
+            yield return new TestCaseData(operacion, new ForbiddenError("SIN_PERMISO", "Sin permiso"), 403);
         }
+        yield return new TestCaseData("create", VehiculoError.VehiculoYaExiste("1234BCD"), 409);
+        yield return new TestCaseData("update", VehiculoError.VehiculoYaExiste("1234BCD"), 409);
+        yield return new TestCaseData("delete", VehiculoError.NoDisponibleParaBaja(EstadoVehiculo.Reservado), 409);
+        yield return new TestCaseData("delete", VehiculoError.VehiculoConPartesAbiertos(Id), 409);
     }
 
     [TestCaseSource(nameof(Errores))]
@@ -209,6 +218,49 @@ public class VehiculoControllerTests {
         _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), operacion == "create" ? Times.Once() : Times.Never());
         _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), operacion == "update" ? Times.Once() : Times.Never());
         _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), operacion is "create" or "update" ? Times.Once() : Times.Never());
+    }
+
+    [Test]
+    public async Task GetByMatricula_NoExiste_Devuelve404() {
+        // Arrange
+        _service.Setup(s => s.GetByMatricula("1234BCD"))
+            .ReturnsAsync(Result.Failure<VehiculoDto, DomainError>(VehiculoError.NotFoundVehiculoMatricula("1234BCD")));
+
+        // Act
+        var resultado = await _controller.GetByMatricula("1234BCD");
+
+        // Assert
+        resultado.Result.Should().BeOfType<NotFoundObjectResult>();
+        _service.Verify(s => s.GetByMatricula("1234BCD"), Times.Once);
+        _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [TestCase(false, false, 400)]
+    [TestCase(true, false, 400)]
+    [TestCase(false, true, 500)]
+    [TestCase(true, true, 500)]
+    public async Task GetByFilters_ErrorServicio_ConservaCodigoYPerfil(bool admin, bool pendiente, int status) {
+        // Arrange
+        var request = new QueryRequestVehiculoDto { Categoria = "NoValida" };
+        var claims = admin
+            ? new[] { new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Admin") }
+            : Array.Empty<System.Security.Claims.Claim>();
+        _controller.ControllerContext = new ControllerContext {
+            HttpContext = new DefaultHttpContext {
+                User = new System.Security.Claims.ClaimsPrincipal(new System.Security.Claims.ClaimsIdentity(claims, admin ? "Test" : null))
+            }
+        };
+        DomainError error = pendiente ? new InternalError("Integración pendiente") : ValidationError.Create("Categoría inválida");
+        _service.Setup(s => s.GetByFilters(request, admin))
+            .ReturnsAsync(Result.Failure<IEnumerable<QueryResponseVehiculoDto>, DomainError>(error));
+
+        // Act
+        var resultado = await _controller.GetByFilters(request);
+
+        // Assert
+        resultado.Result.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(status);
+        _service.Verify(s => s.GetByFilters(request, admin), Times.Once);
+        _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
     }
 
     private Task<ActionResult<VehiculoDto>> Guardar(bool actualizar, IFormFile foto) => actualizar

@@ -1,5 +1,6 @@
-﻿
+﻿using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
+using Alquiler_Vehiculos.Enums.Usuarios;
 using Alquiler_Vehiculos.Extensions;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Services.Storage;
@@ -21,16 +22,14 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     /// <summary>
     /// Consulta todos los vehículos.
     /// </summary>
-    [Authorize(Roles = "ADMIN")]
     [HttpGet]
     public async Task<ActionResult<IEnumerable<VehiculoDto>>> GetAll() {
         return Ok(await service.GetAll());
     }
 
     /// <summary>
-    /// Consulta los vehículos mediante paginación.
+    /// Consulta los vehículos mediante paginación para administración.
     /// </summary>
-    [AllowAnonymous]
     [HttpGet("paged")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -56,8 +55,9 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     /// <summary>
     /// Consulta un vehículo por su identificador.
     /// </summary>
-    [Authorize(Roles = "ADMIN")]
+    [AllowAnonymous]
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> GetById(string id) {
         return (await service.GetById(id)).Match(
@@ -67,15 +67,51 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     }
 
     /// <summary>
+    /// Consulta una unidad concreta por su matrícula (RF-06).
+    /// </summary>
+    [AllowAnonymous]
+    [HttpGet("matricula/{matricula}")]
+    [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<VehiculoDto>> GetByMatricula(string matricula) {
+        var result = await service.GetByMatricula(matricula);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.ToHttpResult<VehiculoDto>();
+    }
+
+    /// <summary>
+    /// Consulta el catálogo agrupado por marca, modelo y categoría (RF-06).
+    /// </summary>
+    /// <remarks>
+    /// Solo el administrador ve también grupos sin unidades libres.
+    /// La disponibilidad por fechas está pendiente de integración en el servicio.
+    /// </remarks>
+    [AllowAnonymous]
+    [HttpGet("search")]
+    [ProducesResponseType(typeof(IEnumerable<QueryResponseVehiculoDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<QueryResponseVehiculoDto>>> GetByFilters(
+        [FromQuery] QueryRequestVehiculoDto request) {
+        // El perfil procede del usuario autenticado, nunca de un parámetro de la petición.
+        var esAdmin = User.IsInRole(nameof(RolUsuario.Admin));
+        var result = await service.GetByFilters(request, esAdmin);
+        return result.IsSuccess
+            ? Ok(result.Value)
+            : result.Error.ToHttpResult<IEnumerable<QueryResponseVehiculoDto>>();
+    }
+
+    /// <summary>
     /// Crea un vehículo recibiendo los datos campo por campo y archivo adjunto.
     /// </summary>
-    [Authorize(Roles = "ADMIN")]
     [HttpPost]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<VehiculoDto>> Create(
         [FromForm] IFormFile foto,
         [FromForm] string matricula,
@@ -121,13 +157,13 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     /// <summary>
     /// Actualiza un vehículo recibiendo los datos campo por campo y un archivo adjunto.
     /// </summary>
-    [Authorize(Roles = "ADMIN")]
     [HttpPut("{id}")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(VehiculoDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<VehiculoDto>> Update(
         string id,
         [FromForm] IFormFile foto,
@@ -175,10 +211,10 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     /// <summary>
     /// Desactiva un vehículo mediante una baja lógica.
     /// </summary>
-    [Authorize(Roles = "ADMIN")]
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<bool>> Delete(string id) {
         return (await service.SoftDelete(id)).Match(
             response => Ok(response),
@@ -189,7 +225,6 @@ public class VehiculoController(IVehiculoService service, IStorageService storag
     /// <summary>
     /// Restaura un vehículo previamente desactivado.
     /// </summary>
-    [Authorize(Roles = "ADMIN")]
     [HttpPatch("{id}/restore")]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> Restore(string id) {
