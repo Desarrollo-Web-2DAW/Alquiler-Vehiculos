@@ -18,4 +18,9 @@ public interface IFotoRepository : ICrud<Foto, string>
     /// <param name="name">El id</param>
     /// <returns><see cref="Foto"/>si existe, null si no existe</returns>
     Task<Foto?> Restore(string name);
+
+    /// <summary>
+    /// Da de baja una foto descartada solo si ningún vehículo, incluido el histórico, la referencia.
+    /// </summary>
+    Task<bool> SoftDeleteSiNoAsociada(string name);
 }

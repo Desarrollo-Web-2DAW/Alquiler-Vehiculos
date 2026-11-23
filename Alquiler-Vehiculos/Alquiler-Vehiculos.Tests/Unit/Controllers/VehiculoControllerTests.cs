@@ -134,6 +134,7 @@ public class VehiculoControllerTests {
             creado.Value.Should().BeSameAs(response);
         }
         _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), Times.Once);
+        _storage.Verify(s => s.DescartarFotoAsync(It.IsAny<string>()), Times.Never);
         _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), actualizar ? Times.Never() : Times.Once());
         _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), actualizar ? Times.Once() : Times.Never());
     }
@@ -219,6 +220,7 @@ public class VehiculoControllerTests {
         _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), operacion == "create" ? Times.Once() : Times.Never());
         _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), operacion == "update" ? Times.Once() : Times.Never());
         _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), operacion is "create" or "update" ? Times.Once() : Times.Never());
+        _storage.Verify(s => s.DescartarFotoAsync("foto-id"), operacion is "create" or "update" ? Times.Once() : Times.Never());
     }
 
     [Test]
@@ -262,6 +264,53 @@ public class VehiculoControllerTests {
         resultado.Result.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(status);
         _service.Verify(s => s.GetByFilters(request, admin), Times.Once);
         _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Guardar_ExcepcionDelServicio_DescartaSoloFotoNuevaYPropagaExcepcion(bool actualizar) {
+        // Arrange
+        using var contenido = new MemoryStream([1]);
+        var foto = new FormFile(contenido, 0, 1, "foto", "coche.jpg");
+        _storage.Setup(s => s.SaveFileAsync(foto, "vehiculos")).ReturnsAsync(Result.Success<string, DomainError>("nueva.jpg"));
+        _storage.Setup(s => s.DescartarFotoAsync("nueva.jpg")).ReturnsAsync(Result.Success<bool, DomainError>(true));
+        if (actualizar) _service.Setup(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id)).ThrowsAsync(new InvalidOperationException("Fallo del servicio"));
+        else _service.Setup(s => s.Create(It.IsAny<CreateVehiculoDto>())).ThrowsAsync(new InvalidOperationException("Fallo del servicio"));
+
+        // Act
+        Func<Task> act = async () => { await Guardar(actualizar, foto); };
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("Fallo del servicio");
+        _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), Times.Once);
+        _storage.Verify(s => s.DescartarFotoAsync("nueva.jpg"), Times.Once);
+        _storage.Verify(s => s.DeleteFileAsync(It.IsAny<string>()), Times.Never);
+        _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), actualizar ? Times.Never() : Times.Once());
+        _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), actualizar ? Times.Once() : Times.Never());
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task Guardar_DescartadoFalla_Conserva409Original(bool actualizar) {
+        // Arrange
+        using var contenido = new MemoryStream([1]);
+        var foto = new FormFile(contenido, 0, 1, "foto", "coche.jpg");
+        var error = VehiculoError.VehiculoYaExiste("1234BCD");
+        _storage.Setup(s => s.SaveFileAsync(foto, "vehiculos")).ReturnsAsync(Result.Success<string, DomainError>("nueva.jpg"));
+        _storage.Setup(s => s.DescartarFotoAsync("nueva.jpg")).ReturnsAsync(Result.Failure<bool, DomainError>(StorageError.ErrorEliminando()));
+        if (actualizar) _service.Setup(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id)).ReturnsAsync(Result.Failure<VehiculoDto, DomainError>(error));
+        else _service.Setup(s => s.Create(It.IsAny<CreateVehiculoDto>())).ReturnsAsync(Result.Failure<VehiculoDto, DomainError>(error));
+
+        // Act
+        var resultado = await Guardar(actualizar, foto);
+
+        // Assert
+        resultado.Result.Should().BeOfType<ConflictObjectResult>().Which.Value.Should().BeEquivalentTo(new { code = error.Code, message = error.Message });
+        _storage.Verify(s => s.SaveFileAsync(foto, "vehiculos"), Times.Once);
+        _storage.Verify(s => s.DescartarFotoAsync("nueva.jpg"), Times.Once);
+        _storage.Verify(s => s.DeleteFileAsync(It.IsAny<string>()), Times.Never);
+        _service.Verify(s => s.Create(It.IsAny<CreateVehiculoDto>()), actualizar ? Times.Never() : Times.Once());
+        _service.Verify(s => s.Update(It.IsAny<UpdateVehiculoDto>(), Id), actualizar ? Times.Once() : Times.Never());
     }
 
     private static IEnumerable<TestCaseData> CasosVisibilidad() {

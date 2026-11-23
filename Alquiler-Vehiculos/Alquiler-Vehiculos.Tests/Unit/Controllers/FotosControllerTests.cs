@@ -7,12 +7,31 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
+using System.Reflection;
+using Microsoft.AspNetCore.Authorization;
+using Alquiler_Vehiculos.Infrastructure;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Controllers;
 
 [TestFixture]
 [Category("Unit")]
 public class FotosControllerTests {
+    [TestCase(nameof(FotosController.GetHistorico))]
+    [TestCase(nameof(FotosController.GetArchivoHistorico))]
+    public void ConsultaHistorica_SoloPersonal_NoPermiteAnonimos(string accion) {
+        // Arrange
+        var metodo = typeof(FotosController).GetMethod(accion)!;
+
+        // Act
+        var permiso = metodo.GetCustomAttribute<AuthorizeAttribute>();
+        var anonimo = metodo.GetCustomAttribute<AllowAnonymousAttribute>();
+
+        // Assert
+        permiso.Should().NotBeNull();
+        permiso!.Policy.Should().Be(PolicyNames.Trabajador);
+        anonimo.Should().BeNull();
+    }
+
     private const string Nombre = "coche.jpg";
     private Mock<IFotoService> _service = null!;
     private Mock<IStorageService> _storage = null!;
@@ -134,6 +153,23 @@ public class FotosControllerTests {
     }
 
     [Test]
+    public async Task GetHistorico_FotoInactiva_DevuelveMetadatosSinReactivarla() {
+        // Arrange
+        var foto = new Foto { Nombre = Nombre, Activo = false };
+        _service.Setup(s => s.GetHistoricoById(Nombre)).ReturnsAsync(Result.Success<Foto, DomainError>(foto));
+
+        // Act
+        var resultado = await _controller.GetHistorico(Nombre);
+
+        // Assert
+        resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(foto);
+        foto.Activo.Should().BeFalse();
+        _service.Verify(s => s.GetHistoricoById(Nombre), Times.Once);
+        _service.Verify(s => s.GetById(It.IsAny<string>()), Times.Never);
+        _storage.Verify(s => s.DeleteFileAsync(It.IsAny<string>()), Times.Never);
+    }
+
+    [Test]
     public async Task GetArchivo_SinFicheroFisico_Devuelve404SinAbrirArchivo() {
         // Arrange
         var foto = new Foto { Nombre = Nombre };
@@ -150,6 +186,138 @@ public class FotosControllerTests {
         });
         _service.Verify(s => s.GetById(Nombre), Times.Once);
         _storage.Verify(s => s.FileExists(relativa), Times.Once);
+        _storage.Verify(s => s.GetFullPath(It.IsAny<string>()), Times.Never);
+    }
+
+    private static string CrearCarpetaTemporal() {
+        var carpeta = Path.Combine(Path.GetTempPath(), "fotos-controller-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(carpeta);
+        return carpeta;
+    }
+
+    [Test]
+    public async Task GetArchivo_FicheroExistente_DevuelveContenidoYTipoMime() {
+        // Arrange
+        var carpeta = CrearCarpetaTemporal();
+        var ruta = Path.Combine(carpeta, Nombre);
+        await File.WriteAllBytesAsync(ruta, [1, 2, 3]);
+        var relativa = Path.Combine("vehiculos", Nombre);
+        _service.Setup(s => s.GetById(Nombre)).ReturnsAsync(Result.Success<Foto, DomainError>(new Foto { Nombre = Nombre }));
+        _storage.Setup(s => s.FileExists(relativa)).Returns(true);
+        _storage.Setup(s => s.GetFullPath(relativa)).Returns(ruta);
+        try {
+            // Act
+            var resultado = await _controller.GetArchivo(Nombre);
+
+            // Assert
+            var respuesta = resultado.Should().BeOfType<FileStreamResult>().Subject;
+            respuesta.ContentType.Should().Be("image/jpeg");
+            await using var contenido = respuesta.FileStream;
+            using var copia = new MemoryStream();
+            await contenido.CopyToAsync(copia);
+            copia.ToArray().Should().Equal(1, 2, 3);
+            _service.Verify(s => s.GetById(Nombre), Times.Once);
+            _storage.Verify(s => s.FileExists(relativa), Times.Once);
+            _storage.Verify(s => s.GetFullPath(relativa), Times.Once);
+        } finally {
+            Directory.Delete(carpeta, true);
+        }
+    }
+
+    [Test]
+    public async Task GetArchivo_ExtensionDesconocida_UsaTipoGenerico() {
+        // Arrange
+        const string nombre = "coche.sinmime";
+        var carpeta = CrearCarpetaTemporal();
+        var ruta = Path.Combine(carpeta, nombre);
+        await File.WriteAllBytesAsync(ruta, [4]);
+        var relativa = Path.Combine("vehiculos", nombre);
+        _service.Setup(s => s.GetById(nombre)).ReturnsAsync(Result.Success<Foto, DomainError>(new Foto { Nombre = nombre }));
+        _storage.Setup(s => s.FileExists(relativa)).Returns(true);
+        _storage.Setup(s => s.GetFullPath(relativa)).Returns(ruta);
+        try {
+            // Act
+            var resultado = await _controller.GetArchivo(nombre);
+
+            // Assert
+            var respuesta = resultado.Should().BeOfType<FileStreamResult>().Subject;
+            respuesta.ContentType.Should().Be("application/octet-stream");
+            await respuesta.FileStream.DisposeAsync();
+            _storage.Verify(s => s.FileExists(relativa), Times.Once);
+            _storage.Verify(s => s.GetFullPath(relativa), Times.Once);
+        } finally {
+            Directory.Delete(carpeta, true);
+        }
+    }
+
+    [TestCase("ausente")]
+    [TestCase("sinDirectorio")]
+    public async Task GetArchivo_FicheroDesaparecidoTrasComprobar_Devuelve404(string caso) {
+        // Arrange
+        var carpeta = CrearCarpetaTemporal();
+        var relativa = Path.Combine("vehiculos", Nombre);
+        var ruta = caso == "ausente"
+            ? Path.Combine(carpeta, Nombre)
+            : Path.Combine(carpeta, "sub", Nombre);
+        _service.Setup(s => s.GetById(Nombre)).ReturnsAsync(Result.Success<Foto, DomainError>(new Foto { Nombre = Nombre }));
+        _storage.Setup(s => s.FileExists(relativa)).Returns(true);
+        _storage.Setup(s => s.GetFullPath(relativa)).Returns(ruta);
+        try {
+            // Act
+            var resultado = await _controller.GetArchivo(Nombre);
+
+            // Assert
+            resultado.Should().BeOfType<NotFoundObjectResult>().Which.Value.Should().BeEquivalentTo(new {
+                code = "FOTO_NO_ENCONTRADA", message = $"No se ha encontrado la foto con el nombre:{Nombre}"
+            });
+            _storage.Verify(s => s.FileExists(relativa), Times.Once);
+            _storage.Verify(s => s.GetFullPath(relativa), Times.Once);
+        } finally {
+            Directory.Delete(carpeta, true);
+        }
+    }
+
+    [Test]
+    public async Task GetArchivoHistorico_FotoConservada_DevuelveContenido() {
+        // Arrange
+        var carpeta = CrearCarpetaTemporal();
+        var ruta = Path.Combine(carpeta, Nombre);
+        await File.WriteAllBytesAsync(ruta, [5, 6]);
+        var relativa = Path.Combine("vehiculos", Nombre);
+        var foto = new Foto { Nombre = Nombre, Activo = false };
+        _service.Setup(s => s.GetHistoricoById(Nombre)).ReturnsAsync(Result.Success<Foto, DomainError>(foto));
+        _storage.Setup(s => s.FileExists(relativa)).Returns(true);
+        _storage.Setup(s => s.GetFullPath(relativa)).Returns(ruta);
+        try {
+            // Act
+            var resultado = await _controller.GetArchivoHistorico(Nombre);
+
+            // Assert
+            var respuesta = resultado.Should().BeOfType<FileStreamResult>().Subject;
+            await using var contenido = respuesta.FileStream;
+            using var copia = new MemoryStream();
+            await contenido.CopyToAsync(copia);
+            copia.ToArray().Should().Equal(5, 6);
+            _service.Verify(s => s.GetHistoricoById(Nombre), Times.Once);
+            _service.Verify(s => s.GetById(It.IsAny<string>()), Times.Never);
+        } finally {
+            Directory.Delete(carpeta, true);
+        }
+    }
+
+    [Test]
+    public async Task GetArchivoHistorico_ErrorDeDominio_Devuelve404SinTocarElDisco() {
+        // Arrange
+        var error = new NotFoundError("FOTO_NO_ENCONTRADA", "Foto histórica ausente");
+        _service.Setup(s => s.GetHistoricoById(Nombre)).ReturnsAsync(Result.Failure<Foto, DomainError>(error));
+
+        // Act
+        var resultado = await _controller.GetArchivoHistorico(Nombre);
+
+        // Assert
+        resultado.Should().BeAssignableTo<ObjectResult>().Which.StatusCode.Should().Be(404);
+        _service.Verify(s => s.GetHistoricoById(Nombre), Times.Once);
+        _storage.Verify(s => s.FileExists(It.IsAny<string>()), Times.Never);
         _storage.Verify(s => s.GetFullPath(It.IsAny<string>()), Times.Never);
     }
 }

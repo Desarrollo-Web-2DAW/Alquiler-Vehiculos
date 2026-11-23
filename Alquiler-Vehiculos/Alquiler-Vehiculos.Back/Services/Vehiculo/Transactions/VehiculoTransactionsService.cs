@@ -27,7 +27,7 @@ public sealed class VehiculoTransactionsService(
     ITransactionManager transactionManager,
     ILogger<VehiculoTransactionsService> logger) : IVehiculoTransactionsService
 {
-    /// <inheritdoc />
+    /// <inheritdoc cref="IVehiculoTransactionsService.DeleteAsync" />
     /// <remarks>
     /// Enfoque mixto de concurrencia: la fase 1 solo <b>lee</b> para poder dar un mensaje
     /// claro al usuario, pero la garantía la da la fase 2, un <c>UPDATE ... WHERE Estado</c>
@@ -87,7 +87,7 @@ public sealed class VehiculoTransactionsService(
             return Result.Success<VehiculoModel, DomainError>(vehiculo);
         }, ct);
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IVehiculoTransactionsService.UpdateAsync" />
     public async Task<Result<VehiculoModel, DomainError>> UpdateAsync(
         string id, VehiculoModel datos, CancellationToken ct = default)
     {
@@ -137,7 +137,7 @@ public sealed class VehiculoTransactionsService(
         }
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IVehiculoTransactionsService.RestoreAsync" />
     public Task<Result<VehiculoModel, DomainError>> RestoreAsync(string id, CancellationToken ct = default)
         => transactionManager.ExecuteAsync(async () =>
         {

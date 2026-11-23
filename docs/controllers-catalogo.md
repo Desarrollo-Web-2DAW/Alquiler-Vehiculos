@@ -27,6 +27,8 @@ El enunciado aportado fija RF-09, RF-10, RF-46 y RF-48. Se adaptan los ejemplos 
 | GET | `/api/Fotos` | Público | 200, metadatos activos |
 | GET | `/api/Fotos/{nombre}` | Público | 200, metadatos |
 | GET | `/api/Fotos/{nombre}/archivo` | Público | 200, contenido de la imagen |
+| GET | `/api/Fotos/historico/{nombre}` | Trabajador, Responsable, Admin | 200, metadatos incluso de baja |
+| GET | `/api/Fotos/historico/{nombre}/archivo` | Trabajador, Responsable, Admin | 200, fichero conservado |
 | POST | `/api/Fotos` | Trabajador, Responsable, Admin | 201 y Location |
 | DELETE | `/api/Fotos/{nombre}` | Trabajador, Responsable, Admin | 200, booleano; baja lógica |
 
@@ -97,7 +99,7 @@ Se reutiliza `DomainErrorExtensions`, sin convertir todos los fallos en 400 ni t
 | 400 | Validación de datos de marca/concesionario; archivo ausente/vacío; identificador de foto con rutas |
 | 401 | Sin identificación válida en una acción protegida |
 | 403 | Identificado sin el perfil requerido |
-| 404 | Marca, concesionario o foto inexistentes/inactivos; fichero no encontrado al descargar |
+| 404 | Marca o concesionario inexistente/inactivo; foto inexistente, foto inactiva en consulta pública o fichero ausente |
 | 409 | Teléfono de concesionario duplicado; otros `ConflictError` devueltos por los servicios |
 | 422 | `BusinessRuleError` de almacenamiento: tamaño, extensión, MIME o nombre de archivo rechazados |
 | 500 | Fallo interno; excepciones inesperadas atendidas por el middleware global |
@@ -106,14 +108,139 @@ Los errores de dominio mantienen `{ code, message, details? }`. Los errores auto
 
 ## Conservación del histórico y alcance
 
+### Coherencia de marca y modelo en vehículos
+
+`VehiculoService.Create` y `Update` consultan `IMarcaRepository.GetAll()` y comprueban
+la combinación antes de recuperar la foto y persistir el vehículo. Se reutiliza el
+contrato existente, sin añadir dependencias ni cambiar los DTO de texto. Para el
+catálogo actual se consulta la lista activa directamente; se evita validar contra
+una copia en caché que pudiera conservar una marca dada de baja.
+
+- Marca desconocida o dada de baja: `ValidationError`, HTTP 400, campo `Marca`.
+- Modelo no incluido en `ModelosDisponibles` de esa marca: HTTP 400, campo `Modelo`.
+- Un modelo de otra marca también se rechaza, aunque exista en el catálogo.
+- Se exige coincidencia exacta de los nombres. No se normaliza el texto ni se
+  acepta una coincidencia parcial: se conserva la escritura del catálogo para
+  no generar agrupaciones distintas para la misma marca o modelo.
+- Cambiar o dar de baja una marca no reescribe ni elimina vehículos históricos.
+  Una modificación posterior del vehículo vuelve a validar la combinación enviada.
+
+El enunciado exige coherencia entre marca, modelo y vehículo; la forma concreta
+de comprobar la lista y devolver 400 por campo es una adaptación al modelo del grupo,
+no un código fijado expresamente por RF-09 para esta combinación.
+Guía: [UD02 §8.3, validación y pertenencia a listas](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/08-dtos-mapeadores-validaciones.md#83-validaciones)
+y [ProductoService de 15-ProductosIdentity](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/15-ProductosIdentity/ProductosTest/Services/ProductoService.cs)
+para comprobaciones previas a la escritura y devolución de `Result` desde el servicio.
+
+Pruebas: `VehiculoServiceCatalogoTests` cubre alta y modificación con marcas
+desconocidas, inactivas, modelos de otra marca, diferencias de escritura y
+combinaciones válidas. Comprueba 400, el campo concreto y la ausencia de escrituras
+y cambios de caché cuando la combinación no es válida.
+
 - La baja de una marca conserva vehículos y documento.
 - La baja de un concesionario con vehículos está permitida, según RF-10 y la decisión confirmada por Lucia: conserva las relaciones y registra la fecha de baja. El catálogo excluye los inactivos.
 - El endpoint de baja de foto desactiva solo los metadatos y conserva siempre el fichero físico. Se descarta llamar a `DeleteFileAsync` porque borra el contenido y podría romper RF-48. Por ahora no se implementa una purga al finalizar la retención.
 - La subida independiente no asigna automáticamente la foto a un vehículo. Se conserva la relación `FotoFk` existente y no se añade en esta tarea un endpoint de sustitución ni un modelo de múltiples fotos por vehículo.
 - No se modifica el `DeleteFileAsync` existente: otros flujos que lo utilicen siguen pudiendo eliminar físicamente archivos y requieren revisión antes de declarar RF-48 cubierto en toda la aplicación.
 
+### Fotos: operaciones fallidas e histórico (RF-48)
+
+Se mantiene la secuencia del [controller de 18-ProductosFileStorage](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/18-ProductosFileStorage/ProductosTest/Controllers/ProductosController.cs):
+guardar la subida, construir el DTO y llamar al servicio. A diferencia de la
+sustitución de imagen de ese ejemplo, aquí no se borra el fichero anterior: RF-48
+exige conservar el histórico. Esta diferencia es una adaptación al enunciado.
+
+Si el alta o modificación devuelve un error, o lanza una excepción, el controller
+intenta descartar **solo el nombre de la foto recién subida**. Se conserva el código
+original (por ejemplo, 400 por datos inválidos o 409 por matrícula duplicada).
+`DescartarFotoAsync` realiza una baja lógica condicional mediante
+`SoftDeleteSiNoAsociada`; ningún vehículo puede referenciar esa foto, incluidos los
+retirados. Así no se desactiva una foto si el vehículo se confirmó y después falló,
+por ejemplo, la actualización de caché. No se borra su fichero físico.
+
+Si falla el descarte se registra el error para revisión. No hay reintentos
+automáticos ni una tarea de limpieza: no se presenta este procedimiento como una
+transacción atómica entre disco y PostgreSQL. Ante una interrupción del proceso
+antes de ejecutar el descarte también puede quedar una subida pendiente.
+Si falla la copia de bytes tras crear sus metadatos, almacenamiento intenta
+igualmente desactivar esa foto para no ofrecerla como imagen activa.
+
+Las fotos retiradas no aparecen en el listado ni en las consultas públicas.
+El personal usa las rutas `/api/Fotos/historico/{nombre}` y
+`/api/Fotos/historico/{nombre}/archivo`, sin reactivar la foto. El nombre debe ser
+el identificador, no una ruta: se mantienen las comprobaciones de path traversal.
+Ejemplo de metadatos históricos:
+
+```json
+{
+  "nombre": "20261123090000_ab12cd34_coche.jpg",
+  "ruta": "/uploads/vehiculos/20261123090000_ab12cd34_coche.jpg",
+  "extension": ".jpg",
+  "tamano": 1024,
+  "activo": false,
+  "createdAt": "2026-11-23T09:00:00Z",
+  "updatedAt": "2026-11-23T10:00:00Z",
+  "deletedAt": "2026-11-23T10:00:00Z"
+}
+```
+
+Errores de estas rutas: 400 si el nombre no es válido, 404 si faltan metadatos o
+fichero, 401 sin identificación y 403 sin el perfil de personal. No se han probado
+estos dos últimos por HTTP real. El histórico se consulta por nombre; no añade una
+galería ni reconstruye qué foto tenía una reserva. El módulo futuro de reservas
+deberá conservar la referencia que necesite si exige esa reconstrucción.
+Se retienen todos los bytes, también los de subidas descartadas: se prioriza la
+conservación frente a una purga que aún no puede consultar reservas.
+
+Pruebas consultadas como guía: [tema 06, unitarias §2.1 y §2.3](https://github.com/joseluisgs/DespliegueAplicacionesWeb-06-2025-2026/blob/master/02-Pruebas-Unitarias.md),
+[integración §3.3](https://github.com/joseluisgs/DespliegueAplicacionesWeb-06-2025-2026/blob/master/03-Pruebas-Integracion.md)
+y [tema 07, pruebas y artefactos §2.3–2.4](https://github.com/joseluisgs/DespliegueAplicacionesWeb-07-2025-2026/blob/master/02-Integracion-Continua-CI.md).
+Se adaptan al proyecto con NUnit, FluentAssertions, AAA, Verify explícito y sus
+fixtures de Testcontainers/PostgreSQL y disco Linux existentes.
+
+## Arranque: migraciones y semillas del catálogo
+
+Referencias consultadas:
+
+- [UD02, 12.11. Migraciones](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/12-entity-framework-core.md#1211-migraciones): comandos de `dotnet ef`, flujo de una migración y `Database.Migrate()` en `Program.cs` para aplicar las pendientes.
+- [UD02, 12.12. Seed data y logging](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/12-entity-framework-core.md#1212-seed-data-y-logging): semilla condicionada a que la tabla esté vacía.
+- [UD02, 26.2 y 26.3](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/26-organizacion-program.md#262-patrón-de-extension-methods-para-configuración): patrón de extension methods y carpeta `Infrastructure/`; `*Extensions.cs` para el pipeline y `*Config.cs` para el registro en DI.
+- [Solución 18, `DatabaseInitializationExtensions`](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/18-ProductosFileStorage/ProductosTest/Infrastructures/DatabaseInitializationExtensions.cs) y [`StorageInitializationExtensions`](https://github.com/joseluisgs/DesarrolloWebEntornosServidor-02-2026-2027/blob/main/soluciones/18-ProductosFileStorage/ProductosTest/Infrastructures/StorageInitializationExtensions.cs): extensión sobre `WebApplication`, parámetro `isDevelopment` y registro con Serilog.
+
+Adaptación al proyecto:
+
+- `InitializeCatalogoAsync(app, isDevelopment)` aplica **siempre** las migraciones
+  pendientes con `MigrateAsync` y siembra solo en `Development`. El ejemplo deja el
+  esquema en manos de `EnsureDeleted`/`EnsureCreated` en desarrollo y no migra en
+  producción; aquí no se borra nada porque los datos de catálogo deben conservarse.
+- `InitializeStorage(app, configuration, isDevelopment)` **no vacía** `uploads` como
+  el ejemplo de clase: RF-48 exige conservar el histórico. Solo crea carpetas y copia
+  los archivos que faltan desde `SeedImages`, sin sobrescribir los existentes.
+- El orden es almacenamiento y después catálogo, porque `FotoSeeder` lee el tamaño
+  real de los archivos en `uploads/vehiculos`. En el ejemplo el orden es el inverso
+  porque su semilla usa `HasData` y no depende de archivos.
+- `CatalogoSeeder` encadena fotos → marcas → concesionarios → vehículos; cada seeder
+  comprueba su tabla o colección y no duplica datos, como la semilla condicional de
+  §12.12.
+- Las migraciones del catálogo viven en `Migrations/Catalogo/` y usan el contexto
+  `PostgreDbContext`; el contexto de usuarios conserva `Migrations/`.
+
 ## Comprobaciones
 
-`dotnet build Alquiler-Vehiculos/Alquiler-Vehiculos.Back/Alquiler-Vehiculos.Back.csproj --no-restore`: correcto, 0 advertencias y 0 errores.
+`dotnet build Alquiler-Vehiculos/Alquiler-Vehiculos.slnx --no-restore`: correcto, 0 advertencias y 0 errores.
 
-No se han ejecutado tests ni peticiones HTTP. Esta compilación no acredita el funcionamiento de permisos, la persistencia ni el cumplimiento completo de RF-48; siguen vigentes los requisitos de arranque descritos en el README.
+Arranque del catálogo: 1.469 pruebas unitarias correctas y 6 pruebas de integración
+de `CatalogoSeederTests` con PostgreSQL y MongoDB reales. El fixture
+`StorageInitializationExtensionsTests` se ejecutó dentro de su contenedor Linux
+(2 casos de `SinUploads` más los 4 casos restantes) y pasó completo. La migración se
+aplicó sobre un PostgreSQL temporal y creó `Concesionarios`, `Fotos`, `Vehiculos` y
+`__EFMigrationsHistory`. Un arranque completo con PostgreSQL, MongoDB y la API viva
+registró en el log 12 fotos, 8 marcas, 5 concesionarios y 12 vehículos.
+
+Actualización del flujo de fotos: 1.469 pruebas unitarias correctas. Integración
+seleccionada de `FotoRepositoryTests` y `StorageContainerTests`: 24 correctas, cero
+fallos. Las tres pruebas externas de `StorageContainerTests` ejecutan además sus
+escenarios internos con disco Linux y PostgreSQL real en contenedores. Se han
+comprobado descarte de fotos libres, protección de referencias activas/históricas,
+fallos al copiar, conservación de bytes y descarga histórica. Las acciones de los
+controllers se invocan directamente: no son E2E HTTP ni demuestran 401/403 reales.

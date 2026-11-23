@@ -16,7 +16,7 @@ public class StorageInitializationExtensionsTests : StorageTestBase {
         var configuracion = Configuracion();
 
         // Act
-        app.InitializeStorage(configuracion);
+        app.InitializeStorage(configuracion, true);
 
         // Assert
         Directory.Exists(Path.Combine(raiz, "uploads")).Should().BeTrue();
@@ -24,7 +24,7 @@ public class StorageInitializationExtensionsTests : StorageTestBase {
     }
 
     [Test]
-    public async Task InitializeStorage_UploadsExistente_LimpiaContenidoYConservaGitkeep() {
+    public async Task InitializeStorage_UploadsExistente_ConservaContenidoYGitkeep() {
         // Arrange
         await using var app = CrearAplicacion();
         var uploads = Path.Combine(RootPath, "uploads");
@@ -35,12 +35,18 @@ public class StorageInitializationExtensionsTests : StorageTestBase {
         var configuracion = Configuracion();
 
         // Act
-        app.InitializeStorage(configuracion);
+        app.InitializeStorage(configuracion, true);
 
         // Assert
-        Directory.GetFiles(uploads).Should().Equal(Path.Combine(uploads, ".gitkeep"));
+        Directory.GetFiles(uploads).Should().BeEquivalentTo([
+            Path.Combine(uploads, ".gitkeep"),
+            Path.Combine(uploads, "vieja.jpg")
+        ]);
         File.ReadAllText(Path.Combine(uploads, ".gitkeep")).Should().Be("conservar");
-        Directory.GetDirectories(uploads).Should().BeEmpty();
+        File.ReadAllText(Path.Combine(uploads, "vieja.jpg")).Should().Be("borrar");
+        Directory.GetDirectories(uploads).Should().ContainSingle()
+            .Which.Should().Be(Path.Combine(uploads, "viejas"));
+        File.ReadAllText(Path.Combine(uploads, "viejas", "anidadas", "foto.jpg")).Should().Be("borrar");
     }
 
     [Test]
@@ -56,7 +62,7 @@ public class StorageInitializationExtensionsTests : StorageTestBase {
         });
 
         // Act
-        app.InitializeStorage(configuracion);
+        app.InitializeStorage(configuracion, true);
 
         // Assert
         var destino = Path.Combine(RootPath, "uploads", "vehiculos");
@@ -76,7 +82,7 @@ public class StorageInitializationExtensionsTests : StorageTestBase {
         var configuracion = Configuracion();
 
         // Act
-        app.InitializeStorage(configuracion);
+        app.InitializeStorage(configuracion, true);
 
         // Assert
         Directory.GetFileSystemEntries(Path.Combine(RootPath, "uploads"))
@@ -92,7 +98,7 @@ public class StorageInitializationExtensionsTests : StorageTestBase {
         var configuracion = Configuracion();
 
         // Act
-        Action inicializar = () => app.InitializeStorage(configuracion);
+        Action inicializar = () => app.InitializeStorage(configuracion, true);
 
         // Assert
         inicializar.Should().NotThrow();

@@ -9,6 +9,35 @@ namespace Alquiler_Vehiculos.Tests.Integration.Repositories;
 [Category("Integration")]
 [NonParallelizable]
 public class FotoRepositoryTests : RepositoryTestBase {
+    [TestCase("libre", true)]
+    [TestCase("activo", false)]
+    [TestCase("retirado", false)]
+    [TestCase("inexistente", false)]
+    public async Task SoftDeleteSiNoAsociada_ConservaFotosReferenciadasInclusoPorHistorico(string caso, bool esperado) {
+        // Arrange
+        var nombre = "libre.jpg";
+        if (caso is "activo" or "retirado") {
+            var vehiculo = await GuardarVehiculo(activo: caso == "activo");
+            nombre = vehiculo.FotoFk;
+        } else if (caso == "libre") await GuardarFoto(CrearFoto(nombre));
+        await using var db = CrearContexto();
+        var repository = new FotoRepository(db, NullLogger<FotoRepository>.Instance);
+
+        // Act
+        var resultado = await repository.SoftDeleteSiNoAsociada(nombre);
+
+        // Assert
+        resultado.Should().Be(esperado);
+        await using var lectura = CrearContexto();
+        var foto = await lectura.Fotos.SingleOrDefaultAsync(f => f.Nombre == nombre);
+        if (caso == "inexistente") foto.Should().BeNull();
+        else {
+            foto.Should().NotBeNull();
+            foto!.Activo.Should().Be(!esperado);
+            foto.DeletedAt.HasValue.Should().Be(esperado);
+        }
+    }
+
     [Test]
     public async Task SoftDelete_YRestore_ConFotoRastreada_ActualizanLaMismaInstancia() {
         // Arrange

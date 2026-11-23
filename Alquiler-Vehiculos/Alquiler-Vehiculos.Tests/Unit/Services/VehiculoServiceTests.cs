@@ -9,6 +9,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
+using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Vehiculo;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
@@ -144,6 +145,7 @@ public partial class VehiculoServiceTests
     private Mock<IVehiculoTransactionsService> _transactionsService = null!;
     private Mock<ICacheService> _cache = null!;
     private Mock<IConcesionarioRepository> _concesionarioRepository = null!;
+    private Mock<IMarcaRepository> _marcaRepository = null!;
     private VehiculoService _service = null!;
 
     [SetUp]
@@ -155,6 +157,11 @@ public partial class VehiculoServiceTests
         _cache = new Mock<ICacheService>();
         _concesionarioRepository = new Mock<IConcesionarioRepository>();
         _concesionarioRepository.Setup(r => r.ExistById(It.IsAny<long>())).ReturnsAsync(true);
+        _marcaRepository = new Mock<IMarcaRepository>();
+        _marcaRepository.Setup(r => r.GetAll()).ReturnsAsync([
+            new MarcaModel(MongoDB.Bson.ObjectId.Empty, "Toyota", "Japón", "https://toyota.example", ["Corolla"], false, new DateTime(2026, 1, 1), null, null),
+            new MarcaModel(MongoDB.Bson.ObjectId.Empty, "Renault", "Francia", "https://renault.example", ["Megane"], false, new DateTime(2026, 1, 1), null, null)
+        ]);
 
         // Por defecto no hay nada en caché: cada test que la necesite lo sobreescribe.
         _cache.Setup(c => c.GetAsync<VehiculoDto>(It.IsAny<string>(), It.IsAny<CancellationToken>()))
@@ -168,7 +175,8 @@ public partial class VehiculoServiceTests
             new CreateVehiculoValidator(),
             new UpdateVehiculoValidator(),
             _concesionarioRepository.Object,
-            new QueryRequestVehiculoValidator());
+            new QueryRequestVehiculoValidator(),
+            _marcaRepository.Object);
     }
 
     private static CreateVehiculoDto CrearCreateValido() => new()

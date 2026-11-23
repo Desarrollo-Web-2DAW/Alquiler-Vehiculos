@@ -19,14 +19,14 @@ public class MarcaService(
     UpdateMarcaValidator updateMarcaValidator) : IMarcaService {
     private const string ClaveMarca = "marca:";
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IMarcaService.GetAll" />
     public async Task<IEnumerable<MarcaDto>> GetAll() {
         Log.Debug("Consultando todas las marcas activas");
         var marcas = await repository.GetAll();
         return marcas.Select(m => m.ToDto());
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IMarcaService.GetById" />
     public async Task<Result<MarcaDto, DomainError>> GetById(string key) {
         if (!ObjectId.TryParse(key, out var id)) return MarcaError.NotFoundMarca(key);
         key = id.ToString();
@@ -42,7 +42,7 @@ public class MarcaService(
         return dto;
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IMarcaService.Create" />
     public async Task<Result<MarcaDto, DomainError>> Create(CreateMarcaDto item) {
         Log.Debug("Creando marca con nombre {Nombre}", item.Nombre);
         var validationResult = await createMarcaValidator.ValidateAsync(item);
@@ -55,7 +55,7 @@ public class MarcaService(
         return creada.ToDto();
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IMarcaService.Update" />
     public async Task<Result<MarcaDto, DomainError>> Update(UpdateMarcaDto item, string key) {
         Log.Debug("Actualizando marca con ID {Id}", key);
         var validationResult = await updateMarcaValidator.ValidateAsync(item);
@@ -82,7 +82,7 @@ public class MarcaService(
         return actualizada.ToDto();
     }
 
-    /// <inheritdoc />
+    /// <inheritdoc cref="IMarcaService.SoftDelete" />
     public async Task<Result<bool, DomainError>> SoftDelete(string key) {
         if (!ObjectId.TryParse(key, out var id)) return MarcaError.NotFoundMarca(key);
         key = id.ToString();
