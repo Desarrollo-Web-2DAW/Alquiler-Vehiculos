@@ -31,6 +31,14 @@ namespace Alquiler_Vehiculos.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Ciudad")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("CodigoPostal")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -53,6 +61,12 @@ namespace Alquiler_Vehiculos.Migrations
 
                     b.Property<TimeOnly>("HoraCierre")
                         .HasColumnType("time without time zone");
+
+                    b.Property<double>("Latitud")
+                        .HasColumnType("double precision");
+
+                    b.Property<double>("Longitud")
+                        .HasColumnType("double precision");
 
                     b.Property<string>("Nombre")
                         .IsRequired()

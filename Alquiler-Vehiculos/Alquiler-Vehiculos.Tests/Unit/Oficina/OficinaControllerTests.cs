@@ -129,8 +129,11 @@ public class OficinaControllerTests {
     private static OficinaResponseDto CrearRespuesta() => new(
         "Oficina Central Leganés",
         "Avenida de la Universidad 1",
+        "Leganés",
+        "28911",
         "+34 916 000 111",
         "oficina@alquiler.local",
+        new LocalizacionDto(40.3319, -3.7635),
         DayOfWeek.Monday,
         DayOfWeek.Friday,
         new TimeOnly(9, 0),

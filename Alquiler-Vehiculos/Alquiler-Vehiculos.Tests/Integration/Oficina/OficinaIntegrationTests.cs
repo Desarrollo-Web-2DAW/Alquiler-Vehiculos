@@ -108,6 +108,10 @@ public class OficinaIntegrationTests {
         var oficina = await response.Content.ReadFromJsonAsync<OficinaResponseDto>();
         oficina.Should().NotBeNull();
         oficina!.Nombre.Should().NotBeNullOrWhiteSpace();
+        oficina.Ciudad.Should().Be("Leganés");
+        oficina.CodigoPostal.Should().Be("28911");
+        oficina.Localizacion.Latitud.Should().BeApproximately(40.3319, 0.001);
+        oficina.Localizacion.Longitud.Should().BeApproximately(-3.7635, 0.001);
         oficina.HorarioFormateado.Should().Be("Lunes a Viernes de 09:00 a 20:00");
         oficina.Responsable.Email.Should().Be("responsable@test.local");
     }
@@ -238,9 +242,13 @@ public class OficinaIntegrationTests {
         TimeOnly? apertura = null,
         TimeOnly? cierre = null) => new() {
             Nombre = "Oficina Central Leganés",
-            Direccion = "Avenida de la Universidad 1, 28911 Leganés, Madrid",
+            Direccion = "Avenida de la Universidad 1",
+            Ciudad = "Leganés",
+            CodigoPostal = "28911",
             Telefono = "+34 916 000 111",
             Email = "oficina@alquiler.local",
+            Latitud = 40.3319,
+            Longitud = -3.7635,
             DiaInicio = diaInicio,
             DiaFin = diaFin,
             HoraApertura = apertura ?? new TimeOnly(9, 0),

@@ -55,8 +55,12 @@ public class OficinaService(
 
         oficina.Nombre = dto.Nombre.Trim();
         oficina.Direccion = dto.Direccion.Trim();
+        oficina.Ciudad = dto.Ciudad.Trim();
+        oficina.CodigoPostal = dto.CodigoPostal.Trim();
         oficina.Telefono = dto.Telefono.Trim();
         oficina.Email = dto.Email.Trim().ToLowerInvariant();
+        oficina.Latitud = dto.Latitud;
+        oficina.Longitud = dto.Longitud;
         oficina.DiaInicio = dto.DiaInicio;
         oficina.DiaFin = dto.DiaFin;
         oficina.HoraApertura = dto.HoraApertura;
@@ -161,8 +165,11 @@ public class OficinaService(
     private static OficinaResponseDto Mapear(OficinaEntity oficina) => new(
         oficina.Nombre,
         oficina.Direccion,
+        oficina.Ciudad,
+        oficina.CodigoPostal,
         oficina.Telefono,
         oficina.Email,
+        new LocalizacionDto(oficina.Latitud, oficina.Longitud),
         oficina.DiaInicio,
         oficina.DiaFin,
         oficina.HoraApertura,

@@ -2,6 +2,9 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Alquiler_Vehiculos.Dto.Oficina;
 
+/// <summary>Coordenadas geográficas de la oficina (RF-11, RI-02).</summary>
+public record LocalizacionDto(double Latitud, double Longitud);
+
 /// <summary>Datos mínimos del trabajador responsable devueltos junto a la oficina.</summary>
 public record ResponsableResumenDto(
     Guid Id,
@@ -10,12 +13,15 @@ public record ResponsableResumenDto(
     string Email,
     string Telefono);
 
-/// <summary>Respuesta de consulta y actualización de la oficina única (RF-11).</summary>
+/// <summary>Respuesta de consulta y actualización de la oficina única (RF-11, RI-02).</summary>
 public record OficinaResponseDto(
     string Nombre,
     string Direccion,
+    string Ciudad,
+    string CodigoPostal,
     string Telefono,
     string Email,
+    LocalizacionDto Localizacion,
     DayOfWeek DiaInicio,
     DayOfWeek DiaFin,
     TimeOnly HoraApertura,
@@ -28,8 +34,12 @@ public record OficinaResponseDto(
 public record UpdateOficinaDto {
     [Required, MaxLength(150)] public string Nombre { get; init; } = string.Empty;
     [Required, MaxLength(250)] public string Direccion { get; init; } = string.Empty;
+    [Required, MaxLength(100)] public string Ciudad { get; init; } = string.Empty;
+    [Required, MaxLength(10)] public string CodigoPostal { get; init; } = string.Empty;
     [Required, MaxLength(20)] public string Telefono { get; init; } = string.Empty;
     [Required, EmailAddress, MaxLength(150)] public string Email { get; init; } = string.Empty;
+    public double Latitud { get; init; }
+    public double Longitud { get; init; }
     public DayOfWeek DiaInicio { get; init; } = DayOfWeek.Monday;
     public DayOfWeek DiaFin { get; init; } = DayOfWeek.Friday;
     public TimeOnly HoraApertura { get; init; }

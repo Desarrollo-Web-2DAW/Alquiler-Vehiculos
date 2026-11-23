@@ -177,11 +177,11 @@ sequenceDiagram
 
 ## Tarea: Módulo de Oficina Única, Horario Semanal y Responsable de Operaciones (RF-11 · CU-18 · CU-22 · RF-34 · RI-03)
 
-> **Fecha de registro:** 23/11/2026 · **Rama:** `feature/Oficina` → `dev` · **Estado:** implementado y verificado (`235/235` tests en verde, `0` warnings, pendiente de commit/revisión final).
+> **Fecha de registro:** 23/11/2026 · **Rama:** `feature/Oficina` → `dev` · **Estado:** implementado y verificado (`235/235` tests en verde, `0` warnings).
 
 ### 1. Qué incluye
 
-- **Modelo (`Models/Oficina/Oficina.cs`) y migración (`20261123120000_AddOficina`):** tabla `oficina` en `AppDbContextUsuarios` con clave fija `OficinaUnicaId`, restricción `CHECK ("Id" = '11111111-1111-1111-1111-111111111111')` para garantizar fila única en PostgreSQL y FK obligatoria `ResponsableId` hacia `trabajadores` con `DeleteBehavior.Restrict`.
+- **Modelo (`Models/Oficina/Oficina.cs`) y migración (`20261123120000_AddOficina`):** tabla `oficina` en `AppDbContextUsuarios` con todos los campos de `RF-11`/`RI-02` (`Nombre`, `Direccion`, `Ciudad`, `CodigoPostal`, `Telefono`, `Email`, `Latitud`, `Longitud` como `Localizacion`, horario semanal y `ResponsableId`), clave fija `OficinaUnicaId`, restricción `CHECK ("Id" = '11111111-1111-1111-1111-111111111111')` y FK obligatoria hacia `trabajadores` con `DeleteBehavior.Restrict`.
 - **Siembra idempotente (`IdentitySeeder.SeedOficinaAsync` · RI-03):** crea la oficina única (*Oficina Central Leganés*, Lunes a Viernes de `09:00` a `20:00`) vinculada al responsable semilla (`responsable@alquiler.local`).
 - **Validadores y regla uniforme de email (`UpdateOficinaValidator`, `CambiarResponsableValidator`, `LoginValidator`, `SignupValidator`):** validación de rango de días (`DiaFin >= DiaInicio` con semana española Lunes=1..Domingo=7), rango horario (`HoraCierre > HoraApertura`) y regex estricta de dominio de email (`^[^@\s]+@[^@\s]+\.[^@\s]{2,}$`) unificada en los tres validadores.
 - **Servicio (`IOficinaService` / `OficinaService`) y Controlador (`OficinaController`):** sin `POST` ni `DELETE` (recurso singleton). Expone además `EsResponsableAsync(Guid)` para Trabajadores (**CU-18**) y `EstaAbiertaAsync(DateTime)` para Reservas (**CU-22**).

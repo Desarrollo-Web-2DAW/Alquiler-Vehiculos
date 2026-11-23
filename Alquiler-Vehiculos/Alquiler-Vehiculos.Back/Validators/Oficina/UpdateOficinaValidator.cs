@@ -19,6 +19,20 @@ public class UpdateOficinaValidator : AbstractValidator<UpdateOficinaDto> {
             .MinimumLength(5).WithMessage("La dirección debe tener al menos 5 caracteres")
             .MaximumLength(250).WithMessage("La dirección no puede superar los 250 caracteres");
 
+        RuleFor(x => x.Ciudad)
+            .NotEmpty().WithMessage("La ciudad es obligatoria")
+            .MaximumLength(100).WithMessage("La ciudad no puede superar los 100 caracteres");
+
+        RuleFor(x => x.CodigoPostal)
+            .NotEmpty().WithMessage("El código postal es obligatorio")
+            .Matches(@"^\d{5}$").WithMessage("El código postal debe tener 5 dígitos");
+
+        RuleFor(x => x.Latitud)
+            .InclusiveBetween(-90, 90).WithMessage("La latitud debe estar entre -90 y 90");
+
+        RuleFor(x => x.Longitud)
+            .InclusiveBetween(-180, 180).WithMessage("La longitud debe estar entre -180 y 180");
+
         RuleFor(x => x.Telefono)
             .NotEmpty().WithMessage("El teléfono es obligatorio")
             .Matches(@"^[0-9+ ]{9,20}$").WithMessage("El teléfono no tiene un formato válido");
