@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Errors.Common;
 using CSharpFunctionalExtensions;
@@ -97,4 +98,19 @@ public interface IVehiculoRepository {
     /// <param name="key">Identificador del vehículo que se desea restaurar.</param>
     /// <returns>El vehículo restaurado o null si no existe.</returns>
     Task<VehiculoModel?> Restore(string key);
+
+    /// <summary>
+    /// Da de baja lógica el vehículo <b>solo si</b> su estado actual en la base de datos
+    /// es <paramref name="estadoEsperado"/>.
+    /// </summary>
+    /// <remarks>
+    /// Implementa un compare-and-set: la comprobación del estado viaja en el <c>WHERE</c>
+    /// del <c>UPDATE</c>, de modo que "decidir" y "escribir" ocurren en la misma sentencia.
+    /// Si otro proceso cambió la fila entre la lectura y la escritura, no coincide ninguna
+    /// y se devuelve <c>false</c>; ese <c>false</c> es una respuesta de negocio, no un error técnico.
+    /// </remarks>
+    /// <param name="key">Identificador del vehículo.</param>
+    /// <param name="estadoEsperado">Estado que debe tener el vehículo en ese instante.</param>
+    /// <returns><c>true</c> si se actualizó alguna fila; <c>false</c> si ninguna coincidió.</returns>
+    Task<bool> SoftDeleteSiEstado(string key, EstadoVehiculo estadoEsperado);
 }
