@@ -1,0 +1,44 @@
+# .dockerignore — contexto RAÍZ del repo
+# Build: docker build -f Alquiler-Vehiculos/Alquiler-Vehiculos.Back/Dockerfile .
+# Reduce el build context y evita copiar bin/obj, IDE, tests y secretos a la imagen.
+
+# Control de versiones / IDE
+.git
+.gitattributes
+.gitignore
+.vs
+.vscode
+.idea
+.opencode
+**/*.user
+
+# Artefactos de compilación y tests
+**/bin
+**/obj
+**/out
+TestResults
+**/TestResults
+coveragereport
+*.trx
+*.log
+
+# Dependencias de JavaScript (clientes / E2E)
+**/node_modules
+
+# Contenido que la imagen de la API no necesita
+Alquiler-Vehiculos/Alquiler-Vehiculos.Tests
+Alquiler-Vehiculos/Alquiler-Vehiculos.Tests.E2E
+Alquiler-Vehiculos/Alquiler-Vehiculos.Clients
+Alquiler-Vehiculos/doc
+doc
+compose*.yaml
+docker-compose*.yml
+.env
+.env.*
+*.md
+
+# Docker
+Dockerfile
+**/Dockerfile
+.dockerignore
+**/.dockerignore

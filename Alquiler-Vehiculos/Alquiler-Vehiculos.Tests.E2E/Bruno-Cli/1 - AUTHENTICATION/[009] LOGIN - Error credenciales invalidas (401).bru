@@ -1,0 +1,42 @@
+meta {
+  name: [009] LOGIN - Error credenciales invalidas (401)
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{adminEmail}}",
+    "password": "PasswordIncorrecta1!"
+  }
+}
+
+script:post-response {
+  test("Login credenciales invalidas - Status 401 Unauthorized", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+
+  test("Login credenciales invalidas - Código CREDENCIALES_INVALIDAS", function () {
+    const body = res.getBody();
+    expect(body.code).to.equal("CREDENCIALES_INVALIDAS");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: credenciales erróneas responden 401 sin filtrar detalles internos.
+}

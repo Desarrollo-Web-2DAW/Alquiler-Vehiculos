@@ -1,0 +1,47 @@
+meta {
+  name: [004] LOGIN - Admin (200)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/auth/login
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "email": "{{adminEmail}}",
+    "password": "{{adminPassword}}"
+  }
+}
+
+script:post-response {
+  test("Login Admin - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Login Admin - Devuelve token y rol Admin", function () {
+    const body = res.getBody();
+    expect(body.token).to.be.a("string").and.not.be.empty;
+    expect(body.role).to.equal("Admin");
+  });
+
+  if (res.getStatus() === 200) {
+    bru.setVar("adminToken", res.getBody().token);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Login del administrador semilla (RF-46). Guarda adminToken.
+}

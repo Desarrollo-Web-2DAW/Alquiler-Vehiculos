@@ -1,0 +1,34 @@
+meta {
+  name: [017] OFICINA - Consultar publica (200)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/oficina
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Oficina pública - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Oficina pública - Devuelve horario y responsable", function () {
+    const body = res.getBody();
+    expect(body.nombre).to.be.a("string").and.not.be.empty;
+    expect(body.horarioFormateado).to.be.a("string").and.not.be.empty;
+    expect(body.responsable).to.be.an("object");
+    expect(body.responsable.email).to.not.be.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-11: consulta pública de la oficina única, su horario y su responsable.
+}
