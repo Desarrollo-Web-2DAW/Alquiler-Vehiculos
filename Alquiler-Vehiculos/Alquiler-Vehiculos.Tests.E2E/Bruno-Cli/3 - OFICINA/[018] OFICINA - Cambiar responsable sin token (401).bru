@@ -1,0 +1,36 @@
+meta {
+  name: [018] OFICINA - Cambiar responsable sin token (401)
+  type: http
+  seq: 2
+}
+
+patch {
+  url: {{baseUrl}}/api/oficina/responsable
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "trabajadorId": "22222222-2222-2222-2222-222222222222"
+  }
+}
+
+script:post-response {
+  test("Cambiar responsable sin token - Status 401 Unauthorized", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: el relevo de responsable de la oficina exige autenticación JWT.
+}

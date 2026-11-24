@@ -59,41 +59,6 @@ public class OficinaControllerTests {
     }
 
     [Test]
-    public async Task Actualizar_DatosValidos_Devuelve200ConOficinaActualizada() {
-        // Arrange
-        var input = new UpdateOficinaDto { Nombre = "Central" };
-        var respuesta = CrearRespuesta();
-        _serviceMock
-            .Setup(s => s.ActualizarAsync(input, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<OficinaResponseDto, DomainError>(respuesta));
-
-        // Act
-        var result = await _controller.Actualizar(input, CancellationToken.None);
-
-        // Assert
-        var ok = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        ok.Value.Should().BeEquivalentTo(respuesta);
-    }
-
-    [Test]
-    public async Task Actualizar_HorarioInvalido_Devuelve400BadRequest() {
-        // Arrange
-        var input = new UpdateOficinaDto();
-        _serviceMock
-            .Setup(s => s.ActualizarAsync(input, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<OficinaResponseDto, DomainError>(
-                OficinaError.ValidacionConCampos(new Dictionary<string, string[]> {
-                    ["horario"] = ["La hora de cierre debe ser posterior a la hora de apertura"]
-                })));
-
-        // Act
-        var result = await _controller.Actualizar(input, CancellationToken.None);
-
-        // Assert
-        result.Result.Should().BeOfType<BadRequestObjectResult>();
-    }
-
-    [Test]
     public async Task CambiarResponsable_TrabajadorMecanico_Devuelve422UnprocessableEntity() {
         // Arrange
         var dto = new CambiarResponsableDto { TrabajadorId = Guid.NewGuid() };

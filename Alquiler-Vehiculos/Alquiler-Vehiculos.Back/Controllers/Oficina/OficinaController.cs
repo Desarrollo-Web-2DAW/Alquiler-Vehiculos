@@ -10,8 +10,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace Alquiler_Vehiculos.Controllers.Oficina;
 
 /// <summary>
-/// Consulta y gestión de la oficina única de la empresa (RF-11, CU-18).
-/// No expone POST ni DELETE: la oficina existe una sola vez desde la semilla.
+/// Consulta de la oficina única y relevo de su responsable (RF-11, CU-18).
+/// Según RF-11, no expone alta, modificación ni baja de oficinas; la oficina llega sembrada desde el arranque.
 /// </summary>
 [ApiController]
 [Route("api/oficina")]
@@ -29,31 +29,6 @@ public class OficinaController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<OficinaResponseDto>> Obtener(CancellationToken ct) {
         Result<OficinaResponseDto, DomainError> resultado = await oficinaService.ObtenerAsync(ct);
-
-        return resultado.Match(
-            oficina => Ok(oficina),
-            error => error.ToHttpResult<OficinaResponseDto>());
-    }
-
-    /// <summary>Actualiza los datos de contacto y el horario semanal de la oficina.</summary>
-    /// <response code="200">Oficina actualizada.</response>
-    /// <response code="400">Formato o rango horario inválido.</response>
-    /// <response code="401">Token ausente o inválido.</response>
-    /// <response code="403">Requiere rol Responsable o Admin.</response>
-    /// <response code="404">Oficina no inicializada.</response>
-    [Authorize(Policy = PolicyNames.Responsable)]
-    [HttpPut]
-    [ProducesResponseType(typeof(OficinaResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(StatusCodes.Status403Forbidden)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<OficinaResponseDto>> Actualizar(
-        [FromBody] UpdateOficinaDto dto,
-        CancellationToken ct) {
-        logger.LogInformation("Actualización de datos de oficina solicitada");
-
-        Result<OficinaResponseDto, DomainError> resultado = await oficinaService.ActualizarAsync(dto, ct);
 
         return resultado.Match(
             oficina => Ok(oficina),

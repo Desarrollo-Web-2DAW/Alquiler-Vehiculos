@@ -11,9 +11,6 @@ public interface IOficinaService {
     /// <summary>Obtiene los datos, horario y responsable actual de la oficina única.</summary>
     Task<Result<OficinaResponseDto, DomainError>> ObtenerAsync(CancellationToken ct = default);
 
-    /// <summary>Actualiza los datos de contacto y el horario semanal de la oficina.</summary>
-    Task<Result<OficinaResponseDto, DomainError>> ActualizarAsync(UpdateOficinaDto dto, CancellationToken ct = default);
-
     /// <summary>Nombra a un nuevo trabajador activo de Operaciones como responsable (CU-18).</summary>
     Task<Result<OficinaResponseDto, DomainError>> CambiarResponsableAsync(CambiarResponsableDto dto, CancellationToken ct = default);
 

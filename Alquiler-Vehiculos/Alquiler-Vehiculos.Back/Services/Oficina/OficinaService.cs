@@ -19,7 +19,6 @@ namespace Alquiler_Vehiculos.Services.Oficina;
 public class OficinaService(
     AppDbContextUsuarios db,
     UserManager<User> userManager,
-    IValidator<UpdateOficinaDto> updateValidator,
     IValidator<CambiarResponsableDto> cambiarResponsableValidator,
     ILogger<OficinaService> logger
 ) : IOficinaService {
@@ -33,44 +32,6 @@ public class OficinaService(
         return oficina is null
             ? Result.Failure<OficinaResponseDto, DomainError>(OficinaError.NoConfigurada())
             : Result.Success<OficinaResponseDto, DomainError>(Mapear(oficina));
-    }
-
-    /// <inheritdoc />
-    public async Task<Result<OficinaResponseDto, DomainError>> ActualizarAsync(
-        UpdateOficinaDto dto,
-        CancellationToken ct = default) {
-        var validacion = await updateValidator.ValidateAsync(dto, ct);
-        if (!validacion.IsValid) {
-            return Result.Failure<OficinaResponseDto, DomainError>(
-                OficinaError.ValidacionConCampos(AgruparErrores(validacion)));
-        }
-
-        var oficina = await db.Oficinas
-            .Include(o => o.Responsable)
-            .FirstOrDefaultAsync(o => o.Id == OficinaEntity.OficinaUnicaId, ct);
-
-        if (oficina is null) {
-            return Result.Failure<OficinaResponseDto, DomainError>(OficinaError.NoConfigurada());
-        }
-
-        oficina.Nombre = dto.Nombre.Trim();
-        oficina.Direccion = dto.Direccion.Trim();
-        oficina.Ciudad = dto.Ciudad.Trim();
-        oficina.CodigoPostal = dto.CodigoPostal.Trim();
-        oficina.Telefono = dto.Telefono.Trim();
-        oficina.Email = dto.Email.Trim().ToLowerInvariant();
-        oficina.Latitud = dto.Latitud;
-        oficina.Longitud = dto.Longitud;
-        oficina.DiaInicio = dto.DiaInicio;
-        oficina.DiaFin = dto.DiaFin;
-        oficina.HoraApertura = dto.HoraApertura;
-        oficina.HoraCierre = dto.HoraCierre;
-        oficina.UpdatedAt = DateTime.UtcNow;
-
-        await db.SaveChangesAsync(ct);
-
-        logger.LogInformation("Datos y horario de la oficina actualizados");
-        return Result.Success<OficinaResponseDto, DomainError>(Mapear(oficina));
     }
 
     /// <inheritdoc />

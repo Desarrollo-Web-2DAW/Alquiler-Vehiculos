@@ -117,9 +117,11 @@ public class OficinaIntegrationTests {
     }
 
     [Test]
-    public async Task Actualizar_SinToken_Devuelve401Unauthorized() {
+    public async Task CambiarResponsable_SinToken_Devuelve401Unauthorized() {
         // Act
-        var response = await _client!.PutAsJsonAsync("/api/oficina", CrearUpdateValido());
+        var response = await _client!.PatchAsJsonAsync(
+            "/api/oficina/responsable",
+            new CambiarResponsableDto { TrabajadorId = Guid.NewGuid() });
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
@@ -128,45 +130,10 @@ public class OficinaIntegrationTests {
     [TestCase("cliente@test.local", "Cliente12345!")]
     [TestCase("trabajador@test.local", "Trabajador12345!")]
     [TestCase("mecanico@test.local", "Mecanico12345!")]
-    public async Task Actualizar_ConRolSinPermiso_Devuelve403Forbidden(string email, string password) {
+    [TestCase("responsable@test.local", "Responsable12345!")]
+    public async Task CambiarResponsable_ConRolNoAdmin_Devuelve403Forbidden(string email, string password) {
         // Arrange
         var token = await LoginAsync(email, password);
-        using var request = CrearPeticionJson(HttpMethod.Put, "/api/oficina", token, CrearUpdateValido());
-
-        // Act
-        var response = await _client!.SendAsync(request);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
-    }
-
-    [Test]
-    public async Task Actualizar_ComoResponsable_ActualizaDatosYHorario() {
-        // Arrange
-        var token = await LoginAsync("responsable@test.local", "Responsable12345!");
-        var dto = CrearUpdateValido(
-            diaFin: DayOfWeek.Saturday,
-            apertura: new TimeOnly(8, 30),
-            cierre: new TimeOnly(20, 30));
-
-        // Act
-        using var request = CrearPeticionJson(HttpMethod.Put, "/api/oficina", token, dto);
-        var response = await _client!.SendAsync(request);
-
-        // Restore horario original para no interferir con otros tests
-        using var restore = CrearPeticionJson(HttpMethod.Put, "/api/oficina", token, CrearUpdateValido());
-        await _client!.SendAsync(restore);
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var actualizada = await response.Content.ReadFromJsonAsync<OficinaResponseDto>();
-        actualizada!.HorarioFormateado.Should().Be("Lunes a Sábado de 08:30 a 20:30");
-    }
-
-    [Test]
-    public async Task CambiarResponsable_ComoResponsableNoAdmin_Devuelve403Forbidden() {
-        // Arrange
-        var token = await LoginAsync("responsable@test.local", "Responsable12345!");
         using var request = CrearPeticionJson(
             HttpMethod.Patch, "/api/oficina/responsable", token, new CambiarResponsableDto { TrabajadorId = Guid.NewGuid() });
 
@@ -235,25 +202,6 @@ public class OficinaIntegrationTests {
         var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
         return auth!.Token;
     }
-
-    private static UpdateOficinaDto CrearUpdateValido(
-        DayOfWeek diaInicio = DayOfWeek.Monday,
-        DayOfWeek diaFin = DayOfWeek.Friday,
-        TimeOnly? apertura = null,
-        TimeOnly? cierre = null) => new() {
-            Nombre = "Oficina Central Leganés",
-            Direccion = "Avenida de la Universidad 1",
-            Ciudad = "Leganés",
-            CodigoPostal = "28911",
-            Telefono = "+34 916 000 111",
-            Email = "oficina@alquiler.local",
-            Latitud = 40.3319,
-            Longitud = -3.7635,
-            DiaInicio = diaInicio,
-            DiaFin = diaFin,
-            HoraApertura = apertura ?? new TimeOnly(9, 0),
-            HoraCierre = cierre ?? new TimeOnly(20, 0)
-        };
 
     private static HttpRequestMessage CrearPeticionJson<T>(HttpMethod method, string url, string token, T body) {
         var request = new HttpRequestMessage(method, url);
