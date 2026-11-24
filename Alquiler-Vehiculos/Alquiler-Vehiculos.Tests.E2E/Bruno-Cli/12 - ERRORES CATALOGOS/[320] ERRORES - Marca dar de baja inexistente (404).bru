@@ -1,0 +1,27 @@
+meta {
+  name: [320] ERRORES - Marca dar de baja inexistente (404)
+  type: http
+  seq: 20
+}
+
+delete {
+  url: {{baseUrl}}/api/marca/000000000000000000000000
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("MARCA_NO_ENCONTRADA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

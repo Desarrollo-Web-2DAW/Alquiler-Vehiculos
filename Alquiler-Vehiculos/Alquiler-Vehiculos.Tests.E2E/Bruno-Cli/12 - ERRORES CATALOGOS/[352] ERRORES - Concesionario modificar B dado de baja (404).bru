@@ -1,0 +1,31 @@
+meta {
+  name: [352] ERRORES - Concesionario modificar B dado de baja (404)
+  type: http
+  seq: 52
+}
+
+put {
+  url: {{baseUrl}}/api/concesionario/{{errConcBId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errRechazada}}", "ciudad": "Madrid", "telefono": "{{errTelB}}", "email": "errores@concesionario.example" }
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("CONCESIONARIO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

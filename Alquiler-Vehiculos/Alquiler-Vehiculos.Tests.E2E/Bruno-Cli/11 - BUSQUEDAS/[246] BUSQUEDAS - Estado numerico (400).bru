@@ -1,0 +1,24 @@
+meta {
+  name: [246] BUSQUEDAS - Estado numerico (400)
+  type: http
+  seq: 46
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?estado=0
+  body: none
+  auth: none
+}
+
+tests {
+  test("Filtro Estado rechazado con su campo, no un 400 por otro motivo", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().code).to.equal("VALIDACION");
+    expect(res.getBody().details["Estado"]).to.be.an("array").that.is.not.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

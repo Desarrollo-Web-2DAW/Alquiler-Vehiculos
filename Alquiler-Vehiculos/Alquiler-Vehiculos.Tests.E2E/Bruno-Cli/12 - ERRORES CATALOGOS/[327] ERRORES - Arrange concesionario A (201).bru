@@ -1,0 +1,41 @@
+meta {
+  name: [327] ERRORES - Arrange concesionario A (201)
+  type: http
+  seq: 27
+}
+
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errConcANombre}}", "ciudad": "Madrid", "telefono": "{{errTelA}}", "email": "errores@concesionario.example" }
+}
+
+script:pre-request {
+  // Arrange: teléfono aleatorio distinto entre A y B.
+  let telefono;
+  do {
+    telefono = `9${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`;
+  } while (telefono === bru.getVar("errTelA"));
+  bru.setVar("errTelA", telefono);
+  bru.setVar("errConcANombre", `Concesionario Errores A ${bru.getVar("errSello")}`);
+}
+
+tests {
+  test("Arrange: concesionario A creado", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+  if (res.getStatus() === 201) bru.setVar("errConcAId", res.getBody().id);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

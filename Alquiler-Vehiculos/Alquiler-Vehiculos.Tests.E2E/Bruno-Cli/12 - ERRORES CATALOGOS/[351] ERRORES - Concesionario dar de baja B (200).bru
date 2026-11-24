@@ -1,0 +1,26 @@
+meta {
+  name: [351] ERRORES - Concesionario dar de baja B (200)
+  type: http
+  seq: 51
+}
+
+delete {
+  url: {{baseUrl}}/api/concesionario/{{errConcBId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Arrange: B dado de baja", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

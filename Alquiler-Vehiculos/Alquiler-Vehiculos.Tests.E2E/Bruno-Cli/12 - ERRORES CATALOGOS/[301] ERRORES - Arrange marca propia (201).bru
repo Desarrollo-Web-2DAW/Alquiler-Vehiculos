@@ -1,0 +1,39 @@
+meta {
+  name: [301] ERRORES - Arrange marca propia (201)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errMarcaNombre}}", "pais": "España", "web": "https://errores.example", "modelosDisponibles": ["Modelo A"] }
+}
+
+script:pre-request {
+  const sello = Date.now();
+  bru.setVar("errSello", String(sello));
+  bru.setVar("errMarcaNombre", `Marca Errores ${sello}`);
+  bru.setVar("errRechazada", `Rechazada E2E ${sello}`);
+  bru.setVar("texto101", "a".repeat(101));
+}
+
+tests {
+  test("Arrange: marca propia creada", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+  if (res.getStatus() === 201) bru.setVar("errMarcaId", res.getBody().id);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

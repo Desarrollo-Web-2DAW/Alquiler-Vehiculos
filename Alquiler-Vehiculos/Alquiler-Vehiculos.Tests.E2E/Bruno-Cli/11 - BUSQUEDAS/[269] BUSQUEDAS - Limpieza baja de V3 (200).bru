@@ -1,0 +1,26 @@
+meta {
+  name: [269] BUSQUEDAS - Limpieza baja de V3 (200)
+  type: http
+  seq: 69
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/{{bqV3Id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Limpieza: V3 retirado", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

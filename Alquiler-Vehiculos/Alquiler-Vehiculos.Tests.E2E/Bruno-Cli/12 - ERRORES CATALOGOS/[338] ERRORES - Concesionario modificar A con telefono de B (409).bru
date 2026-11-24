@@ -1,0 +1,31 @@
+meta {
+  name: [338] ERRORES - Concesionario modificar A con telefono de B (409)
+  type: http
+  seq: 38
+}
+
+put {
+  url: {{baseUrl}}/api/concesionario/{{errConcAId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "No debe guardarse", "ciudad": "Madrid", "telefono": "{{errTelB}}", "email": "errores@concesionario.example" }
+}
+
+tests {
+  test("Teléfono de otro concesionario: conflicto concreto", function () {
+    expect(res.getStatus()).to.equal(409);
+    expect(res.getBody().code).to.equal("TELEFONO_CONCESIONARIO_DUPLICADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

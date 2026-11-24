@@ -1,0 +1,29 @@
+meta {
+  name: [325] ERRORES - Marca listar sin la dada de baja (200)
+  type: http
+  seq: 25
+}
+
+get {
+  url: {{baseUrl}}/api/marca
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("La marca retirada no aparece ni con el nombre del PUT rechazado", function () {
+    expect(res.getStatus()).to.equal(200);
+    const marcas = res.getBody();
+    expect(marcas.find(m => m.id === bru.getVar("errMarcaId"))).to.be.undefined;
+    expect(marcas.filter(m => m.nombre === bru.getVar("errRechazada"))).to.be.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,31 @@
+meta {
+  name: [302] ERRORES - Marca consultar y preparar cache (200)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/marca/{{errMarcaId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Arrange: lectura que deja la marca en caché", function () {
+    expect(res.getStatus()).to.equal(200);
+    const m = res.getBody();
+    expect(m.nombre).to.equal(bru.getVar("errMarcaNombre"));
+    expect(m.pais).to.equal("España");
+    expect(m.web).to.equal("https://errores.example");
+    expect(m.modelosDisponibles).to.deep.equal(["Modelo A"]);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

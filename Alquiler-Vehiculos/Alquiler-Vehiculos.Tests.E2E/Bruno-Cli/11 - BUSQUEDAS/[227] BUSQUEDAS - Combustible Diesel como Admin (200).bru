@@ -1,0 +1,35 @@
+meta {
+  name: [227] BUSQUEDAS - Combustible Diesel como Admin (200)
+  type: http
+  seq: 27
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?marca={{bqMarca}}&combustible=Diesel
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("RF-06: recuento exacto (Combustible Diesel)", function () {
+    expect(res.getStatus()).to.equal(200);
+    const grupos = res.getBody();
+    expect(grupos).to.be.an("array");
+    grupos.forEach(g => expect(g.marca).to.equal(bru.getVar("bqMarca")));
+    const firma = g => [g.modelo, g.categoria, g.unidadesTotales, g.unidadesLibres].join("|");
+    const esperado = [
+      [bru.getVar("bqAlfa"), "Hatchback", 2, 1],
+      [bru.getVar("bqGamma"), "Furgoneta", 1, 0]
+    ].map(e => e.join("|")).sort();
+    expect(grupos.map(firma).sort()).to.deep.equal(esperado);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

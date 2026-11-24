@@ -1,0 +1,35 @@
+meta {
+  name: [202] BUSQUEDAS - Arrange concesionario propio (201)
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "Concesionario {{bqMarca}}", "ciudad": "Madrid", "telefono": "{{bqTelefono}}", "email": "busqueda@concesionario.example" }
+}
+
+script:pre-request {
+  bru.setVar("bqTelefono", `9${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`);
+}
+
+tests {
+  test("Arrange: concesionario propio", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+  if (res.getStatus() === 201) bru.setVar("bqConcesionarioId", res.getBody().id);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

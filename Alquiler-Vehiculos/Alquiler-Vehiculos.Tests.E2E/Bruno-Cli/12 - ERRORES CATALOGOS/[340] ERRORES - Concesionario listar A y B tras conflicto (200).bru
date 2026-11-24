@@ -1,0 +1,33 @@
+meta {
+  name: [340] ERRORES - Concesionario listar A y B tras conflicto (200)
+  type: http
+  seq: 40
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Ni A ni B cambian en la base de datos", function () {
+    expect(res.getStatus()).to.equal(200);
+    const lista = res.getBody();
+    const a = lista.find(c => c.id === bru.getVar("errConcAId"));
+    const b = lista.find(c => c.id === bru.getVar("errConcBId"));
+    expect(a.nombre).to.equal(bru.getVar("errConcANombre"));
+    expect(a.telefono).to.equal(bru.getVar("errTelA"));
+    expect(b.nombre).to.equal(bru.getVar("errConcBNombre"));
+    expect(b.telefono).to.equal(bru.getVar("errTelB"));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

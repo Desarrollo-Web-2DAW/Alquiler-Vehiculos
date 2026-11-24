@@ -1,0 +1,43 @@
+meta {
+  name: 11 - BUSQUEDAS
+  seq: 11
+}
+
+auth {
+  mode: none
+}
+
+script:pre-request {
+  // Arrange: autenticación real. No se depende de ejecutar antes la carpeta AUTH.
+  const axios = require("axios");
+  for (const perfil of ["admin", "cliente", "trabajador", "responsable", "mecanico"]) {
+    const token = bru.getVar(`${perfil}Token`);
+    let vigente = false;
+    try {
+      const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      vigente = JSON.parse(Buffer.from(base64, "base64").toString("utf8")).exp * 1000 > Date.now() + 60000;
+    } catch (_) {
+      vigente = false;
+    }
+    if (!vigente) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`),
+        password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+
+docs {
+  RF-06, RF-09, RF-10 y RF-46. Ejecutar la carpeta completa y secuencialmente.
+  Arrange: se crea un universo propio (marca única, 6 vehículos, 2 retirados) para que los
+  recuentos sean exactos y no dependan de la semilla. Todas las búsquedas filtran por esa marca.
+    Alfa  | Hatchback | V1 Diesel/Manual, V2 Diesel/Manual retirado, V3 Gasolina/Automática
+    Beta  | Suv       | V4 Híbrido/Automática 7 plazas, V5 Eléctrico/Automática
+    Gamma | Furgoneta | V6 Diesel/Manual retirado (grupo sin disponibilidad)
+  Assert: se compara la lista completa de grupos (modelo, categoría, totales, libres):
+  un filtro ignorado en silencio cambia la cardinalidad y falla.
+  Solo Admin ve grupos sin unidades libres; el resto de perfiles no.
+  Fuera de alcance: disponibilidad por fechas y horario (RF-06/11/19/26), pendiente de reservas.
+}

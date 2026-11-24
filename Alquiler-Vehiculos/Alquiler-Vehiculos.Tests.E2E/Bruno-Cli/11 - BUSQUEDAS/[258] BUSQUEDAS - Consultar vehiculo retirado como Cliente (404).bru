@@ -1,0 +1,28 @@
+meta {
+  name: [258] BUSQUEDAS - Consultar vehiculo retirado como Cliente (404)
+  type: http
+  seq: 58
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{bqV6Id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+tests {
+  test("RF-46: unidad retirada oculta, sin filtrar sus datos", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+    expect(res.getBody().matricula).to.be.undefined;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

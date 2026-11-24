@@ -1,0 +1,31 @@
+meta {
+  name: [353] ERRORES - Concesionario consultar B tras PUT rechazado (404)
+  type: http
+  seq: 53
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{errConcBId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("CONCESIONARIO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  El PUT rechazado no debe reactivar B ni dejarlo en caché.
+}

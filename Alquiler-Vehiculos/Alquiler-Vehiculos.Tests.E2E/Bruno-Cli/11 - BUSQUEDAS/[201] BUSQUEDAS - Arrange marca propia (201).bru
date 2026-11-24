@@ -1,0 +1,42 @@
+meta {
+  name: [201] BUSQUEDAS - Arrange marca propia (201)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{bqMarca}}", "pais": "España", "web": "https://busqueda.example", "modelosDisponibles": ["{{bqAlfa}}", "{{bqBeta}}", "{{bqGamma}}"] }
+}
+
+script:pre-request {
+  // Arrange: nombres únicos sin espacios; el filtro de marca es "contiene".
+  const sello = Date.now();
+  bru.setVar("bqMarca", `BQ${sello}`);
+  bru.setVar("bqSello", String(sello));
+  bru.setVar("bqAlfa", `Alfa${sello}`);
+  bru.setVar("bqBeta", `Beta${sello}`);
+  bru.setVar("bqGamma", `Gamma${sello}`);
+}
+
+tests {
+  test("Arrange: marca con los tres modelos del universo", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().modelosDisponibles).to.have.length(3);
+  });
+  if (res.getStatus() === 201) bru.setVar("bqMarcaId", res.getBody().id);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

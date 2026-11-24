@@ -1,0 +1,28 @@
+meta {
+  name: [255] BUSQUEDAS - Consultar vehiculo retirado como Trabajador (200)
+  type: http
+  seq: 55
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{bqV6Id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+tests {
+  test("RF-46: el personal consulta la unidad retirada", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().estado).to.equal("Retirado");
+    expect(res.getBody().isActivo).to.equal(false);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

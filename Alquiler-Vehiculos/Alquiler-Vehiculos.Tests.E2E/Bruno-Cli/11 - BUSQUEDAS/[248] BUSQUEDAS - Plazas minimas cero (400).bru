@@ -1,0 +1,24 @@
+meta {
+  name: [248] BUSQUEDAS - Plazas minimas cero (400)
+  type: http
+  seq: 48
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?plazasMinimas=0
+  body: none
+  auth: none
+}
+
+tests {
+  test("Filtro PlazasMinimas rechazado con su campo, no un 400 por otro motivo", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().code).to.equal("VALIDACION");
+    expect(res.getBody().details["PlazasMinimas"]).to.be.an("array").that.is.not.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,23 @@
+meta {
+  name: [251] BUSQUEDAS - Plazas minimas no numericas (400)
+  type: http
+  seq: 51
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?plazasMinimas=abc
+  body: none
+  auth: none
+}
+
+tests {
+  test("Valor no convertible rechazado por el binding, sin 500", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().errors).to.have.property("PlazasMinimas");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

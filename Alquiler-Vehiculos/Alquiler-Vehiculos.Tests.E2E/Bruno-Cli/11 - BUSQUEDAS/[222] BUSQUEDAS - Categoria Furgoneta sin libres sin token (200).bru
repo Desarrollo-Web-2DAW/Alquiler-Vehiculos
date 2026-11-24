@@ -1,0 +1,30 @@
+meta {
+  name: [222] BUSQUEDAS - Categoria Furgoneta sin libres sin token (200)
+  type: http
+  seq: 22
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?marca={{bqMarca}}&categoria=Furgoneta
+  body: none
+  auth: none
+}
+
+tests {
+  test("RF-06: recuento exacto (Categoria Furgoneta sin libres)", function () {
+    expect(res.getStatus()).to.equal(200);
+    const grupos = res.getBody();
+    expect(grupos).to.be.an("array");
+    grupos.forEach(g => expect(g.marca).to.equal(bru.getVar("bqMarca")));
+    const firma = g => [g.modelo, g.categoria, g.unidadesTotales, g.unidadesLibres].join("|");
+    const esperado = [
+      
+    ].map(e => e.join("|")).sort();
+    expect(grupos.map(firma).sort()).to.deep.equal(esperado);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

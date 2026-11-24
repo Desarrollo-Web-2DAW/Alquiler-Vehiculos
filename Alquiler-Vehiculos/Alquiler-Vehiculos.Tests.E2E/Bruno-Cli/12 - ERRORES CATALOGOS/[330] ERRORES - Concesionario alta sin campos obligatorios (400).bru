@@ -1,0 +1,37 @@
+meta {
+  name: [330] ERRORES - Concesionario alta sin campos obligatorios (400)
+  type: http
+  seq: 30
+}
+
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "", "ciudad": "", "telefono": "", "email": "" }
+}
+
+tests {
+  test("RF-10: alta rechazada (sin campos obligatorios)", function () {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    const campos = body.details || body.errors;
+    expect(campos, "el 400 debe indicar los campos").to.be.an("object");
+    expect(campos).to.have.property("Nombre");
+    expect(campos).to.have.property("Ciudad");
+    expect(campos).to.have.property("Telefono");
+    expect(campos).to.have.property("Email");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,31 @@
+meta {
+  name: [319] ERRORES - Marca modificar inexistente (404)
+  type: http
+  seq: 19
+}
+
+put {
+  url: {{baseUrl}}/api/marca/000000000000000000000000
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errRechazada}}", "pais": "España", "web": "https://errores.example", "modelosDisponibles": ["Modelo A"] }
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("MARCA_NO_ENCONTRADA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

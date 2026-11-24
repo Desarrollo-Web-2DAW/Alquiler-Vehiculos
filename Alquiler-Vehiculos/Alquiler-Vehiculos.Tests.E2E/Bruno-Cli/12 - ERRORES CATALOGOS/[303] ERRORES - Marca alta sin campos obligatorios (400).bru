@@ -1,0 +1,36 @@
+meta {
+  name: [303] ERRORES - Marca alta sin campos obligatorios (400)
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "", "pais": "", "web": "", "modelosDisponibles": [] }
+}
+
+tests {
+  test("RF-09: alta rechazada (sin campos obligatorios)", function () {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    const campos = body.details || body.errors;
+    expect(campos, "el 400 debe indicar los campos").to.be.an("object");
+    expect(campos).to.have.property("Nombre");
+    expect(campos).to.have.property("Pais");
+    expect(campos).to.have.property("Web");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

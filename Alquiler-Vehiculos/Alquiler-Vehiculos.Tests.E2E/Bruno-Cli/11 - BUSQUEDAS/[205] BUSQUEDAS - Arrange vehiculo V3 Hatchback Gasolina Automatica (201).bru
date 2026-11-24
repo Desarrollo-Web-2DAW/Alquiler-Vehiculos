@@ -1,0 +1,60 @@
+meta {
+  name: [205] BUSQUEDAS - Arrange vehiculo V3 Hatchback Gasolina Automatica (201)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{bqMatV3}}
+  marca: {{bqMarca}}
+  modelo: {{bqAlfa}}
+  acriss: CDAV
+  color: Blanco
+  precioBaseDia: 50
+  plazas: 5
+  maleteroLitros: 350
+  autonomiaKm: 700
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{bqConcesionarioId}}
+}
+
+script:pre-request {
+  // Arrange: matrícula aleatoria distinta de las ya generadas en esta ejecución.
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  const usadas = ["V1", "V2", "V3", "V4", "V5", "V6"].map(v => bru.getVar(`bqMat${v}`));
+  let matricula;
+  do {
+    const numero = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+    matricula = numero + Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join("");
+  } while (usadas.includes(matricula));
+  bru.setVar("bqMatV3", matricula);
+}
+
+tests {
+  test("Arrange: V3 clasificado como Hatchback/Gasolina/Automatica", function () {
+    expect(res.getStatus()).to.equal(201);
+    const v = res.getBody();
+    expect(v.estado).to.equal("Disponible");
+    expect(v.categoria).to.equal("Hatchback");
+    expect(v.combustible).to.equal("Gasolina");
+    expect(v.transmision).to.equal("Automatica");
+  });
+  if (res.getStatus() === 201) bru.setVar("bqV3Id", res.getBody().id);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

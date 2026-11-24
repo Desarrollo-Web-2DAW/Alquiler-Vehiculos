@@ -1,0 +1,45 @@
+meta {
+  name: [265] BUSQUEDAS - Actualizar como Responsable (200)
+  type: http
+  seq: 65
+}
+
+put {
+  url: {{baseUrl}}/api/vehiculo/{{bqV1Id}}
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{bqMatV1}}
+  marca: {{bqMarca}}
+  modelo: {{bqAlfa}}
+  acriss: CDMD
+  color: Amarillo
+  precioBaseDia: 50
+  plazas: 5
+  maleteroLitros: 380
+  autonomiaKm: 1000
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{bqConcesionarioId}}
+}
+
+tests {
+  test("RF-46: Responsable modifica datos sin cambiar estado ni baja", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().color).to.equal("Amarillo");
+    expect(res.getBody().estado).to.equal("Disponible");
+    expect(res.getBody().isActivo).to.equal(true);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

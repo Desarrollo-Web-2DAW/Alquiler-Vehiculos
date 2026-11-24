@@ -1,0 +1,27 @@
+meta {
+  name: [337] ERRORES - Concesionario listar sin altas rechazadas (200)
+  type: http
+  seq: 37
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Los rechazos no crean concesionarios", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().filter(c => c.nombre === bru.getVar("errRechazada"))).to.be.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

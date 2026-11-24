@@ -1,0 +1,27 @@
+meta {
+  name: [354] ERRORES - Concesionario dar de baja B dos veces (404)
+  type: http
+  seq: 54
+}
+
+delete {
+  url: {{baseUrl}}/api/concesionario/{{errConcBId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("CONCESIONARIO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,28 @@
+meta {
+  name: [261] BUSQUEDAS - Matricula retirada como Trabajador (200)
+  type: http
+  seq: 61
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/{{bqMatV6}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+tests {
+  test("RF-46: el personal consulta por matrícula la unidad retirada", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().matricula).to.equal(bru.getVar("bqMatV6"));
+    expect(res.getBody().estado).to.equal("Retirado");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

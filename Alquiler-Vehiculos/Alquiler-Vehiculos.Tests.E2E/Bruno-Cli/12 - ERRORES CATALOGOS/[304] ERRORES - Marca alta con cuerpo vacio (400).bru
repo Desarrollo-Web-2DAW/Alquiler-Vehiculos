@@ -1,0 +1,36 @@
+meta {
+  name: [304] ERRORES - Marca alta con cuerpo vacio (400)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  {}
+}
+
+tests {
+  test("RF-09: alta rechazada (con cuerpo vacio)", function () {
+    expect(res.getStatus()).to.equal(400);
+    const body = res.getBody();
+    const campos = body.details || body.errors;
+    expect(campos, "el 400 debe indicar los campos").to.be.an("object");
+    expect(campos).to.have.property("Nombre");
+    expect(campos).to.have.property("Pais");
+    expect(campos).to.have.property("Web");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

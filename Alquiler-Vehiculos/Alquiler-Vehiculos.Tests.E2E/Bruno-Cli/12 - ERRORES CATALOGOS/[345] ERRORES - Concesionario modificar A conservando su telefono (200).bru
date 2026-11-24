@@ -1,0 +1,36 @@
+meta {
+  name: [345] ERRORES - Concesionario modificar A conservando su telefono (200)
+  type: http
+  seq: 45
+}
+
+put {
+  url: {{baseUrl}}/api/concesionario/{{errConcAId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errConcANuevo}}", "ciudad": "Madrid", "telefono": "{{errTelA}}", "email": "errores@concesionario.example" }
+}
+
+script:pre-request {
+  bru.setVar("errConcANuevo", `${bru.getVar("errConcANombre")} modificado`);
+}
+
+tests {
+  test("Su propio teléfono no cuenta como duplicado", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(bru.getVar("errConcANuevo"));
+    expect(res.getBody().telefono).to.equal(bru.getVar("errTelA"));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

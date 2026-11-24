@@ -1,0 +1,26 @@
+meta {
+  name: [271] BUSQUEDAS - Limpieza baja de V5 (200)
+  type: http
+  seq: 71
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/{{bqV5Id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Limpieza: V5 retirado", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,23 @@
+meta {
+  name: [242] BUSQUEDAS - Marca inexistente sin token (200)
+  type: http
+  seq: 42
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?marca=NoExiste{{bqSello}}
+  body: none
+  auth: none
+}
+
+tests {
+  test("RF-06: sin coincidencias devuelve lista vacía, no 404", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.deep.equal([]);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,32 @@
+meta {
+  name: [253] BUSQUEDAS - Paginar como Responsable (200)
+  type: http
+  seq: 53
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/paged?page=1&pageSize=5
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+tests {
+  test("RF-46: el personal pagina la flota", function () {
+    expect(res.getStatus()).to.equal(200);
+    const pagina = res.getBody();
+    expect(pagina.page).to.equal(1);
+    expect(pagina.pageSize).to.equal(5);
+    expect(pagina.items).to.be.an("array");
+    expect(pagina.items.length).to.be.at.most(5);
+    expect(pagina.totalItems).to.be.at.least(4);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

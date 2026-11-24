@@ -1,0 +1,31 @@
+meta {
+  name: [339] ERRORES - Concesionario consultar A tras conflicto (200)
+  type: http
+  seq: 39
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{errConcAId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("La caché no devuelve el intento rechazado", function () {
+    expect(res.getStatus()).to.equal(200);
+    const c = res.getBody();
+    expect(c.nombre).to.equal(bru.getVar("errConcANombre"));
+    expect(c.ciudad).to.equal("Madrid");
+    expect(c.telefono).to.equal(bru.getVar("errTelA"));
+    expect(c.email).to.equal("errores@concesionario.example");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

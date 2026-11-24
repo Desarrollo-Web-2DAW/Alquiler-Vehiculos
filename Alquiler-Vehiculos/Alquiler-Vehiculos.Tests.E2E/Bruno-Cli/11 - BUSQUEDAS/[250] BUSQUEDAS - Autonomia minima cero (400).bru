@@ -1,0 +1,24 @@
+meta {
+  name: [250] BUSQUEDAS - Autonomia minima cero (400)
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?autonomiaKmMinima=0
+  body: none
+  auth: none
+}
+
+tests {
+  test("Filtro AutonomiaKmMinima rechazado con su campo, no un 400 por otro motivo", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().code).to.equal("VALIDACION");
+    expect(res.getBody().details["AutonomiaKmMinima"]).to.be.an("array").that.is.not.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

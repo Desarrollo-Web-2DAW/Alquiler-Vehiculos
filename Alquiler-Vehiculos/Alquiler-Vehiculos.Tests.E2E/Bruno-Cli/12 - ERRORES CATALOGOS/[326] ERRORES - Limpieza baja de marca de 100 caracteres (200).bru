@@ -1,0 +1,26 @@
+meta {
+  name: [326] ERRORES - Limpieza baja de marca de 100 caracteres (200)
+  type: http
+  seq: 26
+}
+
+delete {
+  url: {{baseUrl}}/api/marca/{{errMarcaLimiteId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Limpieza: marca límite retirada", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

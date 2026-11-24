@@ -1,0 +1,31 @@
+meta {
+  name: [348] ERRORES - Concesionario modificar inexistente (404)
+  type: http
+  seq: 48
+}
+
+put {
+  url: {{baseUrl}}/api/concesionario/999999999
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errRechazada}}", "ciudad": "Madrid", "telefono": "600000002", "email": "errores@concesionario.example" }
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("CONCESIONARIO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

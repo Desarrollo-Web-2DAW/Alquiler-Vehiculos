@@ -1,0 +1,28 @@
+meta {
+  name: [264] BUSQUEDAS - Matricula disponible como Cliente (200)
+  type: http
+  seq: 64
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/{{bqMatV1}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+tests {
+  test("RF-06: el cliente consulta una unidad disponible por matrícula", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getVar("bqV1Id"));
+    expect(res.getBody().estado).to.equal("Disponible");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,31 @@
+meta {
+  name: [329] ERRORES - Concesionario consultar A y preparar cache (200)
+  type: http
+  seq: 29
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{errConcAId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Arrange: lectura que deja A en caché", function () {
+    expect(res.getStatus()).to.equal(200);
+    const c = res.getBody();
+    expect(c.nombre).to.equal(bru.getVar("errConcANombre"));
+    expect(c.ciudad).to.equal("Madrid");
+    expect(c.telefono).to.equal(bru.getVar("errTelA"));
+    expect(c.email).to.equal("errores@concesionario.example");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

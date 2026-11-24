@@ -1,0 +1,42 @@
+meta {
+  name: 12 - ERRORES CATALOGOS
+  seq: 12
+}
+
+auth {
+  mode: none
+}
+
+script:pre-request {
+  // Arrange: autenticación real. No se depende de ejecutar antes la carpeta AUTH.
+  const axios = require("axios");
+  for (const perfil of ["admin", "cliente", "trabajador", "responsable", "mecanico"]) {
+    const token = bru.getVar(`${perfil}Token`);
+    let vigente = false;
+    try {
+      const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      vigente = JSON.parse(Buffer.from(base64, "base64").toString("utf8")).exp * 1000 > Date.now() + 60000;
+    } catch (_) {
+      vigente = false;
+    }
+    if (!vigente) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`),
+        password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+
+docs {
+  RF-09, RF-10 y RF-46. Ejecutar la carpeta completa y secuencialmente, como Admin.
+  Errores de marcas y concesionarios: obligatorios, longitudes (1 y 101 rechazados, 100 admitido),
+  lista de modelos vacía, GET/PUT/DELETE de inexistentes, modificar dados de baja y teléfono
+  duplicado al modificar.
+  Efectos colaterales: cada bloque lee antes (deja la entrada en caché), lanza el rechazo y
+  vuelve a leer por ID (caché) y en el listado (base de datos) para comprobar que nada cambió.
+  Los campos vacíos los rechaza el binding de ASP.NET (cuerpo ProblemDetails, clave errors)
+  antes que FluentValidation (clave details): el test acepta ambos y exige el campo concreto.
+  No modifica marcas ni concesionarios semilla.
+}

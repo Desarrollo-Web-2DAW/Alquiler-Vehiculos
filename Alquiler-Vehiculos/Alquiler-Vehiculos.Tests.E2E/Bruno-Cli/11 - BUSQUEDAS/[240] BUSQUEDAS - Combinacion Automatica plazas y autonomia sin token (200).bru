@@ -1,0 +1,30 @@
+meta {
+  name: [240] BUSQUEDAS - Combinacion Automatica plazas y autonomia sin token (200)
+  type: http
+  seq: 40
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?marca={{bqMarca}}&transmision=Automatica&plazasMinimas=6&autonomiaKmMinima=500
+  body: none
+  auth: none
+}
+
+tests {
+  test("RF-06: recuento exacto (Combinacion Automatica plazas y autonomia)", function () {
+    expect(res.getStatus()).to.equal(200);
+    const grupos = res.getBody();
+    expect(grupos).to.be.an("array");
+    grupos.forEach(g => expect(g.marca).to.equal(bru.getVar("bqMarca")));
+    const firma = g => [g.modelo, g.categoria, g.unidadesTotales, g.unidadesLibres].join("|");
+    const esperado = [
+      [bru.getVar("bqBeta"), "Suv", 1, 1]
+    ].map(e => e.join("|")).sort();
+    expect(grupos.map(firma).sort()).to.deep.equal(esperado);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

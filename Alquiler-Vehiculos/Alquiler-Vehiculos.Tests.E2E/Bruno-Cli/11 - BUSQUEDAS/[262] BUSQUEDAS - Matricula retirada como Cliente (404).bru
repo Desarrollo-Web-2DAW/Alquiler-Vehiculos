@@ -1,0 +1,27 @@
+meta {
+  name: [262] BUSQUEDAS - Matricula retirada como Cliente (404)
+  type: http
+  seq: 62
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/{{bqMatV6}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+tests {
+  test("RF-46: matrícula retirada oculta al público", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

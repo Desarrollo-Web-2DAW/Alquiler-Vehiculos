@@ -1,0 +1,36 @@
+meta {
+  name: [311] ERRORES - Marca alta nombre de 100 caracteres (201)
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{errMarcaLimite}}", "pais": "España", "web": "https://errores.example", "modelosDisponibles": ["Modelo A"] }
+}
+
+script:pre-request {
+  bru.setVar("errMarcaLimite", `Limite${bru.getVar("errSello")}`.padEnd(100, "x"));
+}
+
+tests {
+  test("RF-09: el límite de 100 caracteres se admite", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().nombre).to.have.length(100);
+  });
+  if (res.getStatus() === 201) bru.setVar("errMarcaLimiteId", res.getBody().id);
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

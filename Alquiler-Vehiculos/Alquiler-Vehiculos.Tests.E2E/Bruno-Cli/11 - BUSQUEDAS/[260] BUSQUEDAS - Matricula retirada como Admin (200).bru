@@ -1,0 +1,28 @@
+meta {
+  name: [260] BUSQUEDAS - Matricula retirada como Admin (200)
+  type: http
+  seq: 60
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/{{bqMatV6}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("RF-46: el personal consulta por matrícula la unidad retirada", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().matricula).to.equal(bru.getVar("bqMatV6"));
+    expect(res.getBody().estado).to.equal("Retirado");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

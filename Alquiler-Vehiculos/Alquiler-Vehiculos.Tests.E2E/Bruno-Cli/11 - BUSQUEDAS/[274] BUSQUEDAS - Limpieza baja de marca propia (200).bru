@@ -1,0 +1,26 @@
+meta {
+  name: [274] BUSQUEDAS - Limpieza baja de marca propia (200)
+  type: http
+  seq: 74
+}
+
+delete {
+  url: {{baseUrl}}/api/marca/{{bqMarcaId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Limpieza: marca retirada", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,26 @@
+meta {
+  name: [210] BUSQUEDAS - Arrange baja de V6 (200)
+  type: http
+  seq: 10
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/{{bqV6Id}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Arrange: V6 queda Retirado", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

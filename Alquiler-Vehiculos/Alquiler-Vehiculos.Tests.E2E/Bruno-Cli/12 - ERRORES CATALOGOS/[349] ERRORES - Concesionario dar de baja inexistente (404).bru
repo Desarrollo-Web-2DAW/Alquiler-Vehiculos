@@ -1,0 +1,27 @@
+meta {
+  name: [349] ERRORES - Concesionario dar de baja inexistente (404)
+  type: http
+  seq: 49
+}
+
+delete {
+  url: {{baseUrl}}/api/concesionario/999999999
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("CONCESIONARIO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

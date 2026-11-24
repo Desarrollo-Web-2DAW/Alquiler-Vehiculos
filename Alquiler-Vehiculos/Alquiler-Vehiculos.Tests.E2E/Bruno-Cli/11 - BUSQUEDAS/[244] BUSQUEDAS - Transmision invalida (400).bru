@@ -1,0 +1,24 @@
+meta {
+  name: [244] BUSQUEDAS - Transmision invalida (400)
+  type: http
+  seq: 44
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?transmision=Semiautomatica
+  body: none
+  auth: none
+}
+
+tests {
+  test("Filtro Transmision rechazado con su campo, no un 400 por otro motivo", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().code).to.equal("VALIDACION");
+    expect(res.getBody().details["Transmision"]).to.be.an("array").that.is.not.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

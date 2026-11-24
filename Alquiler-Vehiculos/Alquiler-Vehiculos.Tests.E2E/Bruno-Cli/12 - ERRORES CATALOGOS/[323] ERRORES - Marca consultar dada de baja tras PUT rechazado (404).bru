@@ -1,0 +1,31 @@
+meta {
+  name: [323] ERRORES - Marca consultar dada de baja tras PUT rechazado (404)
+  type: http
+  seq: 23
+}
+
+get {
+  url: {{baseUrl}}/api/marca/{{errMarcaId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Recurso inexistente: 404 con código de dominio", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("MARCA_NO_ENCONTRADA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  El PUT rechazado no debe reactivar la marca ni dejarla en caché.
+}

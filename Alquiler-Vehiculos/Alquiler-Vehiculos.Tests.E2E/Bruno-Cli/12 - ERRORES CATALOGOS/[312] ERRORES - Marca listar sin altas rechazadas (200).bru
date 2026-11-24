@@ -1,0 +1,30 @@
+meta {
+  name: [312] ERRORES - Marca listar sin altas rechazadas (200)
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/marca
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Los rechazos no crean marcas", function () {
+    expect(res.getStatus()).to.equal(200);
+    const marcas = res.getBody();
+    expect(marcas.filter(m => m.nombre === bru.getVar("errRechazada"))).to.be.empty;
+    expect(marcas.filter(m => m.nombre === "a")).to.be.empty;
+    expect(marcas.find(m => m.id === bru.getVar("errMarcaLimiteId"))).to.not.be.undefined;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

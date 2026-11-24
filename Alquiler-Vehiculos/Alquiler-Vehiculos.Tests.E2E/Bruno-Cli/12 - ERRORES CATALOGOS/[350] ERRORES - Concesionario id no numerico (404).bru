@@ -1,0 +1,26 @@
+meta {
+  name: [350] ERRORES - Concesionario id no numerico (404)
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/abc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("La restricción de ruta responde 404, no 500", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
