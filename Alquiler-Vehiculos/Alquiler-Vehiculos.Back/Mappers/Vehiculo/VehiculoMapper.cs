@@ -118,12 +118,12 @@ public static class VehiculoMapper
     /// </summary>
     /// <param name="vehiculoModel">El modelo de vehículo</param>
     /// <returns><see cref="VehiculoDto"/></returns>
-    public static VehiculoDto ToDto(this Models.Vehiculo.VehiculoModel vehiculoModel)
+    public static VehiculoDto ToDto(this VehiculoModel vehiculoModel)
     {
         return new VehiculoDto
         {
             Id = vehiculoModel.Id,
-            Foto = vehiculoModel.FotoFk,
+            FotoRuta = vehiculoModel.Foto.Ruta,
             Matricula = vehiculoModel.Matrícula,
             Marca = vehiculoModel.Marca,
             Modelo = vehiculoModel.Modelo,
@@ -197,7 +197,7 @@ public static class VehiculoMapper
     /// como valor por defecto de la flota. Se documenta en la memoria de la práctica.
     /// </remarks>
     /// <param name="letraCombustible">AcrissCombustible</param>
-    /// <returns><see cref="TipoCombustible"/> o <see cref="BadRequestError"/></returns>
+    /// <returns><see cref="TipoCombustible"/> o <see cref="ValidationError"/></returns>
     internal static Result<TipoCombustible, DomainError> ObtenerTipoCombustible(char letraCombustible)
     {
         return letraCombustible switch
@@ -220,7 +220,7 @@ public static class VehiculoMapper
     /// automáticas, así que se mapean a <see cref="TipoTransmision.Automatica"/>.
     /// </remarks>
     /// <param name="letraTransmision">AcrissTransmision</param>
-    /// <returns><see cref="TipoTransmision"/> o <see cref="BadRequestError"/></returns>
+    /// <returns><see cref="TipoTransmision"/> o <see cref="ValidationError"/></returns>
     internal static Result<TipoTransmision, DomainError> ObtenerTipoTransmision(char letraTransmision)
     {
         return letraTransmision switch
