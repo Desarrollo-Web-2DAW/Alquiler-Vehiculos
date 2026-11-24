@@ -36,8 +36,6 @@
         <Folder Include="Controllers\Pago\"/>
         <Folder Include="Controllers\Reserva\"/>
         <Folder Include="Controllers\Vehiculo\"/>
-        <Folder Include="Errors\Pago\"/>
-        <Folder Include="Errors\Reserva\"/>
         <Folder Include="Errors\Vehiculo\"/>
         <Folder Include="Exceptions\Cliente\"/>
         <Folder Include="Exceptions\Pago\"/>
@@ -52,10 +50,7 @@
         <Folder Include="Repositories\Cliente\"/>
         <Folder Include="Repositories\Reserva\"/>
         <Folder Include="Repositories\Vehiculo\"/>
-        <Folder Include="Services\Pago\"/>
-        <Folder Include="Services\Reserva\"/>
         <Folder Include="Services\Vehiculo\"/>
-        <Folder Include="Validators\"/>
     </ItemGroup>
 
 </Project>
