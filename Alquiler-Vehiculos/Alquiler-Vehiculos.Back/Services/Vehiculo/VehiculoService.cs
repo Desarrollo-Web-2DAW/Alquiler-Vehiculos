@@ -12,6 +12,8 @@ using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
+using Alquiler_Vehiculos.Services.Reserva;
+using Alquiler_Vehiculos.Services.Taller;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
@@ -34,7 +36,8 @@ public class VehiculoService(
     UpdateVehiculoValidator updateVehiculoValidator,
     IConcesionarioRepository concesionarioRepository,
     QueryRequestVehiculoValidator queryRequestVehiculoValidator,
-    IMarcaRepository marcaRepository
+    IMarcaRepository marcaRepository,
+    IParteTallerService tallerService
     ) : IVehiculoService {
     
     private const string ClaveVehiculo = "vehiculo:id:";
@@ -258,17 +261,25 @@ public class VehiculoService(
     public async Task<Result<bool, DomainError>> SoftDelete(string key)
     {
         Log.Debug("Borrado lógico de vehículo con ID {Id}", key);
+        
+        var vehiculo = await repository.GetById(key);
+        if (vehiculo == null) return VehiculoError.NotFoundVehiculo(key);
+        
+        if (vehiculo.Estado != EstadoVehiculo.Disponible) return VehiculoError.NoDisponibleParaBaja(vehiculo.Estado);
+        
+        var partesAbiertos = await tallerService.TienePartesAbiertosAsync(key);
+        if (partesAbiertos.IsFailure) return partesAbiertos.Error;
+        if (partesAbiertos.Value)  return VehiculoError.VehiculoConPartesAbiertos(key);
 
-        var result = await transactionsService.DeleteAsync(key);
-        if (result.IsFailure)
-        {
-            return Result.Failure<bool, DomainError>(result.Error);
-        }
+        // var tieneReserva = await repository.TieneReservas(key);
+        // if (tieneReserva) return VehiculoError.NoDisponibleParaBaja();
+
+        var result = await repository.SoftDelete(key);
 
         await cache.RemoveAsync(ClaveVehiculo + key);
-        await cache.RemoveAsync(ClaveMatricula + result.Value.Matrícula);
+        await cache.RemoveAsync(ClaveMatricula + vehiculo.Matrícula);
 
-        return Result.Success<bool, DomainError>(true);
+        return Result.Success<bool, DomainError>(result);
     }
 
     /// <inheritdoc cref="IVehiculoService.Restore" />

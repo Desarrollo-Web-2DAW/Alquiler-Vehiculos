@@ -6,6 +6,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Services.Common;
+using Alquiler_Vehiculos.Services.Storage;
 using Alquiler_Vehiculos.Services.Taller;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions.Common;
 using CSharpFunctionalExtensions;
@@ -27,65 +28,6 @@ public sealed class VehiculoTransactionsService(
     ITransactionManager transactionManager,
     ILogger<VehiculoTransactionsService> logger) : IVehiculoTransactionsService
 {
-    /// <inheritdoc cref="IVehiculoTransactionsService.DeleteAsync" />
-    /// <remarks>
-    /// Enfoque mixto de concurrencia: la fase 1 solo <b>lee</b> para poder dar un mensaje
-    /// claro al usuario, pero la garantía la da la fase 2, un <c>UPDATE ... WHERE Estado</c>
-    /// que o afecta a una fila o a ninguna. La fase 3 (segunda escritura) queda vacía en este
-    /// caso de uso porque la baja conserva la foto. Sigue pendiente integrar la comprobación
-    /// de reservas vivas cuando exista el contrato del módulo de reservas (RF-01).
-    /// </remarks>
-    public Task<Result<VehiculoModel, DomainError>> DeleteAsync(string id, CancellationToken ct = default)
-        => transactionManager.ExecuteAsync<VehiculoModel>(async () =>
-        {
-            logger.LogInformation("Eliminando vehículo {Id}", id);
-
-            // ── Fase 1: validación optimista (solo lectura) ─────────────────────
-            // Cortesía: sirve para responder "no está disponible" con su estado real.
-            // No es la garantía, porque entre este SELECT y el UPDATE puede cambiar.
-            var vehiculo = await vehiculoRepository.GetById(id);
-            if (vehiculo is null)
-            {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
-            }
-
-            if (vehiculo.Estado != EstadoVehiculo.Disponible)
-            {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NoDisponibleParaBaja(vehiculo.Estado));
-            }
-
-            var partesAbiertos = await parteTallerService.TienePartesAbiertosAsync(id, ct);
-            if (partesAbiertos.IsFailure)
-            {
-                return Result.Failure<VehiculoModel, DomainError>(partesAbiertos.Error);
-            }
-
-            if (partesAbiertos.Value)
-            {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.VehiculoConPartesAbiertos(id));
-            }
-
-            // ── Fase 2: compare-and-set (la garantía real) ──────────────────────
-            if (!await vehiculoRepository.SoftDeleteSiEstado(id, EstadoVehiculo.Disponible))
-            {
-                // 0 filas = otro proceso cambió el estado o dio de baja el vehículo
-                // entre la fase 1 y la fase 2. Se devuelve un fallo de negocio y el
-                // gestor transaccional revierte: no es un error técnico.
-                logger.LogWarning(
-                    "Baja condicional sin efecto para el vehículo {Id}: cambió su estado", id);
-
-                var ultimo = await vehiculoRepository.GetById(id);
-                if (ultimo is null || !ultimo.Activo)
-                {
-                    return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
-                }
-
-                return Result.Failure<VehiculoModel, DomainError>(
-                    VehiculoError.NoDisponibleParaBaja(ultimo.Estado));
-            }
-
-            return Result.Success<VehiculoModel, DomainError>(vehiculo);
-        }, ct);
 
     /// <inheritdoc cref="IVehiculoTransactionsService.UpdateAsync" />
     public async Task<Result<VehiculoModel, DomainError>> UpdateAsync(
@@ -131,8 +73,7 @@ public sealed class VehiculoTransactionsService(
             SqlState: PostgresErrorCodes.UniqueViolation,
             ConstraintName: "IX_Vehiculos_Matrícula"
         }) {
-            // Se traduce después de que el gestor transaccional haya deshecho la operación.
-            // La comprobación previa del servicio no evita dos escrituras simultáneas (RF-02).
+          
             return VehiculoError.VehiculoYaExiste(datos.Matrícula);
         }
     }

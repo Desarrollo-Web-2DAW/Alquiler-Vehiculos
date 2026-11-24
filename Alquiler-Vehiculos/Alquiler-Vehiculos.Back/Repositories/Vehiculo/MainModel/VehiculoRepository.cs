@@ -48,26 +48,19 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     /// <inheritdoc cref="IVehiculoRepository.SoftDelete" />
     public async Task<bool> SoftDelete(string key)
     {
-        logger.LogInformation("Realizando borrado lógico de Vehiculo ID: {Id}", key);
+        logger.LogInformation("Baja lógicade Vehiculo {Id}", key);
 
-        VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
-        if (existente == null) return false;
+        var ahora = DateTime.UtcNow;
+        
+        var filas = await context.Vehiculos
+            .Where(v => v.Id == key && v.Activo && v.Estado == EstadoVehiculo.Disponible)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(v => v.Activo, false)
+                .SetProperty(v => v.Estado, EstadoVehiculo.Retirado)
+                .SetProperty(v => v.UpdatedAt, ahora)
+                .SetProperty(v => v.DeletedAt, ahora));
 
-        // Se actualiza la instancia rastreada (no ExecuteUpdate) para que los cambios
-        // queden reflejados también en el DbContext y en la transacción en curso.
-        var actualizado = existente with
-        {
-            Activo = false,
-            UpdatedAt = DateTime.UtcNow,
-            DeletedAt = DateTime.UtcNow
-        };
-        // RF-01: la baja lógica deja el vehículo Retirado y con Activo = false a la vez.
-        actualizado.CambiarEstadoMapper(EstadoVehiculo.Retirado);
-
-        context.Entry(existente).CurrentValues.SetValues(actualizado);
-        await context.SaveChangesAsync();
-
-        return true;
+        return filas > 0;
     }
 
     /// <inheritdoc cref="IVehiculoRepository.GetById" />
@@ -275,29 +268,5 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             .AsNoTracking()
             .Include(v => v.Foto)
             .FirstOrDefaultAsync(v => v.Id == key);
-    }
-
-    /// <inheritdoc cref="IVehiculoRepository.SoftDeleteSiEstado" />
-    public async Task<bool> SoftDeleteSiEstado(string key, EstadoVehiculo estadoEsperado)
-    {
-        logger.LogInformation(
-            "Baja condicional de Vehiculo {Id} exigiendo estado {Estado}", key, estadoEsperado);
-
-        var ahora = DateTime.UtcNow;
-
-        // Compare-and-set: el estado esperado va en el WHERE, así que la comprobación
-        // y la escritura son la MISMA sentencia. Entre el SELECT de la fase 1 y este
-        // UPDATE no queda hueco para que otro proceso meta un cambio.
-        // No se usa ni AsNoTracking ni entidad rastreada: ExecuteUpdate no pasa por
-        // SaveChanges y no sincroniza el ChangeTracker (aquí no hay nada rastreado).
-        var filas = await context.Vehiculos
-            .Where(v => v.Id == key && v.Activo && v.Estado == estadoEsperado)
-            .ExecuteUpdateAsync(setters => setters
-                .SetProperty(v => v.Activo, false)
-                .SetProperty(v => v.Estado, EstadoVehiculo.Retirado)
-                .SetProperty(v => v.UpdatedAt, ahora)
-                .SetProperty(v => v.DeletedAt, ahora));
-
-        return filas > 0;
     }
 }

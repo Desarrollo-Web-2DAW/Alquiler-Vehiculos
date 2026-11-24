@@ -9,9 +9,6 @@ namespace Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 /// </summary>
 public interface IVehiculoTransactionsService
 {
-    /// <summary>Elimina (borrado lógico) un vehículo y su foto asociada.</summary>
-    Task<Result<VehiculoModel, DomainError>> DeleteAsync(string id, CancellationToken ct = default);
-
     /// <summary>Actualiza los datos de un vehículo y reemplaza su foto si ha cambiado, sin tocar su estado.</summary>
     Task<Result<VehiculoModel, DomainError>> UpdateAsync(
         string id, VehiculoModel datos, CancellationToken ct = default);
