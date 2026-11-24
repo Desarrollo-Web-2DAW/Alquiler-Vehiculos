@@ -4,6 +4,7 @@ using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Enums.Usuarios;
 using Alquiler_Vehiculos.Models.Usuarios;
 using Alquiler_Vehiculos.Services.Usuarios.Auth;
+using Alquiler_Vehiculos.Services.Usuarios.Trabajadores;
 using Alquiler_Vehiculos.Services.Usuarios.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -100,7 +101,7 @@ public static class IdentityConfig {
 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
-
+        services.AddScoped<ITrabajadorService, TrabajadorService>();
         Log.Information("Identity y JWT configurados correctamente.");
         return services;
     }

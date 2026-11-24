@@ -5,7 +5,7 @@
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
         <RootNamespace>Alquiler_Vehiculos</RootNamespace>
-        <UserSecretsId>alquiler-vehiculos-back-local</UserSecretsId>
+        <UserSecretsId>alquiler-vehiculos-2daw-2026</UserSecretsId>
     </PropertyGroup>
 
     <ItemGroup>
@@ -64,6 +64,24 @@
         <Folder Include="Services\Reserva\" />
         <Folder Include="Services\Trabajador\" />
         <Folder Include="Services\Vehiculo\Marca\" />
+        <Folder Include="Controllers\Pago\"/>
+        <Folder Include="Controllers\Reserva\"/>
+        <Folder Include="Controllers\Vehiculo\"/>
+        <Folder Include="Errors\Vehiculo\"/>
+        <Folder Include="Exceptions\Cliente\"/>
+        <Folder Include="Exceptions\Pago\"/>
+        <Folder Include="Exceptions\Reserva\"/>
+        <Folder Include="Exceptions\Trabajador\"/>
+        <Folder Include="Exceptions\Vehiculo\"/>
+        <Folder Include="Mappers\"/>
+        <Folder Include="Middleware\"/>
+        <Folder Include="Models\Pago\"/>
+        <Folder Include="Models\Reserva\"/>
+        <Folder Include="Models\Vehiculo\"/>
+        <Folder Include="Repositories\Cliente\"/>
+        <Folder Include="Repositories\Reserva\"/>
+        <Folder Include="Repositories\Vehiculo\"/>
+        <Folder Include="Services\Vehiculo\"/>
     </ItemGroup>
 
 </Project>

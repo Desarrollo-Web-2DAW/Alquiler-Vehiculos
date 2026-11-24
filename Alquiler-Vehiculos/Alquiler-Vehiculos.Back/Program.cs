@@ -29,6 +29,7 @@ try {
     builder.Services.AddTallerServices();
     builder.Services.AddOficinaServices();
     builder.Services.AddCatalogoServices(builder.Configuration);
+    builder.Services.AddClientes();
 
     var app = builder.Build();
 
