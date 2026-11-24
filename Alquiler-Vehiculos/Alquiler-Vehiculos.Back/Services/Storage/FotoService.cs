@@ -13,9 +13,8 @@ namespace Alquiler_Vehiculos.Services.Storage;
 /// <summary>
 /// Conserva los ficheros físicos aunque se dé de baja su entrada del catálogo.
 /// </summary>
-public class FotoService(FileValidator validator, IFotoRepository repository, IStorageService storage, IOptions<StorageSettings> settingss) : IFotoService
+public class FotoService(FileValidator validator, IFotoRepository repository, IStorageService storage) : IFotoService
 {
-    private StorageSettings _settings = settingss.Value;
     
     public async Task<Result<Foto, DomainError>> Create(IFormFile archivo, string folderName) {
         
@@ -66,8 +65,10 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
     public async Task<Result<bool, DomainError>> HardDelete(string nombre) {
         var existente = await GetById(nombre);
         if (existente.IsFailure) return existente.Error;
+        
         var resultRepository = await repository.HardDelete(nombre);
-        if (!resultRepository) return FotoError.NoSePudoDarDeBaja();
+        if (!resultRepository) return FotoError.NoSePudoDarDeBaja(nombre);
+        
         var result =  await storage.DeleteFileAsync(nombre);
         return result.IsFailure? result.Error : result.Value;
     }
