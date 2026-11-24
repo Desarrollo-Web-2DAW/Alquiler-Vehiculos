@@ -1,0 +1,23 @@
+meta {
+  name: [118] CONCESIONARIOS - Dar de baja como Admin (200)
+  type: http
+  seq: 13
+}
+
+delete {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-10: baja del recurso creado por este flujo", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

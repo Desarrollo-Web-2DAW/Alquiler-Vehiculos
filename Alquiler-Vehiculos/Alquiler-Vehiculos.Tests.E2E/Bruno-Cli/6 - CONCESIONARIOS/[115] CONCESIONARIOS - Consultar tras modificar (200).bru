@@ -1,0 +1,25 @@
+meta {
+  name: [115] CONCESIONARIOS - Consultar tras modificar (200)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-10 y RNF-02: lectura posterior no devuelve el DTO antiguo", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(`${bru.getVar("concesionarioNombreE2E")} actualizado`);
+    expect(res.getBody().ciudad).to.equal("Leganés");
+    expect(res.getBody().email).to.equal("nuevo@concesionario.example");
+  });
+}

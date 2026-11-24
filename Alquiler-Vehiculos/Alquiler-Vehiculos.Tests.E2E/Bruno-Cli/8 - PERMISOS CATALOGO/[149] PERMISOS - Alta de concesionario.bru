@@ -1,0 +1,22 @@
+meta {
+  name: [149] PERMISOS - Alta de concesionario
+  type: http
+  seq: 8
+}
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+body:json {
+  { "nombre": "Alta prohibida matriz", "ciudad": "Madrid", "telefono": "900123456", "email": "matriz@concesionario.example" }
+}
+tests {
+  // Assert
+  test("RF-46: alta de concesionario denegada, no 400 ni 409", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

@@ -1,0 +1,22 @@
+meta {
+  name: [127] HISTORICO - Metadatos de foto sustituida (200)
+  type: http
+  seq: 7
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoAnteriorHistorico}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-48: foto anterior conserva su registro y baja lógica", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(bru.getVar("fotoAnteriorHistorico"));
+    expect(res.getBody().activo).to.equal(false);
+    expect(res.getBody().deletedAt).to.not.equal(null);
+  });
+}

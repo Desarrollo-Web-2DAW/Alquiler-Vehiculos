@@ -1,0 +1,20 @@
+meta {
+  name: [129] HISTORICO - Baja de marca con vehiculo (200)
+  type: http
+  seq: 9
+}
+delete {
+  url: {{baseUrl}}/api/marca/{{marcaHistoricoId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-09: admite la baja lógica teniendo vehículos", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

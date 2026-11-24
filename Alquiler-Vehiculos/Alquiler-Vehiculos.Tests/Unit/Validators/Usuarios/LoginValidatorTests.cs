@@ -8,6 +8,20 @@ namespace Alquiler_Vehiculos.Tests.Unit.Validators.Usuarios;
 [Category("Unit")]
 public class LoginValidatorTests {
     [Test]
+    public void Validate_AmbosCamposVacios_DevuelveErroresDeEmailYPassword() {
+        // Arrange
+        var validator = new LoginValidator();
+        var dto = new LoginDto { Email = "", Password = "" };
+
+        // Act
+        var resultado = validator.Validate(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeFalse();
+        resultado.Errors.Select(e => e.PropertyName).Should().Contain("Email").And.Contain("Password");
+    }
+
+    [Test]
     public void Validate_CredencialesValidas_NoDevuelveErrores() {
         // Arrange
         var validator = new LoginValidator();

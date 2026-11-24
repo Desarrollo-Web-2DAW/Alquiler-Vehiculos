@@ -1,0 +1,27 @@
+meta {
+  name: [152] HISTORICO - Persistencia tras bajas de catalogo (200)
+  type: http
+  seq: 12
+}
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert: GetAll consulta el repositorio; no usa la caché individual del vehículo.
+  test("RF-09 y RF-10: la conservación no es solo un DTO antiguo en caché", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.be.an("array");
+    const vehiculo = res.getBody().find(v => v.id === bru.getVar("vehiculoHistoricoId"));
+    expect(vehiculo).to.not.be.undefined;
+    expect(vehiculo.marca).to.equal(bru.getVar("marcaHistoricoNombre"));
+    expect(vehiculo.concesionario).to.equal(bru.getVar("concesionarioHistoricoId"));
+    expect(vehiculo.foto).to.equal(bru.getVar("fotoActualHistorico"));
+    expect(vehiculo.estado).to.equal("Disponible");
+    expect(vehiculo.isActivo).to.equal(true);
+  });
+}

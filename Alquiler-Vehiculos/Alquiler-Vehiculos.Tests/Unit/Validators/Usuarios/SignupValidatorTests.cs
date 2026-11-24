@@ -7,6 +7,34 @@ namespace Alquiler_Vehiculos.Tests.Unit.Validators.Usuarios;
 [TestFixture]
 [Category("Unit")]
 public class SignupValidatorTests {
+    [Test]
+    public void Validate_TodosLosCamposVacios_DevuelveMultiplesErrores() {
+        // Arrange
+        var validator = new SignupValidator();
+        var dto = new SignupDto();
+
+        // Act
+        var resultado = validator.Validate(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeFalse();
+        resultado.Errors.Should().HaveCountGreaterThanOrEqualTo(5);
+    }
+
+    [Test]
+    public void Validate_SoloDniEnBlanco_DevuelveErrorDeDocumentos() {
+        // Arrange
+        var validator = new SignupValidator();
+        var dto = CrearDto() with { Dni = "   ", Nie = null, Pasaporte = null };
+
+        // Act
+        var resultado = validator.Validate(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeFalse();
+        resultado.Errors.Should().Contain(e => e.PropertyName == "documentos");
+    }
+
     private static SignupDto CrearDto() => new() {
         Email = "cliente@example.com", Password = "Ejemplo123!", Nombre = "Lucia",
         Apellidos = "Fuertes", Telefono = "+34 600123456", FechaNacimiento = new(2000, 1, 1),

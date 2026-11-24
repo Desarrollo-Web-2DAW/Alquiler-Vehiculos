@@ -14,13 +14,14 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-script:post-response {
+tests {
   test("Consultar vehiculo dado de baja como Admin - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });
 
   test("Consultar vehiculo dado de baja como Admin - Contenido de la respuesta", function () {
     expect(res.getBody().isActivo).to.equal(false);
+    expect(res.getBody().estado).to.equal("Retirado");
   });
 }
 

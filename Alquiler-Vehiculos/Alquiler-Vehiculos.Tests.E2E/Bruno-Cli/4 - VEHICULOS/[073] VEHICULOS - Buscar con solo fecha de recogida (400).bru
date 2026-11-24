@@ -10,7 +10,7 @@ get {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Buscar con solo fecha de recogida - Status 400", function () {
     expect(res.getStatus()).to.equal(400);
   });

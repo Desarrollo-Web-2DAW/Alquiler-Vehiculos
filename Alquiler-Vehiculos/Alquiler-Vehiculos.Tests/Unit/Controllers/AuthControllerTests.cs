@@ -61,6 +61,25 @@ public class AuthControllerTests {
     }
 
     [Test]
+    public async Task Login_CuentaInactiva_Devuelve403() {
+        // Arrange
+        var dto = new LoginDto { Email = "baja@alquiler.local", Password = "Password123!" };
+        var error = AuthError.CuentaInactiva();
+        _service.Setup(s => s.LoginAsync(dto, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<AuthResponseDto, DomainError>(error));
+
+        // Act
+        var resultado = await _controller.Login(dto, CancellationToken.None);
+
+        // Assert
+        var respuesta = resultado.Result.Should().BeOfType<ObjectResult>().Subject;
+        respuesta.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        respuesta.Value.Should().BeEquivalentTo(new { code = error.Code, message = error.Message });
+        _service.Verify(s => s.LoginAsync(dto, CancellationToken.None), Times.Once);
+        _service.Verify(s => s.SignUpAsync(It.IsAny<SignupDto>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
     public async Task Signup_AltaCorrecta_DevuelveTokenCon201() {
         // Arrange
         var dto = new SignupDto { Email = "cliente@example.com" };

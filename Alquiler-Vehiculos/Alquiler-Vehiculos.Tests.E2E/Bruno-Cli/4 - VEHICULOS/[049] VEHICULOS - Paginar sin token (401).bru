@@ -10,7 +10,7 @@ get {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Paginar sin token - Status 401", function () {
     expect(res.getStatus()).to.equal(401);
   });

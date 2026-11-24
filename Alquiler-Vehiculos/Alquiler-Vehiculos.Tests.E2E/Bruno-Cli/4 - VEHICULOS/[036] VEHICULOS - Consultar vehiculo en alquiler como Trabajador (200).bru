@@ -14,7 +14,7 @@ auth:bearer {
   token: {{trabajadorToken}}
 }
 
-script:post-response {
+tests {
   test("Consultar vehiculo en alquiler como Trabajador - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

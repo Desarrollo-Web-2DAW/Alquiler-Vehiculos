@@ -37,7 +37,7 @@ script:pre-request {
   bru.setVar("matriculaAleatoria", n + l);
 }
 
-script:post-response {
+tests {
   test("Actualizar ID inexistente - Status 404", function () {
     expect(res.getStatus()).to.equal(404);
   });

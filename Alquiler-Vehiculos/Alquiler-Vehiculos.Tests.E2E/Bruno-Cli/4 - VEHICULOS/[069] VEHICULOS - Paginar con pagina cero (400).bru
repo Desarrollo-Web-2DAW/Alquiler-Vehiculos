@@ -14,7 +14,7 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-script:post-response {
+tests {
   test("Paginar con pagina cero - Status 400", function () {
     expect(res.getStatus()).to.equal(400);
   });

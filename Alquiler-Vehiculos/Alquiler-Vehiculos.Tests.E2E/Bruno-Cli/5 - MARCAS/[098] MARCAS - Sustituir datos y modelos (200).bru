@@ -1,0 +1,31 @@
+meta {
+  name: [098] MARCAS - Sustituir datos y modelos (200)
+  type: http
+  seq: 8
+}
+
+put {
+  url: {{baseUrl}}/api/marca/{{marcaE2EId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{marcaNombreE2E}} actualizada", "pais": "Francia", "web": "https://actualizada.example", "modelosDisponibles": ["Modelo nuevo", "Modelo familiar"] }
+}
+
+tests {
+  // Assert
+  test("RF-09: PUT sustituye la lista completa sin cambiar el ID", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getVar("marcaE2EId"));
+    expect(res.getBody().nombre).to.equal(`${bru.getVar("marcaNombreE2E")} actualizada`);
+    expect(res.getBody().pais).to.equal("Francia");
+    expect(res.getBody().web).to.equal("https://actualizada.example");
+    expect(res.getBody().modelosDisponibles).to.deep.equal(["Modelo nuevo", "Modelo familiar"]);
+  });
+}

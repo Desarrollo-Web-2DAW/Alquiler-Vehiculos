@@ -1,0 +1,26 @@
+meta {
+  name: [109] CONCESIONARIOS - Crear como Responsable (403)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+body:json {
+  { "nombre": "Alta prohibida E2E", "ciudad": "Madrid", "telefono": "{{concesionarioTelefonoE2E}}", "email": "contacto@concesionario.example" }
+}
+
+tests {
+  // Assert
+  test("RF-46: Responsable no administra catálogos globales", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

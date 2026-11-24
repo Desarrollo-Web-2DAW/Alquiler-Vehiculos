@@ -1,0 +1,22 @@
+meta {
+  name: [093] MARCAS - Consultar como Cliente (403)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/marca/{{marcaE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+tests {
+  // Assert
+  test("RF-46: el Cliente no administra marcas", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

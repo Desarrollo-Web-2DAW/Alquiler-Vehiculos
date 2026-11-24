@@ -1,0 +1,18 @@
+meta {
+  name: [132] HISTORICO - Foto conservada tras bajas (200)
+  type: http
+  seq: 13
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoActualHistorico}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("RF-48: dar de baja catálogos no borra la foto del vehículo", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    expect(Number(res.getHeader("content-length"))).to.equal(bru.getVar("fotoHistoricoLongitud"));
+  });
+}

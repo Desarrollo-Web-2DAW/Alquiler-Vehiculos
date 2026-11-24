@@ -1,0 +1,22 @@
+meta {
+  name: [138] HISTORICO - Metadatos de foto retirada (200)
+  type: http
+  seq: 19
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoActualHistorico}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-48: metadatos y auditoría se conservan", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(bru.getVar("fotoActualHistorico"));
+    expect(res.getBody().activo).to.equal(false);
+    expect(res.getBody().deletedAt).to.be.a("string").that.is.not.empty;
+  });
+}

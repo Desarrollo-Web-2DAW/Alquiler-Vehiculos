@@ -1,0 +1,25 @@
+meta {
+  name: 7 - HISTORICO CATALOGO
+  seq: 7
+}
+
+script:pre-request {
+  // Arrange: datos y usuarios de este escenario, sin tocar la flota semilla.
+  const axios = require("axios");
+  for (const perfil of ["admin", "cliente"]) {
+    if (!bru.getVar(`${perfil}Token`)) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`), password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+
+docs {
+  RF-01, RF-09, RF-10 y RF-48. Ejecutar toda la carpeta en orden y en datos aislados.
+  Se crean marca, concesionario, vehículo y fotos propios. Se sustituye la foto, se dan
+  de baja los catálogos y se comprueba la conservación del vehículo y los archivos.
+  Finalmente se da de baja vehículo y foto, sin borrar bytes. No requiere reservas semilla.
+  La conservación física del documento de marca requiere además pruebas de integración.
+}

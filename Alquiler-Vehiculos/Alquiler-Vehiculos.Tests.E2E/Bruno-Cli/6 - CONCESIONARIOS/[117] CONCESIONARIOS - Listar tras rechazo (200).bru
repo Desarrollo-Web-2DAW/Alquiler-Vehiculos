@@ -1,0 +1,29 @@
+meta {
+  name: [117] CONCESIONARIOS - Listar tras rechazo (200)
+  type: http
+  seq: 12
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-10: el PUT inválido no alteró el concesionario", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.be.an("array");
+    const concesionario = res.getBody().find(c => c.id === bru.getVar("concesionarioE2EId"));
+    expect(concesionario).to.not.be.undefined;
+    expect(concesionario.nombre).to.equal(`${bru.getVar("concesionarioNombreE2E")} actualizado`);
+    expect(concesionario.ciudad).to.equal("Leganés");
+    expect(concesionario.email).to.equal("nuevo@concesionario.example");
+    expect(res.getBody().filter(c => c.telefono === bru.getVar("concesionarioTelefonoE2E"))).to.have.lengthOf(1);
+  });
+}

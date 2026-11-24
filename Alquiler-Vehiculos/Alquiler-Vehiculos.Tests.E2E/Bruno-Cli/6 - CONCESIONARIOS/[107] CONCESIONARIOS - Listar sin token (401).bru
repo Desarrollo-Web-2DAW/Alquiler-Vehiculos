@@ -1,0 +1,18 @@
+meta {
+  name: [107] CONCESIONARIOS - Listar sin token (401)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario
+  body: none
+  auth: none
+}
+
+tests {
+  // Assert
+  test("RF-46: no identificado recibe 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

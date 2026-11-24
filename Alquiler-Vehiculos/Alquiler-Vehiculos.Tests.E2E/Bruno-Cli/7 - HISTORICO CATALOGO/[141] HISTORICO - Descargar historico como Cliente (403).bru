@@ -1,0 +1,19 @@
+meta {
+  name: [141] HISTORICO - Descargar historico como Cliente (403)
+  type: http
+  seq: 22
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoActualHistorico}}/archivo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{clienteToken}}
+}
+tests {
+  // Assert
+  test("RF-46: el Cliente no descarga el histórico interno", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

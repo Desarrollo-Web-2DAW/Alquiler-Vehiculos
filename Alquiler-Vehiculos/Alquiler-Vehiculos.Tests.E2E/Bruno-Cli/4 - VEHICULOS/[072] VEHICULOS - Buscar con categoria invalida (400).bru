@@ -10,7 +10,7 @@ get {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Buscar con categoria invalida - Status 400", function () {
     expect(res.getStatus()).to.equal(400);
   });

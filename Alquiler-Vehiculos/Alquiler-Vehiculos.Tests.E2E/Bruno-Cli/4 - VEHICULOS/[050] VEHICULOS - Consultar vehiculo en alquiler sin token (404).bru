@@ -10,7 +10,7 @@ get {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Consultar vehiculo en alquiler sin token - Status 404", function () {
     expect(res.getStatus()).to.equal(404);
   });

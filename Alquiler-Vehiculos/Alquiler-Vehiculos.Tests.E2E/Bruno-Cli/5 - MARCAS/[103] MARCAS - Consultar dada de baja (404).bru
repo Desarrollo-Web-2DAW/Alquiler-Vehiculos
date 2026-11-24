@@ -1,0 +1,23 @@
+meta {
+  name: [103] MARCAS - Consultar dada de baja (404)
+  type: http
+  seq: 13
+}
+
+get {
+  url: {{baseUrl}}/api/marca/{{marcaE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-09 y RNF-02: baja invisible incluso tras llenar la caché", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("MARCA_NO_ENCONTRADA");
+  });
+}

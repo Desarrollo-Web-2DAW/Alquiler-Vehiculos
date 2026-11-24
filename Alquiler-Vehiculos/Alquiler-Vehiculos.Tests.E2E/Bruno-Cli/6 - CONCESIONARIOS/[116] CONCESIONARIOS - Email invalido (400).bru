@@ -1,0 +1,27 @@
+meta {
+  name: [116] CONCESIONARIOS - Email invalido (400)
+  type: http
+  seq: 11
+}
+
+put {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "No debe guardarse", "ciudad": "Madrid", "telefono": "{{concesionarioTelefonoE2E}}", "email": "sin-arroba" }
+}
+
+tests {
+  // Assert
+  test("RF-19: rechaza concretamente el correo inválido", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.Email).to.be.an("array").that.is.not.empty;
+  });
+}

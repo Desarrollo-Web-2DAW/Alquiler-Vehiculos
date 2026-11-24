@@ -1,0 +1,21 @@
+meta {
+  name: [139] HISTORICO - Archivo retirado conservado (200)
+  type: http
+  seq: 20
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoActualHistorico}}/archivo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-48: el personal sigue descargando el archivo histórico", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    expect(Number(res.getHeader("content-length"))).to.equal(bru.getVar("fotoHistoricoLongitud"));
+  });
+}

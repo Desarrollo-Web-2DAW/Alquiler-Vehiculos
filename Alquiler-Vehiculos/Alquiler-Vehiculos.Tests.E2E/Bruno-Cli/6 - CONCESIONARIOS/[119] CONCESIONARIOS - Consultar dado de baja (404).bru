@@ -1,0 +1,23 @@
+meta {
+  name: [119] CONCESIONARIOS - Consultar dado de baja (404)
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-10 y RNF-02: la caché no hace reaparecer el concesionario", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("CONCESIONARIO_NO_ENCONTRADO");
+  });
+}

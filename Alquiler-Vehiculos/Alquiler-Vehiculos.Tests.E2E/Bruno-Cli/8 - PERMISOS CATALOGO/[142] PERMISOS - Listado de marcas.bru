@@ -1,0 +1,19 @@
+meta {
+  name: [142] PERMISOS - Listado de marcas
+  type: http
+  seq: 1
+}
+get {
+  url: {{baseUrl}}/api/marca
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+tests {
+  // Assert
+  test("RF-46: listado de marcas denegado al perfil de la iteración", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

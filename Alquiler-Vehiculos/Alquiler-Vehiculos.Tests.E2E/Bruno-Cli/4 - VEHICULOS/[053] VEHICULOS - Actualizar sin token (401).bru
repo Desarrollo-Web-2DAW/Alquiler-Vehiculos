@@ -10,7 +10,7 @@ put {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Actualizar sin token - Status 401", function () {
     expect(res.getStatus()).to.equal(401);
   });

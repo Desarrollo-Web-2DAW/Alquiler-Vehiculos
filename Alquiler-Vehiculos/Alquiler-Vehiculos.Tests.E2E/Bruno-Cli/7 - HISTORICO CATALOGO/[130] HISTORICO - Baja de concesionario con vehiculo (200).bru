@@ -1,0 +1,20 @@
+meta {
+  name: [130] HISTORICO - Baja de concesionario con vehiculo (200)
+  type: http
+  seq: 10
+}
+delete {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioHistoricoId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-10: baja lógica de concesionario con vehículos", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

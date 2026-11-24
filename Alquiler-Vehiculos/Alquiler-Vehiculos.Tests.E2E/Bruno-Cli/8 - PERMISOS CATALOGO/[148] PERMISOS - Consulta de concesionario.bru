@@ -1,0 +1,19 @@
+meta {
+  name: [148] PERMISOS - Consulta de concesionario
+  type: http
+  seq: 7
+}
+get {
+  url: {{baseUrl}}/api/concesionario/1
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+tests {
+  // Assert
+  test("RF-46: consulta de concesionario denegada", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

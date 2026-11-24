@@ -14,7 +14,7 @@ auth:bearer {
   token: {{trabajadorToken}}
 }
 
-script:post-response {
+tests {
   test("Restaurar como Trabajador - Status 403", function () {
     expect(res.getStatus()).to.equal(403);
   });

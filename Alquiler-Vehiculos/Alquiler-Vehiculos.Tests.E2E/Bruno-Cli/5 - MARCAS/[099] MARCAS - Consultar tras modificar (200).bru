@@ -1,0 +1,26 @@
+meta {
+  name: [099] MARCAS - Consultar tras modificar (200)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/marca/{{marcaE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert: lectura posterior independiente del cuerpo devuelto por el PUT.
+  test("RF-09 y RNF-02: no devuelve datos antiguos de caché", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(`${bru.getVar("marcaNombreE2E")} actualizada`);
+    expect(res.getBody().pais).to.equal("Francia");
+    expect(res.getBody().web).to.equal("https://actualizada.example");
+    expect(res.getBody().modelosDisponibles).to.deep.equal(["Modelo nuevo", "Modelo familiar"]);
+  });
+}

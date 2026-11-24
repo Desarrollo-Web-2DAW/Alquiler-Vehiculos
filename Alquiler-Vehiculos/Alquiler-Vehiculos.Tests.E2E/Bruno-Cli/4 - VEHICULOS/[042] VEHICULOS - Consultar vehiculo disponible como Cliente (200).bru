@@ -14,7 +14,7 @@ auth:bearer {
   token: {{clienteToken}}
 }
 
-script:post-response {
+tests {
   test("Consultar vehiculo disponible como Cliente - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

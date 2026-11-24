@@ -14,7 +14,7 @@ auth:bearer {
   token: {{mecanicoToken}}
 }
 
-script:post-response {
+tests {
   test("Listar como Mecanico - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

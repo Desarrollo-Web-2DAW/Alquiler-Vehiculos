@@ -1,0 +1,26 @@
+meta {
+  name: [112] CONCESIONARIOS - Consultar creado y preparar cache (200)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-10: los intentos sin permiso no cambian el recurso", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getVar("concesionarioE2EId"));
+    expect(res.getBody().nombre).to.equal(bru.getVar("concesionarioNombreE2E"));
+    expect(res.getBody().ciudad).to.equal("Madrid");
+    expect(res.getBody().telefono).to.equal(bru.getVar("concesionarioTelefonoE2E"));
+  });
+}

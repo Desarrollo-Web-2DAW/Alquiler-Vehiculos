@@ -1,0 +1,39 @@
+meta {
+  name: [091] MARCAS - Crear como Admin (201)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{marcaNombreE2E}}", "pais": "España", "web": "https://marca.example", "modelosDisponibles": ["Modelo inicial"] }
+}
+
+script:pre-request {
+  // Arrange: datos nuevos también al repetir el flujo desde la interfaz.
+  bru.setVar("marcaNombreE2E", `Marca E2E ${Date.now()}`);
+}
+
+tests {
+  // Assert
+  test("RF-09: alta con ObjectId y datos completos", function () {
+    expect(res.getStatus()).to.equal(201);
+    const marca = res.getBody();
+    expect(marca.id).to.match(/^[a-f0-9]{24}$/);
+    expect(marca.nombre).to.equal(bru.getVar("marcaNombreE2E"));
+    expect(marca.pais).to.equal("España");
+    expect(marca.web).to.equal("https://marca.example");
+    expect(marca.modelosDisponibles).to.deep.equal(["Modelo inicial"]);
+    expect(res.getHeader("location")).to.include(`/api/Marca/${marca.id}`);
+  });
+  if (res.getStatus() === 201) bru.setVar("marcaE2EId", res.getBody().id);
+}

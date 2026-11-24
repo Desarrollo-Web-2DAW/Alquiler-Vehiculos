@@ -1,0 +1,39 @@
+meta {
+  name: 5 - MARCAS
+  seq: 5
+}
+
+auth {
+  mode: none
+}
+
+script:pre-request {
+  // Arrange: autenticación real. No se depende de ejecutar antes la carpeta AUTH.
+  const axios = require("axios");
+  for (const perfil of ["admin", "cliente", "trabajador", "responsable", "mecanico"]) {
+    const token = bru.getVar(`${perfil}Token`);
+    let vigente = false;
+    try {
+      const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      vigente = JSON.parse(Buffer.from(base64, "base64").toString("utf8")).exp * 1000 > Date.now() + 60000;
+    } catch (_) {
+      vigente = false;
+    }
+    if (!vigente) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`),
+        password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+
+docs {
+  RF-09 y RF-46. Ejecutar la carpeta completa, secuencialmente y en una base de pruebas.
+  Arrange: login y datos propios. Act: bloque HTTP de cada petición. Assert: bloque tests.
+  El PUT sustituye toda la lista de modelos. Las consultas antes y después del PUT/DELETE
+  comprueban también que la caché no siga devolviendo el DTO anterior.
+  La baja final conserva el documento por diseño; no demuestra por sí sola su permanencia física.
+  No modificar marcas semilla. No ejecutar en paralelo ni continuar tras fallar un alta.
+}

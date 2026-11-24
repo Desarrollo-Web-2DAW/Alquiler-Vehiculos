@@ -1,0 +1,21 @@
+meta {
+  name: [128] HISTORICO - Descargar foto sustituida (200)
+  type: http
+  seq: 8
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoAnteriorHistorico}}/archivo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-48: sustituir la foto no borra el archivo anterior", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    expect(Number(res.getHeader("content-length"))).to.equal(bru.getVar("fotoHistoricoLongitud"));
+  });
+}

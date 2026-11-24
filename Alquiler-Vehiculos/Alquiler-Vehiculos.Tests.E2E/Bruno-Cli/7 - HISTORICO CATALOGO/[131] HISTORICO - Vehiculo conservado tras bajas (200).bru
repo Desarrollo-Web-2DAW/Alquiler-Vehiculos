@@ -1,0 +1,23 @@
+meta {
+  name: [131] HISTORICO - Vehiculo conservado tras bajas (200)
+  type: http
+  seq: 11
+}
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoHistoricoId}}
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("RF-09 y RF-10: no hay borrado en cascada ni cambio de relaciones", function () {
+    expect(res.getStatus()).to.equal(200);
+    const vehiculo = res.getBody();
+    expect(vehiculo.marca).to.equal(bru.getVar("marcaHistoricoNombre"));
+    expect(vehiculo.modelo).to.equal("Modelo histórico");
+    expect(vehiculo.concesionario).to.equal(bru.getVar("concesionarioHistoricoId"));
+    expect(vehiculo.isActivo).to.equal(true);
+    expect(vehiculo.estado).to.equal("Disponible");
+    expect(vehiculo.foto).to.equal(bru.getVar("fotoActualHistorico"));
+  });
+}

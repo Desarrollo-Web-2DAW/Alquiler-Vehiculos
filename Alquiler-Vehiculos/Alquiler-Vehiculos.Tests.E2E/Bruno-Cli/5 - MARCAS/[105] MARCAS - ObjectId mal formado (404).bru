@@ -1,0 +1,23 @@
+meta {
+  name: [105] MARCAS - ObjectId mal formado (404)
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/marca/no-es-un-objectid
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("Identificador no interpretable: 404 de dominio, no 500", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("MARCA_NO_ENCONTRADA");
+  });
+}

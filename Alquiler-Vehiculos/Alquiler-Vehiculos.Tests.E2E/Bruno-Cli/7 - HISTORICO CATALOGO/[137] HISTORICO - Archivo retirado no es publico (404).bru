@@ -1,0 +1,17 @@
+meta {
+  name: [137] HISTORICO - Archivo retirado no es publico (404)
+  type: http
+  seq: 18
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoActualHistorico}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("RF-48: el público no descarga fotos retiradas", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("FOTO_NO_ENCONTRADA");
+  });
+}

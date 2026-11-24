@@ -1,0 +1,19 @@
+meta {
+  name: [146] PERMISOS - Baja de marca
+  type: http
+  seq: 5
+}
+delete {
+  url: {{baseUrl}}/api/marca/000000000000000000000000
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+tests {
+  // Assert
+  test("RF-46: baja de marca denegada", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

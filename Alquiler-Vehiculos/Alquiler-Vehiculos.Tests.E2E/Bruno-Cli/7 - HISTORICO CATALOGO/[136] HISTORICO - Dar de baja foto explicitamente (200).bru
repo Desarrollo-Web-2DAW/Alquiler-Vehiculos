@@ -1,0 +1,20 @@
+meta {
+  name: [136] HISTORICO - Dar de baja foto explicitamente (200)
+  type: http
+  seq: 17
+}
+delete {
+  url: {{baseUrl}}/api/fotos/{{fotoActualHistorico}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-48: retirada explícita de la foto, sin borrado físico", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

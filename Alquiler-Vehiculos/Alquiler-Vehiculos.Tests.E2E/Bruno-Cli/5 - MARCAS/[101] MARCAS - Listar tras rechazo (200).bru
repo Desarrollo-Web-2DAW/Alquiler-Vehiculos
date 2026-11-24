@@ -1,0 +1,28 @@
+meta {
+  name: [101] MARCAS - Listar tras rechazo (200)
+  type: http
+  seq: 11
+}
+
+get {
+  url: {{baseUrl}}/api/marca
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-09: listado incluye el recurso y el PUT inválido no lo alteró", function () {
+    expect(res.getStatus()).to.equal(200);
+    const marcas = res.getBody();
+    expect(marcas).to.be.an("array");
+    const marca = marcas.find(m => m.id === bru.getVar("marcaE2EId"));
+    expect(marca).to.not.be.undefined;
+    expect(marca.nombre).to.equal(`${bru.getVar("marcaNombreE2E")} actualizada`);
+    expect(marca.modelosDisponibles).to.deep.equal(["Modelo nuevo", "Modelo familiar"]);
+  });
+}

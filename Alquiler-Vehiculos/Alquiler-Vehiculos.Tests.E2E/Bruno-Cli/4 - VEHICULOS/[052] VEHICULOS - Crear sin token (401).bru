@@ -10,7 +10,7 @@ post {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Crear sin token - Status 401", function () {
     expect(res.getStatus()).to.equal(401);
   });

@@ -30,7 +30,7 @@ body:multipart-form {
   concesionario: {{concesionarioId}}
 }
 
-script:post-response {
+tests {
   test("Actualizar como Trabajador - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

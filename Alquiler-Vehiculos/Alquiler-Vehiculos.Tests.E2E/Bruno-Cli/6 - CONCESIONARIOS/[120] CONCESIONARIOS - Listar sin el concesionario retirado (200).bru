@@ -1,0 +1,24 @@
+meta {
+  name: [120] CONCESIONARIOS - Listar sin el concesionario retirado (200)
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert
+  test("RF-10: listado habitual sin el concesionario de baja", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.be.an("array");
+    expect(res.getBody().some(c => c.id === bru.getVar("concesionarioE2EId"))).to.equal(false);
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: [113] CONCESIONARIOS - Telefono duplicado (409)
+  type: http
+  seq: 8
+}
+
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "Duplicado E2E", "ciudad": "Madrid", "telefono": "{{concesionarioTelefonoE2E}}", "email": "duplicado@concesionario.example" }
+}
+
+tests {
+  // Assert: restricción actual del proyecto, no una regla adicional de RF-10.
+  test("Duplicado produce conflicto de teléfono, no un error genérico", function () {
+    expect(res.getStatus()).to.equal(409);
+    expect(res.getBody().code).to.equal("TELEFONO_CONCESIONARIO_DUPLICADO");
+  });
+}

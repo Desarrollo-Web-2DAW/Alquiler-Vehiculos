@@ -28,8 +28,6 @@
         <PackageReference Include="Testcontainers.Redis" Version="4.17.0" />
         <PackageReference Include="NUnit" Version="4.3.2" />
         <PackageReference Include="NUnit3TestAdapter" Version="5.0.0" />
-        <PackageReference Include="coverlet.collector" Version="6.0.4"/>
-        <PackageReference Include="FluentAssertions" Version="8.11.0"/>
         <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.4"/>
     </ItemGroup>
 

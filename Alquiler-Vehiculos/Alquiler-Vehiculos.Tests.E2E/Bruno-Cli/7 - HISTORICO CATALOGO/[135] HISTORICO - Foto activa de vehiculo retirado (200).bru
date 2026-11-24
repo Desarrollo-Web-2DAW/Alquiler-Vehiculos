@@ -1,0 +1,17 @@
+meta {
+  name: [135] HISTORICO - Foto activa de vehiculo retirado (200)
+  type: http
+  seq: 16
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoActualHistorico}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("RF-48: la baja del vehículo conserva su archivo", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(Number(res.getHeader("content-length"))).to.equal(bru.getVar("fotoHistoricoLongitud"));
+  });
+}

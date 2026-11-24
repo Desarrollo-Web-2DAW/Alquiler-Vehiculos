@@ -1,0 +1,33 @@
+meta {
+  name: 8 - PERMISOS CATALOGO
+  seq: 8
+}
+
+script:pre-request {
+  // Arrange: el script repite esta carpeta para cada perfil excluido del catálogo.
+  const perfil = bru.getEnvVar("perfilMatriz") || "cliente";
+  const perfiles = ["anonimo", "cliente", "trabajador", "responsable", "mecanico"];
+  if (!perfiles.includes(perfil)) throw new Error("Perfil de matriz no admitido");
+  bru.setVar("estadoMatriz", perfil === "anonimo" ? 401 : 403);
+  if (perfil === "anonimo") {
+    // Bearer sin credenciales: no representa a ningún usuario identificado.
+    bru.setVar("tokenMatriz", "");
+  } else if (bru.getVar("perfilMatrizAutenticado") !== perfil) {
+    const axios = require("axios");
+    const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+      email: bru.getEnvVar(`${perfil}Email`), password: bru.getEnvVar(`${perfil}Password`)
+    });
+    bru.setVar("tokenMatriz", respuesta.data.token);
+    bru.setVar("perfilMatrizAutenticado", perfil);
+  }
+}
+
+docs {
+  RF-46: GET listado, GET individual, POST, PUT y DELETE de marcas y concesionarios.
+  Ejecutar scripts/bruno-e2e.ps1 -MatrizPermisos para repetir los 10 endpoints con
+  anónimo, Cliente, Trabajador, Responsable y Mecánico: 50 peticiones.
+  Admin se comprueba con el CRUD real de las carpetas 5 y 6.
+  Los IDs tienen formato válido: se exige denegar antes de consultar su existencia.
+  Los cuerpos son válidos para no confundir un 400 de validación con un permiso.
+  Desde la interfaz, perfilMatriz selecciona un perfil; sin configurarlo usa Cliente.
+}

@@ -1,0 +1,22 @@
+meta {
+  name: [096] MARCAS - Dar de baja como Mecanico (403)
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{baseUrl}}/api/marca/{{marcaE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+tests {
+  // Assert
+  test("RF-46: Mecánico no da de baja marcas", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

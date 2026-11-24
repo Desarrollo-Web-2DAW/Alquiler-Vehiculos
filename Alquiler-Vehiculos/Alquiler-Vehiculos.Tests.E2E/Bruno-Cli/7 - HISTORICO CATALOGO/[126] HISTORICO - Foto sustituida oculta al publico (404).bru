@@ -1,0 +1,17 @@
+meta {
+  name: [126] HISTORICO - Foto sustituida oculta al publico (404)
+  type: http
+  seq: 6
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoAnteriorHistorico}}
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Foto anterior retirada del catálogo", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("FOTO_NO_ENCONTRADA");
+  });
+}

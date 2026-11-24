@@ -1,0 +1,19 @@
+meta {
+  name: [143] PERMISOS - Consulta de marca
+  type: http
+  seq: 2
+}
+get {
+  url: {{baseUrl}}/api/marca/000000000000000000000000
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+tests {
+  // Assert
+  test("RF-46: consulta de marca denegada antes de buscar el ID", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

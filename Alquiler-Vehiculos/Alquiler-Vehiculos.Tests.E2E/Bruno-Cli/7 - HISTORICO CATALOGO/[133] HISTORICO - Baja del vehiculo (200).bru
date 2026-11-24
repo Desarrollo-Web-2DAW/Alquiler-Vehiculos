@@ -1,0 +1,20 @@
+meta {
+  name: [133] HISTORICO - Baja del vehiculo (200)
+  type: http
+  seq: 14
+}
+delete {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoHistoricoId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("RF-01: baja de la unidad propia disponible", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

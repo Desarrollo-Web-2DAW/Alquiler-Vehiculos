@@ -1,0 +1,38 @@
+meta {
+  name: [125] HISTORICO - Sustituir foto del vehiculo (200)
+  type: http
+  seq: 5
+}
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoHistoricoId}}
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaHistorico}}
+  marca: {{marcaHistoricoNombre}}
+  modelo: Modelo histórico
+  acriss: ILAH
+  color: Negro
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1500
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioHistoricoId}}
+}
+tests {
+  // Assert
+  test("RF-48: la sustitución asigna una foto nueva", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getVar("vehiculoHistoricoId"));
+    expect(res.getBody().foto).to.be.a("string").that.is.not.empty;
+    expect(res.getBody().foto).to.not.equal(bru.getVar("fotoAnteriorHistorico"));
+    bru.setVar("fotoActualHistorico", res.getBody().foto);
+  });
+}

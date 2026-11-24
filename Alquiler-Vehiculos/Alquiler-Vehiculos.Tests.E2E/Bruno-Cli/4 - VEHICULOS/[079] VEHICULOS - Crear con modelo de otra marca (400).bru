@@ -37,9 +37,10 @@ script:pre-request {
   bru.setVar("matriculaAleatoria", n + l);
 }
 
-script:post-response {
+tests {
   test("Crear con modelo de otra marca - Status 400", function () {
     expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.Modelo).to.be.an("array").that.is.not.empty;
   });
 }
 

@@ -1,0 +1,33 @@
+meta {
+  name: [121] HISTORICO - Crear marca propia (201)
+  type: http
+  seq: 1
+}
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:json {
+  { "nombre": "{{marcaHistoricoNombre}}", "pais": "España", "web": "https://historico.example", "modelosDisponibles": ["Modelo histórico"] }
+}
+script:pre-request {
+  // Arrange
+  bru.setVar("marcaHistoricoNombre", `Marca Historico ${Date.now()}`);
+  bru.setVar("telefonoHistorico", `9${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`);
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  bru.setVar("matriculaHistorico", String(Math.floor(Math.random() * 10000)).padStart(4, "0") +
+    Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join(""));
+}
+tests {
+  // Assert
+  test("Marca propia preparada", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().nombre).to.equal(bru.getVar("marcaHistoricoNombre"));
+    expect(res.getBody().id).to.match(/^[a-f0-9]{24}$/);
+    bru.setVar("marcaHistoricoId", res.getBody().id);
+  });
+}

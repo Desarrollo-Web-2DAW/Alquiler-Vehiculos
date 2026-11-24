@@ -1,0 +1,26 @@
+meta {
+  name: [110] CONCESIONARIOS - Modificar como Trabajador (403)
+  type: http
+  seq: 5
+}
+
+put {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+body:json {
+  { "nombre": "Cambio prohibido E2E", "ciudad": "Madrid", "telefono": "{{concesionarioTelefonoE2E}}", "email": "contacto@concesionario.example" }
+}
+
+tests {
+  // Assert
+  test("RF-46: Trabajador no modifica concesionarios", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

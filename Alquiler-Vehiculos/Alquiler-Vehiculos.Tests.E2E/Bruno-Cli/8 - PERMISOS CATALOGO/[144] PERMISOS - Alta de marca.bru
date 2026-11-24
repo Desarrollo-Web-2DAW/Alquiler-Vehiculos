@@ -1,0 +1,22 @@
+meta {
+  name: [144] PERMISOS - Alta de marca
+  type: http
+  seq: 3
+}
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+body:json {
+  { "nombre": "Alta prohibida matriz", "pais": "España", "web": "https://matriz.example", "modelosDisponibles": ["Modelo"] }
+}
+tests {
+  // Assert
+  test("RF-46: alta de marca denegada, no error de validación", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

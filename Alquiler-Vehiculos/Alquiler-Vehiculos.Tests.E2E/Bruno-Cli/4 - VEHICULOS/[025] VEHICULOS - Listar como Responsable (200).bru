@@ -14,7 +14,7 @@ auth:bearer {
   token: {{responsableToken}}
 }
 
-script:post-response {
+tests {
   test("Listar como Responsable - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

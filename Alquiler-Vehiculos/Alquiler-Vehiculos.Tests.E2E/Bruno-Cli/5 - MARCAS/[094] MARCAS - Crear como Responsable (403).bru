@@ -1,0 +1,26 @@
+meta {
+  name: [094] MARCAS - Crear como Responsable (403)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+body:json {
+  { "nombre": "Alta prohibida E2E", "pais": "España", "web": "https://marca.example", "modelosDisponibles": ["Modelo"] }
+}
+
+tests {
+  // Assert
+  test("RF-46: Responsable no modifica catálogos globales", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

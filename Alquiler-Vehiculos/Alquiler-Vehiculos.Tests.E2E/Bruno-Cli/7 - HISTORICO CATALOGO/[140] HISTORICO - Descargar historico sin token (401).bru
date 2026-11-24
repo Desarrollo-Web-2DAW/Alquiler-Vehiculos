@@ -1,0 +1,16 @@
+meta {
+  name: [140] HISTORICO - Descargar historico sin token (401)
+  type: http
+  seq: 21
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoActualHistorico}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("RF-46: histórico requiere identificación", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

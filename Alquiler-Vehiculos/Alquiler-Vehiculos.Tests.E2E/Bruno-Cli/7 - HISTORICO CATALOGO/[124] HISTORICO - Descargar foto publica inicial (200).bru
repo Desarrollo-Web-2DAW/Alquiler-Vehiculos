@@ -1,0 +1,20 @@
+meta {
+  name: [124] HISTORICO - Descargar foto publica inicial (200)
+  type: http
+  seq: 4
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoAnteriorHistorico}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("RF-48: archivo real público con contenido JPEG", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    const longitud = Number(res.getHeader("content-length"));
+    expect(longitud).to.be.above(0);
+    bru.setVar("fotoHistoricoLongitud", longitud);
+  });
+}

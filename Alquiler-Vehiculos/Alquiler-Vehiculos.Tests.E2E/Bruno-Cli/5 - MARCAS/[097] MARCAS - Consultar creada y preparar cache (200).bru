@@ -1,0 +1,25 @@
+meta {
+  name: [097] MARCAS - Consultar creada y preparar cache (200)
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/marca/{{marcaE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  // Assert: los intentos sin permiso no han modificado ni borrado el recurso.
+  test("RF-09: marca intacta antes del PUT", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().id).to.equal(bru.getVar("marcaE2EId"));
+    expect(res.getBody().nombre).to.equal(bru.getVar("marcaNombreE2E"));
+    expect(res.getBody().modelosDisponibles).to.deep.equal(["Modelo inicial"]);
+  });
+}

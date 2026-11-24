@@ -30,7 +30,7 @@ body:multipart-form {
   concesionario: {{concesionarioId}}
 }
 
-script:post-response {
+tests {
   test("Actualizar con matricula de otro vehiculo - Status 409", function () {
     expect(res.getStatus()).to.equal(409);
   });

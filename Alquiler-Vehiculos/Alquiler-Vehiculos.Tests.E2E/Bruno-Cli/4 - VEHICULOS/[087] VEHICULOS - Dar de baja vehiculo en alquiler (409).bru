@@ -14,7 +14,7 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-script:post-response {
+tests {
   test("Dar de baja vehiculo en alquiler - Status 409", function () {
     expect(res.getStatus()).to.equal(409);
   });

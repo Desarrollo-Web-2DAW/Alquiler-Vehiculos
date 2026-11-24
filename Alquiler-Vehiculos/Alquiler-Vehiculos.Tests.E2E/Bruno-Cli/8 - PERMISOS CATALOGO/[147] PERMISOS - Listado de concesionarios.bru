@@ -1,0 +1,19 @@
+meta {
+  name: [147] PERMISOS - Listado de concesionarios
+  type: http
+  seq: 6
+}
+get {
+  url: {{baseUrl}}/api/concesionario
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+tests {
+  // Assert
+  test("RF-46: listado de concesionarios denegado", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

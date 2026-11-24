@@ -37,17 +37,18 @@ script:pre-request {
   bru.setVar("matriculaAleatoria", n + l);
 }
 
-script:post-response {
+tests {
   test("Crear como Admin - Status 201", function () {
     expect(res.getStatus()).to.equal(201);
   });
 
   test("Crear como Admin - Contenido de la respuesta", function () {
     const body = res.getBody();
-    expect(body.id).to.be.a("string").and.not.be.empty;
+    expect(body.id).to.match(/^[A-Za-z0-9_-]{11}$/);
     expect(body.matricula).to.equal(bru.getVar("matriculaAleatoria"));
     expect(body.marca).to.equal("Toyota");
     expect(body.isActivo).to.equal(true);
+    expect(body.estado).to.equal("Disponible");
     expect(res.getHeader("location")).to.include(body.id);
   });
 

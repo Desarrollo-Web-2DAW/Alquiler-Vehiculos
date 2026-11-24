@@ -1,0 +1,22 @@
+meta {
+  name: [108] CONCESIONARIOS - Consultar como Cliente (403)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioE2EId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+tests {
+  // Assert
+  test("RF-46: Cliente no administra concesionarios", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

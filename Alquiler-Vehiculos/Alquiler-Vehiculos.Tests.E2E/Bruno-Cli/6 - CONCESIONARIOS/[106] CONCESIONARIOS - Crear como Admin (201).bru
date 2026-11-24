@@ -1,0 +1,40 @@
+meta {
+  name: [106] CONCESIONARIOS - Crear como Admin (201)
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:json {
+  { "nombre": "{{concesionarioNombreE2E}}", "ciudad": "Madrid", "telefono": "{{concesionarioTelefonoE2E}}", "email": "contacto@concesionario.example" }
+}
+
+script:pre-request {
+  // Arrange: no reutiliza el teléfono que sigue reservado en el histórico anterior.
+  bru.setVar("concesionarioNombreE2E", `Concesionario E2E ${Date.now()}`);
+  bru.setVar("concesionarioTelefonoE2E", `9${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`);
+}
+
+tests {
+  // Assert
+  test("RF-10: alta con identificador y todos sus datos", function () {
+    expect(res.getStatus()).to.equal(201);
+    const concesionario = res.getBody();
+    expect(concesionario.id).to.be.a("number").above(0);
+    expect(concesionario.nombre).to.equal(bru.getVar("concesionarioNombreE2E"));
+    expect(concesionario.ciudad).to.equal("Madrid");
+    expect(concesionario.telefono).to.equal(bru.getVar("concesionarioTelefonoE2E"));
+    expect(concesionario.email).to.equal("contacto@concesionario.example");
+    expect(res.getHeader("location")).to.include(`/api/Concesionario/${concesionario.id}`);
+  });
+  if (res.getStatus() === 201) bru.setVar("concesionarioE2EId", res.getBody().id);
+}

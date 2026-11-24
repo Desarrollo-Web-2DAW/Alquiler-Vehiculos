@@ -1,0 +1,24 @@
+meta {
+  name: [122] HISTORICO - Crear concesionario propio (201)
+  type: http
+  seq: 2
+}
+post {
+  url: {{baseUrl}}/api/concesionario
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:json {
+  { "nombre": "{{marcaHistoricoNombre}} concesionario", "ciudad": "Leganés", "telefono": "{{telefonoHistorico}}", "email": "historico@concesionario.example" }
+}
+tests {
+  // Assert
+  test("Concesionario propio preparado", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().id).to.be.a("number").above(0);
+    bru.setVar("concesionarioHistoricoId", res.getBody().id);
+  });
+}

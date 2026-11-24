@@ -1,0 +1,22 @@
+meta {
+  name: [150] PERMISOS - Modificacion de concesionario
+  type: http
+  seq: 9
+}
+put {
+  url: {{baseUrl}}/api/concesionario/1
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+body:json {
+  { "nombre": "Cambio prohibido matriz", "ciudad": "Madrid", "telefono": "900123456", "email": "matriz@concesionario.example" }
+}
+tests {
+  // Assert
+  test("RF-46: modificación de concesionario denegada", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

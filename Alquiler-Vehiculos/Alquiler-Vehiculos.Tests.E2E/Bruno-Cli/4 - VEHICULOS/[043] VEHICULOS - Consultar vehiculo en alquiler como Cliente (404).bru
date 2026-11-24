@@ -14,7 +14,7 @@ auth:bearer {
   token: {{clienteToken}}
 }
 
-script:post-response {
+tests {
   test("Consultar vehiculo en alquiler como Cliente - Status 404", function () {
     expect(res.getStatus()).to.equal(404);
   });

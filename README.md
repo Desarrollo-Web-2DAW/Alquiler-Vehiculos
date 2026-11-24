@@ -104,6 +104,16 @@ variables de entorno). El contexto de usuarios mantiene sus migraciones en
 
 ## Pruebas
 
+Para los E2E de catálogo con Bruno y dependencias reales aisladas en Docker:
+
+```powershell
+.\scripts\bruno-e2e.ps1 -MatrizPermisos
+```
+
+No requiere instalar Bruno CLI en el PC. El script prepara el entorno de prueba,
+espera la API, guarda un informe JUnit y elimina sus contenedores al finalizar.
+Recorrido, requisitos y límites: [docs/bruno-catalogo.md](docs/bruno-catalogo.md).
+
 ```powershell
 dotnet test Alquiler-Vehiculos/Alquiler-Vehiculos.slnx
 ```

@@ -10,7 +10,7 @@ get {
   auth: none
 }
 
-script:post-response {
+tests {
   test("Buscar catalogo filtrando por combustible - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

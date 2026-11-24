@@ -1,0 +1,38 @@
+meta {
+  name: 6 - CONCESIONARIOS
+  seq: 6
+}
+
+auth {
+  mode: none
+}
+
+script:pre-request {
+  // Arrange: usuarios reales; no se depende del estado de otras carpetas.
+  const axios = require("axios");
+  for (const perfil of ["admin", "cliente", "trabajador", "responsable", "mecanico"]) {
+    const token = bru.getVar(`${perfil}Token`);
+    let vigente = false;
+    try {
+      const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      vigente = JSON.parse(Buffer.from(base64, "base64").toString("utf8")).exp * 1000 > Date.now() + 60000;
+    } catch (_) {
+      vigente = false;
+    }
+    if (!vigente) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`),
+        password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+
+docs {
+  RF-10 y RF-46. Ejecutar toda la carpeta en orden y sobre datos de pruebas aislados.
+  Arrange: login y datos propios. Act: bloque HTTP. Assert: bloque tests.
+  El teléfono es único en el proyecto, también en el histórico. La baja no libera el teléfono.
+  El GET previo al PUT/DELETE permite detectar una invalidación incorrecta de caché.
+  La última baja conserva el histórico; no limpia físicamente tablas ni archivos.
+}

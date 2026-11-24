@@ -14,7 +14,7 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-script:post-response {
+tests {
   test("Paginar como Admin - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });

@@ -14,7 +14,7 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-script:post-response {
+tests {
   test("Restaurar ID inexistente - Status 404", function () {
     expect(res.getStatus()).to.equal(404);
   });

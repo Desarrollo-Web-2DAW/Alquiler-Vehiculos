@@ -14,7 +14,7 @@ auth:bearer {
   token: {{clienteToken}}
 }
 
-script:post-response {
+tests {
   test("Actualizar como Cliente - Status 403", function () {
     expect(res.getStatus()).to.equal(403);
   });

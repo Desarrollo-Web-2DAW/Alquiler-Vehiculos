@@ -1,0 +1,22 @@
+meta {
+  name: [145] PERMISOS - Modificacion de marca
+  type: http
+  seq: 4
+}
+put {
+  url: {{baseUrl}}/api/marca/000000000000000000000000
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{tokenMatriz}}
+}
+body:json {
+  { "nombre": "Cambio prohibido matriz", "pais": "España", "web": "https://matriz.example", "modelosDisponibles": ["Modelo"] }
+}
+tests {
+  // Assert
+  test("RF-46: modificación de marca denegada", function () {
+    expect(res.getStatus()).to.equal(bru.getVar("estadoMatriz"));
+  });
+}

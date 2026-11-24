@@ -1,0 +1,97 @@
+# Exclusivo para pruebas: no reutiliza los contenedores, puertos ni datos habituales.
+services:
+  postgres:
+    container_name: alquiler-e2e-postgres
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: alquiler
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${E2E_PASSWORD:?Ejecuta scripts/bruno-e2e.ps1}
+    tmpfs:
+      - /var/lib/postgresql/data
+    volumes:
+      - ./scripts/e2e/catalogo.sql:/docker-entrypoint-initdb.d/catalogo.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d alquiler"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mongodb:
+    container_name: alquiler-e2e-mongo
+    image: mongo:8.0
+    tmpfs:
+      - /data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 3s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    container_name: alquiler-e2e-redis
+    image: redis:7.4-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  mailpit:
+    container_name: alquiler-e2e-mail
+    image: axllent/mailpit:latest
+
+  api:
+    container_name: alquiler-e2e-api
+    image: alquiler-vehiculos-e2e-api:local
+    build:
+      context: .
+      dockerfile: Alquiler-Vehiculos/Alquiler-Vehiculos.Back/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: Host=postgres;Database=alquiler;Username=postgres;Password=${E2E_PASSWORD}
+      ConnectionStrings__Catalogo: Host=postgres;Database=catalogo;Username=postgres;Password=${E2E_PASSWORD}
+      MongoDbSettings__ConnectionString: mongodb://mongodb:27017
+      MongoDbSettings__DatabaseName: catalogo
+      Redis__ConnectionString: redis:6379
+      Jwt__Key: ${E2E_JWT:?Ejecuta scripts/bruno-e2e.ps1}
+      Seed__AdminPassword: ${E2E_PASSWORD}
+      Seed__ClientePassword: ${E2E_PASSWORD}
+      Seed__TrabajadorPassword: ${E2E_PASSWORD}
+      Seed__MecanicoPassword: ${E2E_PASSWORD}
+      Seed__ResponsablePassword: ${E2E_PASSWORD}
+      Email__Host: mailpit
+      Email__Port: 1025
+      Email__Security: None
+      Email__Username: ""
+      Email__Password: ""
+    volumes:
+      - ./Alquiler-Vehiculos/Alquiler-Vehiculos.Back/SeedImages:/app/SeedImages:ro
+    tmpfs:
+      - /app/uploads:uid=1654,gid=1654,mode=0700
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  bruno:
+    container_name: alquiler-e2e-bruno
+    image: alquiler-vehiculos-e2e-bruno:4.3.0
+    build:
+      context: scripts/e2e
+      dockerfile: Dockerfile.bruno
+    working_dir: /collection
+    volumes:
+      - ./Alquiler-Vehiculos/Alquiler-Vehiculos.Tests.E2E/Bruno-Cli:/collection:ro
+      - ./TestResults/bruno:/reports

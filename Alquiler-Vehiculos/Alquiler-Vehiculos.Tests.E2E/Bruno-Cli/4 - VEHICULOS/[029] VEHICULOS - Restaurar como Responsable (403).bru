@@ -14,7 +14,7 @@ auth:bearer {
   token: {{responsableToken}}
 }
 
-script:post-response {
+tests {
   test("Restaurar como Responsable - Status 403", function () {
     expect(res.getStatus()).to.equal(403);
   });

@@ -45,5 +45,13 @@ docs {
 
   ## Organización de la colección
   - `1 - AUTHENTICATION`: alta de cliente, login de los 5 perfiles semilla (RF-46) y consulta de `/api/auth/me`.
-  - Los módulos siguientes (`2 - CLIENTES`, `3 - VEHICULOS`, `4 - TRABAJADORES`, `5 - TALLER`, `6 - RESERVAS`, `7 - PAGOS`) reutilizan los tokens guardados (`adminToken`, `clienteToken`, `trabajadorToken`, `mecanicoToken`, `responsableToken`).
+  - `2 - USERS`: administración de usuarios.
+  - `3 - OFICINA`: consulta y permisos de oficina.
+  - `4 - VEHICULOS`: flota, búsquedas, validaciones y permisos.
+  - `5 - MARCAS`: CRUD, sustitución de modelos, invalidación de caché y permisos.
+  - `6 - CONCESIONARIOS`: CRUD, validación de correo, teléfono duplicado, caché y permisos.
+  - `7 - HISTORICO CATALOGO`: bajas con vehículo asociado, sustitución y conservación de fotos.
+  - `8 - PERMISOS CATALOGO`: diez endpoints de marcas/concesionarios por perfil; ejecutar el script con `-MatrizPermisos`.
+  - Ejecución aislada sin instalar Bruno CLI en el PC: desde la raíz, `./scripts/bruno-e2e.ps1`.
+    Consulta `docs/bruno-catalogo.md` antes de usar las bases habituales.
 }

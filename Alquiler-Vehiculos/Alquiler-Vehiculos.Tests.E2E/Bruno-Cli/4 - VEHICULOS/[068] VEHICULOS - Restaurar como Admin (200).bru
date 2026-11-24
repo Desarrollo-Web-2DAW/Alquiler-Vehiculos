@@ -14,7 +14,7 @@ auth:bearer {
   token: {{adminToken}}
 }
 
-script:post-response {
+tests {
   test("Restaurar como Admin - Status 200", function () {
     expect(res.getStatus()).to.equal(200);
   });
@@ -22,6 +22,7 @@ script:post-response {
   test("Restaurar como Admin - Contenido de la respuesta", function () {
     expect(res.getBody().id).to.equal(bru.getVar("vehiculoCreadoId"));
     expect(res.getBody().isActivo).to.equal(true);
+    expect(res.getBody().estado).to.equal("Disponible");
   });
 }
 

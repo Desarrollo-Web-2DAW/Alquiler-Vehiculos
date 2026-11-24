@@ -1,0 +1,43 @@
+meta {
+  name: [123] HISTORICO - Crear vehiculo con foto (201)
+  type: http
+  seq: 3
+}
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaHistorico}}
+  marca: {{marcaHistoricoNombre}}
+  modelo: Modelo histórico
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioHistoricoId}}
+}
+tests {
+  // Assert
+  test("RF-01: vehículo con relaciones propias y foto asignada", function () {
+    expect(res.getStatus()).to.equal(201);
+    const vehiculo = res.getBody();
+    expect(vehiculo.id).to.match(/^[A-Za-z0-9_-]{11}$/);
+    expect(vehiculo.estado).to.equal("Disponible");
+    expect(vehiculo.isActivo).to.equal(true);
+    expect(vehiculo.marca).to.equal(bru.getVar("marcaHistoricoNombre"));
+    expect(vehiculo.concesionario).to.equal(bru.getVar("concesionarioHistoricoId"));
+    expect(vehiculo.foto).to.be.a("string").that.is.not.empty;
+    bru.setVar("vehiculoHistoricoId", vehiculo.id);
+    bru.setVar("fotoAnteriorHistorico", vehiculo.foto);
+  });
+}
