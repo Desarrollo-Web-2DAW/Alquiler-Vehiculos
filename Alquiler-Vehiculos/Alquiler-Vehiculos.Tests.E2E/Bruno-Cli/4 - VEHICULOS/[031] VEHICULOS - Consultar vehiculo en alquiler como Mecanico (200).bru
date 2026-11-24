@@ -1,0 +1,30 @@
+meta {
+  name: [031] VEHICULOS - Consultar vehiculo en alquiler como Mecanico (200)
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Consultar vehiculo en alquiler como Mecanico - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar vehiculo en alquiler como Mecanico - Contenido de la respuesta", function () {
+    expect(res.getBody().estado).to.equal("EnAlquiler");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

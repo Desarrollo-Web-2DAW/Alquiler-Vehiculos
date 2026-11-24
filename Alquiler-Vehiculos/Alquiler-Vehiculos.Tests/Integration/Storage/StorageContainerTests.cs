@@ -29,6 +29,8 @@ public class StorageContainerTests {
         _container = new ContainerBuilder("mcr.microsoft.com/dotnet/sdk:10.0")
             .WithResourceMapping(DirectoryPath.Of(archivos.FullName), DirectoryPath.Of("/tests/"), uid: 1654, gid: 1654)
             .WithWorkingDirectory("/tests")
+            // Docker Desktop no siempre publica host.docker.internal dentro de los contenedores.
+            .WithExtraHost("host.docker.internal", "host-gateway")
             .WithEnvironment("STORAGE_TEST_CONTAINER", "1")
             .WithEnvironment("STORAGE_TEST_CONNECTION", conexion.ConnectionString)
             .WithEnvironment("DOTNET_CLI_UI_LANGUAGE", "en")

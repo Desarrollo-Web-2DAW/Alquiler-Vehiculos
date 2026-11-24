@@ -1,0 +1,22 @@
+meta {
+  name: [072] VEHICULOS - Buscar con categoria invalida (400)
+  type: http
+  seq: 51
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?categoria=Avion
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Buscar con categoria invalida - Status 400", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

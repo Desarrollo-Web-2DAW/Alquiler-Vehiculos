@@ -1,0 +1,26 @@
+meta {
+  name: [035] VEHICULOS - Listar como Trabajador (200)
+  type: http
+  seq: 14
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+script:post-response {
+  test("Listar como Trabajador - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

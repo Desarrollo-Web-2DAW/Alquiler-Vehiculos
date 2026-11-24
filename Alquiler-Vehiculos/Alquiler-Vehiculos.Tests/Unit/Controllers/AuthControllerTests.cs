@@ -9,6 +9,7 @@ using CSharpFunctionalExtensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Controllers;
@@ -22,7 +23,7 @@ public class AuthControllerTests {
     [SetUp]
     public void SetUp() {
         _service = new Mock<IAuthService>();
-        _controller = new AuthController(_service.Object) {
+        _controller = new AuthController(_service.Object, NullLogger<AuthController>.Instance) {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
     }
@@ -32,47 +33,47 @@ public class AuthControllerTests {
         // Arrange
         var dto = new LoginDto { Email = "cliente@example.com", Password = "ejemplo" };
         var respuesta = new AuthResponseDto("token-de-prueba", dto.Email, "Cliente", new(2026, 12, 1));
-        _service.Setup(s => s.Login(dto)).ReturnsAsync(Result.Success<AuthResponseDto, DomainError>(respuesta));
+        _service.Setup(s => s.LoginAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success<AuthResponseDto, DomainError>(respuesta));
 
         // Act
-        var resultado = await _controller.Login(dto);
+        var resultado = await _controller.Login(dto, CancellationToken.None);
 
         // Assert
         resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(respuesta);
-        _service.Verify(s => s.Login(dto), Times.Once);
-        _service.Verify(s => s.SignUpAsync(It.IsAny<SignupDto>()), Times.Never);
+        _service.Verify(s => s.LoginAsync(dto, It.IsAny<CancellationToken>()), Times.Once);
+        _service.Verify(s => s.SignUpAsync(It.IsAny<SignupDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
     public async Task Login_CredencialesInvalidas_Devuelve401() {
         // Arrange
         var dto = new LoginDto();
-        _service.Setup(s => s.Login(dto)).ReturnsAsync(Result.Failure<AuthResponseDto, DomainError>(AuthError.CredencialesInvalidas()));
+        _service.Setup(s => s.LoginAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Failure<AuthResponseDto, DomainError>(AuthError.CredencialesInvalidas()));
 
         // Act
-        var resultado = await _controller.Login(dto);
+        var resultado = await _controller.Login(dto, CancellationToken.None);
 
         // Assert
         var respuesta = resultado.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
         respuesta.Value.Should().BeEquivalentTo(new { code = "CREDENCIALES_INVALIDAS", message = "Email o contraseña incorrectos" });
-        _service.Verify(s => s.Login(dto), Times.Once);
-        _service.Verify(s => s.SignUpAsync(It.IsAny<SignupDto>()), Times.Never);
+        _service.Verify(s => s.LoginAsync(dto, It.IsAny<CancellationToken>()), Times.Once);
+        _service.Verify(s => s.SignUpAsync(It.IsAny<SignupDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
-    public async Task Signup_AltaCorrecta_DevuelveTokenCon200() {
+    public async Task Signup_AltaCorrecta_DevuelveTokenCon201() {
         // Arrange
         var dto = new SignupDto { Email = "cliente@example.com" };
         var respuesta = new AuthResponseDto("token-de-prueba", dto.Email, "Cliente", new(2026, 12, 1));
-        _service.Setup(s => s.SignUpAsync(dto)).ReturnsAsync(Result.Success<AuthResponseDto, DomainError>(respuesta));
+        _service.Setup(s => s.SignUpAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success<AuthResponseDto, DomainError>(respuesta));
 
         // Act
-        var resultado = await _controller.Signup(dto);
+        var resultado = await _controller.Signup(dto, CancellationToken.None);
 
         // Assert
-        resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(respuesta);
+        resultado.Result.Should().BeOfType<CreatedAtActionResult>().Which.Value.Should().BeSameAs(respuesta);
         _service.Verify(s => s.SignUpAsync(dto), Times.Once);
-        _service.Verify(s => s.Login(It.IsAny<LoginDto>()), Times.Never);
+        _service.Verify(s => s.LoginAsync(It.IsAny<LoginDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -80,16 +81,16 @@ public class AuthControllerTests {
         // Arrange
         var dto = new SignupDto { Email = "cliente@example.com" };
         var error = AuthError.EmailExistente(dto.Email);
-        _service.Setup(s => s.SignUpAsync(dto)).ReturnsAsync(Result.Failure<AuthResponseDto, DomainError>(error));
+        _service.Setup(s => s.SignUpAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Failure<AuthResponseDto, DomainError>(error));
 
         // Act
-        var resultado = await _controller.Signup(dto);
+        var resultado = await _controller.Signup(dto, CancellationToken.None);
 
         // Assert
         resultado.Result.Should().BeOfType<ConflictObjectResult>().Which.Value
             .Should().BeEquivalentTo(new { code = error.Code, message = error.Message });
         _service.Verify(s => s.SignUpAsync(dto), Times.Once);
-        _service.Verify(s => s.Login(It.IsAny<LoginDto>()), Times.Never);
+        _service.Verify(s => s.LoginAsync(It.IsAny<LoginDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [TestCase(null)]
@@ -101,12 +102,12 @@ public class AuthControllerTests {
         _controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "prueba"));
 
         // Act
-        var resultado = await _controller.GetMe();
+        var resultado = await _controller.GetMe(CancellationToken.None);
 
         // Assert
         var respuesta = resultado.Result.Should().BeOfType<UnauthorizedObjectResult>().Subject;
-        respuesta.Value.Should().BeOfType<ApiErrorResponse>().Which.Message.Should().Be("Token inválido o usuario no identificado");
-        _service.Verify(s => s.GetMeAsync(It.IsAny<Guid>()), Times.Never);
+        respuesta.Value.Should().BeEquivalentTo(new { code = "CREDENCIALES_INVALIDAS", message = "Email o contraseña incorrectos" });
+        _service.Verify(s => s.GetMeAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Test]
@@ -115,10 +116,10 @@ public class AuthControllerTests {
         var id = Guid.NewGuid();
         _controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, id.ToString())], "prueba"));
         var perfil = new UserDto(id, "cliente@example.com", "Lucia", "Fuertes", "Cliente");
-        _service.Setup(s => s.GetMeAsync(id)).ReturnsAsync(Result.Success<UserDto, DomainError>(perfil));
+        _service.Setup(s => s.GetMeAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Success<UserDto, DomainError>(perfil));
 
         // Act
-        var resultado = await _controller.GetMe();
+        var resultado = await _controller.GetMe(CancellationToken.None);
 
         // Assert
         resultado.Result.Should().BeOfType<OkObjectResult>().Which.Value.Should().BeSameAs(perfil);
@@ -131,10 +132,10 @@ public class AuthControllerTests {
         var id = Guid.NewGuid();
         _controller.HttpContext.User = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.NameIdentifier, id.ToString())], "prueba"));
         var error = UsuarioError.NotFound(id);
-        _service.Setup(s => s.GetMeAsync(id)).ReturnsAsync(Result.Failure<UserDto, DomainError>(error));
+        _service.Setup(s => s.GetMeAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(Result.Failure<UserDto, DomainError>(error));
 
         // Act
-        var resultado = await _controller.GetMe();
+        var resultado = await _controller.GetMe(CancellationToken.None);
 
         // Assert
         resultado.Result.Should().BeOfType<NotFoundObjectResult>().Which.Value

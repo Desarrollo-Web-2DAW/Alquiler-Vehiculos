@@ -1,0 +1,30 @@
+meta {
+  name: [063] VEHICULOS - Consultar vehiculo creado (200)
+  type: http
+  seq: 42
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Consultar vehiculo creado - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar vehiculo creado - Contenido de la respuesta", function () {
+    expect(res.getBody().matricula).to.equal(bru.getVar("vehiculoCreadoMatricula"));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

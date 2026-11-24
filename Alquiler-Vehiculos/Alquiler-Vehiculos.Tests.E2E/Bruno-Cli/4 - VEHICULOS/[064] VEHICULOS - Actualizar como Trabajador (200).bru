@@ -1,0 +1,53 @@
+meta {
+  name: [064] VEHICULOS - Actualizar como Trabajador (200)
+  type: http
+  seq: 43
+}
+
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{vehiculoCreadoMatricula}}
+  marca: Toyota
+  modelo: Corolla Sedán
+  acriss: ILAH
+  color: Negro
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1500
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioId}}
+}
+
+script:post-response {
+  test("Actualizar como Trabajador - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Actualizar como Trabajador - Contenido de la respuesta", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("vehiculoCreadoId"));
+    expect(body.color).to.equal("Negro");
+    expect(body.kilometraje).to.equal(1500);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  La actualización usa la política Trabajador: el personal de oficina puede modificar unidades.
+}

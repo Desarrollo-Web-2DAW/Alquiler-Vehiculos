@@ -1,0 +1,53 @@
+meta {
+  name: [077] VEHICULOS - Crear con foto de extension no permitida (422)
+  type: http
+  seq: 56
+}
+
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/no-imagen.txt)
+  matricula: {{matriculaAleatoria}}
+  marca: Toyota
+  modelo: Corolla Sedán
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioId}}
+}
+
+script:pre-request {
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  const n = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  const l = Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join("");
+  bru.setVar("matriculaAleatoria", n + l);
+}
+
+script:post-response {
+  test("Crear con foto de extension no permitida - Status 422", function () {
+    expect(res.getStatus()).to.equal(422);
+  });
+
+  test("Crear con foto de extension no permitida - Código EXTENSION_NO_PERMITIDA", function () {
+    expect(res.getBody().code).to.equal("EXTENSION_NO_PERMITIDA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,30 @@
+meta {
+  name: [066] VEHICULOS - Consultar vehiculo dado de baja como Admin (200)
+  type: http
+  seq: 45
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Consultar vehiculo dado de baja como Admin - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar vehiculo dado de baja como Admin - Contenido de la respuesta", function () {
+    expect(res.getBody().isActivo).to.equal(false);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

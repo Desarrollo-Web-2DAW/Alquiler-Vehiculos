@@ -1,0 +1,26 @@
+meta {
+  name: [029] VEHICULOS - Restaurar como Responsable (403)
+  type: http
+  seq: 8
+}
+
+patch {
+  url: {{baseUrl}}/api/vehiculo/noExiste000/restore
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+script:post-response {
+  test("Restaurar como Responsable - Status 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

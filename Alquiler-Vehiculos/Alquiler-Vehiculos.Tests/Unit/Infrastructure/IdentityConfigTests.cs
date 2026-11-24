@@ -17,14 +17,17 @@ namespace Alquiler_Vehiculos.Tests.Unit.Infrastructure;
 [TestFixture]
 [Category("Unit")]
 public class IdentityConfigTests {
+    // Clave de 64 caracteres: supera los 32 bytes que exige HMAC-SHA256.
+    private static string ClaveValida() => Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+
     [TestCase(false)]
     [TestCase(true)]
-    public void AddIdentityConfiguration_ConYSinSeccion_ConfiguraIdentity(bool conSeccion) {
+    public void AddIdentityConfiguration_ConClaveYConOSinResto_ConfiguraIdentity(bool conSeccion) {
         // Arrange
         var valores = conSeccion ? new Dictionary<string, string?> {
-            ["Jwt:Key"] = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"),
+            ["Jwt:Key"] = ClaveValida(),
             ["Jwt:Issuer"] = "issuer-tests", ["Jwt:Audience"] = "audience-tests", ["Jwt:ExpirationMinutes"] = "15"
-        } : new Dictionary<string, string?>();
+        } : new Dictionary<string, string?> { ["Jwt:Key"] = ClaveValida() };
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(valores).Build();
         var services = new ServiceCollection();
         services.AddLogging();
@@ -66,6 +69,23 @@ public class IdentityConfigTests {
         }
     }
 
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("clave-de-menos-de-32-bytes")]
+    public void AddIdentityConfiguration_SinClaveOClaveCorta_FallaAlArrancar(string? clave) {
+        // Arrange
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Jwt:Key"] = clave }).Build();
+        var services = new ServiceCollection();
+        var entorno = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" }).Environment;
+
+        // Act
+        var accion = () => services.AddIdentityConfiguration(configuration, entorno);
+
+        // Assert
+        accion.Should().Throw<InvalidOperationException>().WithMessage("*Jwt:Key*");
+    }
+
     [TestCase(PolicyNames.Admin, "Admin", true)]
     [TestCase(PolicyNames.Admin, "Responsable", false)]
     [TestCase(PolicyNames.Admin, "Trabajador", false)]
@@ -87,7 +107,8 @@ public class IdentityConfigTests {
         var services = new ServiceCollection();
         services.AddLogging();
         var entorno = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" }).Environment;
-        services.AddIdentityConfiguration(new ConfigurationBuilder().Build(), entorno);
+        services.AddIdentityConfiguration(new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?> { ["Jwt:Key"] = ClaveValida() }).Build(), entorno);
         using var provider = services.BuildServiceProvider();
         var usuario = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Role, rol)], "Testing"));
         var authorization = provider.GetRequiredService<IAuthorizationService>();

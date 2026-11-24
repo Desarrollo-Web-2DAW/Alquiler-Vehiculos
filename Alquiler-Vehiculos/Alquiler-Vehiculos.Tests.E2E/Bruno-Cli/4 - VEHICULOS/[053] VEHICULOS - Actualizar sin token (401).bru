@@ -1,0 +1,22 @@
+meta {
+  name: [053] VEHICULOS - Actualizar sin token (401)
+  type: http
+  seq: 32
+}
+
+put {
+  url: {{baseUrl}}/api/vehiculo/noExiste000
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Actualizar sin token - Status 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

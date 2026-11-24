@@ -1,0 +1,31 @@
+meta {
+  name: [068] VEHICULOS - Restaurar como Admin (200)
+  type: http
+  seq: 47
+}
+
+patch {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}/restore
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Restaurar como Admin - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Restaurar como Admin - Contenido de la respuesta", function () {
+    expect(res.getBody().id).to.equal(bru.getVar("vehiculoCreadoId"));
+    expect(res.getBody().isActivo).to.equal(true);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

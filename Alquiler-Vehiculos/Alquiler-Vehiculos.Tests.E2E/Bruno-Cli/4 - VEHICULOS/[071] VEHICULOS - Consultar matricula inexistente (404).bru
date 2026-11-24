@@ -1,0 +1,30 @@
+meta {
+  name: [071] VEHICULOS - Consultar matricula inexistente (404)
+  type: http
+  seq: 50
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/0000ZZZ
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Consultar matricula inexistente - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Consultar matricula inexistente - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

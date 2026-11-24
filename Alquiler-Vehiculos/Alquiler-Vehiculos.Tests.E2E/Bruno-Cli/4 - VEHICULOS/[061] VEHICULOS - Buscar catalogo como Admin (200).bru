@@ -1,0 +1,36 @@
+meta {
+  name: [061] VEHICULOS - Buscar catalogo como Admin (200)
+  type: http
+  seq: 40
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Buscar catalogo como Admin - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Buscar catalogo como Admin - Contenido de la respuesta", function () {
+    const megane = res.getBody().find(g => g.marca === "Renault" && g.modelo === "Megane");
+    expect(megane).to.not.be.undefined;
+    expect(megane.unidadesLibres).to.equal(0);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Solo el Admin ve también los grupos sin unidades libres.
+}

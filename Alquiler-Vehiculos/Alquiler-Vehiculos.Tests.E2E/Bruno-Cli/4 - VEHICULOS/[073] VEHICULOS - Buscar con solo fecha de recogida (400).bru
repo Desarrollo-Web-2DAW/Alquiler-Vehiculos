@@ -1,0 +1,26 @@
+meta {
+  name: [073] VEHICULOS - Buscar con solo fecha de recogida (400)
+  type: http
+  seq: 52
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?fechaRecogida=2030-01-10T10:00:00Z
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Buscar con solo fecha de recogida - Status 400", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Si se envía una fecha, la otra es obligatoria.
+}

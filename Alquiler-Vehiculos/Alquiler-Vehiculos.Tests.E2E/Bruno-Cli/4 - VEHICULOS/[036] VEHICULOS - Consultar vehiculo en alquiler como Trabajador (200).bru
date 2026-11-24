@@ -1,0 +1,30 @@
+meta {
+  name: [036] VEHICULOS - Consultar vehiculo en alquiler como Trabajador (200)
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+script:post-response {
+  test("Consultar vehiculo en alquiler como Trabajador - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar vehiculo en alquiler como Trabajador - Contenido de la respuesta", function () {
+    expect(res.getBody().estado).to.equal("EnAlquiler");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

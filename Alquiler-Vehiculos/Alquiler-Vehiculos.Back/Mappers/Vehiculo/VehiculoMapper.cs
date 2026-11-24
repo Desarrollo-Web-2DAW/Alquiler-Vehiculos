@@ -52,7 +52,8 @@ public static class VehiculoMapper
             MaleteroLitros = dto.MaleteroLitros,
             AutonomiaKm = dto.AutonomiaKm,
             Kilometraje = dto.Kilometraje,
-            FechaUltimaRevision = fecha,
+            // Npgsql solo admite DateTime UTC en columnas 'timestamp with time zone'.
+            FechaUltimaRevision = DateTime.SpecifyKind(fecha.Date, DateTimeKind.Utc),
             ConesionarioFk = dto.Concesionario,
             Activo = true,
             CreatedAt = DateTime.UtcNow,
@@ -101,7 +102,8 @@ public static class VehiculoMapper
             MaleteroLitros = dto.MaleteroLitros,
             AutonomiaKm = dto.AutonomiaKm,
             Kilometraje = dto.Kilometraje,
-            FechaUltimaRevision = fecha,
+            // Npgsql solo admite DateTime UTC en columnas 'timestamp with time zone'.
+            FechaUltimaRevision = DateTime.SpecifyKind(fecha.Date, DateTimeKind.Utc),
             ConesionarioFk = dto.Concesionario,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = null,

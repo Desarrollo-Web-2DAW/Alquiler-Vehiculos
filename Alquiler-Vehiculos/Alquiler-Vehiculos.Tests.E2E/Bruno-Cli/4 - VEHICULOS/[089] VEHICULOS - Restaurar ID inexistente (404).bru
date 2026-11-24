@@ -1,0 +1,30 @@
+meta {
+  name: [089] VEHICULOS - Restaurar ID inexistente (404)
+  type: http
+  seq: 68
+}
+
+patch {
+  url: {{baseUrl}}/api/vehiculo/noExiste000/restore
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Restaurar ID inexistente - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Restaurar ID inexistente - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

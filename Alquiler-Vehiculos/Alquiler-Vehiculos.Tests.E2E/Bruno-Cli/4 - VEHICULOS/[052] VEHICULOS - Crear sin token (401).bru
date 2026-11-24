@@ -1,0 +1,22 @@
+meta {
+  name: [052] VEHICULOS - Crear sin token (401)
+  type: http
+  seq: 31
+}
+
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Crear sin token - Status 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

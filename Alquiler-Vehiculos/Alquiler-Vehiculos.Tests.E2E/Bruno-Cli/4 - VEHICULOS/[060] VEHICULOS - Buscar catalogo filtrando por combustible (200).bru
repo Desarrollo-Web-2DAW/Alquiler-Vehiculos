@@ -1,0 +1,28 @@
+meta {
+  name: [060] VEHICULOS - Buscar catalogo filtrando por combustible (200)
+  type: http
+  seq: 39
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search?combustible=Hibrido
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Buscar catalogo filtrando por combustible - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Buscar catalogo filtrando por combustible - Contenido de la respuesta", function () {
+    const grupos = res.getBody();
+    expect(grupos).to.be.an("array").that.is.not.empty;
+    grupos.forEach(g => expect(g.marca).to.equal("Toyota"));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

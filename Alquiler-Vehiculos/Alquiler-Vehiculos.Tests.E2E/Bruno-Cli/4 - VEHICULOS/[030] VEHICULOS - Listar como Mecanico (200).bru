@@ -1,0 +1,26 @@
+meta {
+  name: [030] VEHICULOS - Listar como Mecanico (200)
+  type: http
+  seq: 9
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Listar como Mecanico - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

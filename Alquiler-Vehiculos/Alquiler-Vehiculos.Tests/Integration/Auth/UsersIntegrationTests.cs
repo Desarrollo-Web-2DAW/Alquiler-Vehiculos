@@ -22,6 +22,7 @@ public class UsersIntegrationTests {
 
     private readonly Dictionary<string, string?> _envBackup = new();
     private PostgreSqlContainer? _postgres;
+    private readonly CatalogoContenedores _catalogo = new();
     private WebApplicationFactory<Program>? _factory;
     private HttpClient? _client;
 
@@ -36,6 +37,7 @@ public class UsersIntegrationTests {
         await _postgres.StartAsync();
 
         var connectionString = _postgres.GetConnectionString();
+        await _catalogo.StartAsync(connectionString);
 
         var overrides = new Dictionary<string, string?> {
             ["ConnectionStrings__DefaultConnection"] = connectionString,
@@ -55,6 +57,8 @@ public class UsersIntegrationTests {
             ["Seed__ResponsableEmail"] = "responsable@test.local",
             ["Seed__ResponsablePassword"] = "Responsable12345!"
         };
+
+        foreach (var (key, value) in _catalogo.VariablesDeEntorno()) overrides[key] = value;
 
         foreach (var (key, value) in overrides) {
             _envBackup[key] = Environment.GetEnvironmentVariable(key);
@@ -87,6 +91,8 @@ public class UsersIntegrationTests {
         if (_postgres is not null) {
             await _postgres.DisposeAsync();
         }
+
+        await _catalogo.DisposeAsync();
 
         foreach (var (key, originalValue) in _envBackup) {
             Environment.SetEnvironmentVariable(key, originalValue);

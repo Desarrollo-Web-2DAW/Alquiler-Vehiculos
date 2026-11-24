@@ -1,0 +1,30 @@
+meta {
+  name: [058] VEHICULOS - Consultar por matricula sin token (200)
+  type: http
+  seq: 37
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/{{vehiculoDisponibleMatricula}}
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Consultar por matricula sin token - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar por matricula sin token - Contenido de la respuesta", function () {
+    expect(res.getBody().id).to.equal(bru.getVar("vehiculoDisponibleId"));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-06: consulta de una unidad concreta por matrícula.
+}

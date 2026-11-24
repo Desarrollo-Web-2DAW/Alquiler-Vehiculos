@@ -1,0 +1,26 @@
+meta {
+  name: [069] VEHICULOS - Paginar con pagina cero (400)
+  type: http
+  seq: 48
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/paged?page=0&pageSize=5
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Paginar con pagina cero - Status 400", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

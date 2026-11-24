@@ -1,0 +1,26 @@
+meta {
+  name: [047] VEHICULOS - Restaurar como Cliente (403)
+  type: http
+  seq: 26
+}
+
+patch {
+  url: {{baseUrl}}/api/vehiculo/noExiste000/restore
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+script:post-response {
+  test("Restaurar como Cliente - Status 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

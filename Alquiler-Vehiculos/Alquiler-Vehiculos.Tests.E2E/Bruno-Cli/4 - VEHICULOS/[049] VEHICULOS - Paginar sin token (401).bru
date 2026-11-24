@@ -1,0 +1,22 @@
+meta {
+  name: [049] VEHICULOS - Paginar sin token (401)
+  type: http
+  seq: 28
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/paged
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Paginar sin token - Status 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,22 @@
+meta {
+  name: [055] VEHICULOS - Restaurar sin token (401)
+  type: http
+  seq: 34
+}
+
+patch {
+  url: {{baseUrl}}/api/vehiculo/noExiste000/restore
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Restaurar sin token - Status 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

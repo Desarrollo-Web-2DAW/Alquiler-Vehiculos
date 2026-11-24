@@ -1,0 +1,30 @@
+meta {
+  name: [037] VEHICULOS - Crear como Trabajador (403)
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+script:post-response {
+  test("Crear como Trabajador - Status 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Crear vehículos es exclusivo del Admin.
+}

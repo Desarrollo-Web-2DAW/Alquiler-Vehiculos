@@ -1,0 +1,26 @@
+meta {
+  name: [023] VEHICULOS - Paginar como Admin (200)
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/paged
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Paginar como Admin - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

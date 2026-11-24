@@ -1,8 +1,11 @@
+using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Enums.Usuarios;
 using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Models.Usuarios;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Moq;
@@ -26,6 +29,11 @@ public class IdentitySeederTests {
         services.AddLogging();
         services.AddSingleton(_users.Object);
         services.AddSingleton(_roles.Object);
+        // El seeder abre transacciones y siembra la oficina: InMemory basta y no persiste entre tests.
+        var baseDatos = Guid.NewGuid().ToString();
+        services.AddDbContext<AppDbContextUsuarios>(o => o
+            .UseInMemoryDatabase(baseDatos)
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning)));
         _provider = services.BuildServiceProvider();
     }
 
@@ -75,7 +83,7 @@ public class IdentitySeederTests {
     [TestCase("Trabajador", "existe")]
     [TestCase("Trabajador", "creacionFalla")]
     [TestCase("Trabajador", "rolFalla")]
-    public async Task SeedAsync_AltaDeCadaPerfil_RespetaErroresYDeshaceAltasSinRol(string perfil, string estado) {
+    public async Task SeedAsync_AltaDeCadaPerfil_RespetaErroresSinBorrarCuentas(string perfil, string estado) {
         // Arrange
         const string email = "persona@example.com";
         var existente = new User { Email = email };
@@ -97,7 +105,8 @@ public class IdentitySeederTests {
         _users.Verify(u => u.FindByEmailAsync(email), Times.Once);
         _users.Verify(u => u.CreateAsync(It.IsAny<User>(), _password), estado == "existe" ? Times.Never() : Times.Once());
         _users.Verify(u => u.AddToRoleAsync(It.IsAny<User>(), perfil), estado is "creada" or "rolFalla" ? Times.Once() : Times.Never());
-        _users.Verify(u => u.DeleteAsync(It.IsAny<User>()), estado == "rolFalla" && perfil != "Admin" ? Times.Once() : Times.Never());
+        // Si falla el rol, Cliente y Trabajador deshacen el alta con la transacción, no borrando la cuenta.
+        _users.Verify(u => u.DeleteAsync(It.IsAny<User>()), Times.Never);
         _users.Verify(u => u.IsInRoleAsync(It.IsAny<User>(), perfil), perfil == "Admin" && estado != "creacionFalla" ? Times.Once() : Times.Never());
         _roles.Verify(r => r.RoleExistsAsync(It.IsAny<string>()), Times.Exactly(4));
         if (estado != "existe") {
@@ -108,13 +117,13 @@ public class IdentitySeederTests {
             if (perfil == "Cliente") {
                 creada.Cliente.Should().NotBeNull();
                 creada.ClienteId.Should().Be(creada.Cliente!.Id);
-                creada.Cliente.Nombre.Should().Be("Cliente");
-                creada.Cliente.Dni.Should().Be("00000000T");
+                creada.Cliente.Nombre.Should().Be("Ana");
+                creada.Cliente.Dni.Should().Be("12345678Z");
             } else if (perfil == "Trabajador") {
                 creada.Trabajador.Should().NotBeNull();
                 creada.TrabajadorId.Should().Be(creada.Trabajador!.Id);
-                creada.Trabajador.Nombre.Should().Be("Trabajador");
-                creada.Trabajador.Dni.Should().Be("11111111H");
+                creada.Trabajador.Nombre.Should().Be("Carlos");
+                creada.Trabajador.Dni.Should().Be("23456789D");
             } else {
                 creada.Cliente.Should().BeNull();
                 creada.Trabajador.Should().BeNull();

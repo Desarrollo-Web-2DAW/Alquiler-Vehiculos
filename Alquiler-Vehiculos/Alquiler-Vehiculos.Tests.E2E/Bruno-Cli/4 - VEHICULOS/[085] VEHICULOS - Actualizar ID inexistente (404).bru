@@ -1,0 +1,53 @@
+meta {
+  name: [085] VEHICULOS - Actualizar ID inexistente (404)
+  type: http
+  seq: 64
+}
+
+put {
+  url: {{baseUrl}}/api/vehiculo/noExiste000
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaAleatoria}}
+  marca: Toyota
+  modelo: Corolla Sedán
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioId}}
+}
+
+script:pre-request {
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  const n = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  const l = Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join("");
+  bru.setVar("matriculaAleatoria", n + l);
+}
+
+script:post-response {
+  test("Actualizar ID inexistente - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Actualizar ID inexistente - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

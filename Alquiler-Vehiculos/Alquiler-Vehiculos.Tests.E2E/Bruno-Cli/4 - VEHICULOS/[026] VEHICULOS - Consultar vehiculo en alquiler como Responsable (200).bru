@@ -1,0 +1,30 @@
+meta {
+  name: [026] VEHICULOS - Consultar vehiculo en alquiler como Responsable (200)
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+script:post-response {
+  test("Consultar vehiculo en alquiler como Responsable - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar vehiculo en alquiler como Responsable - Contenido de la respuesta", function () {
+    expect(res.getBody().estado).to.equal("EnAlquiler");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,22 @@
+meta {
+  name: [054] VEHICULOS - Dar de baja sin token (401)
+  type: http
+  seq: 33
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/noExiste000
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Dar de baja sin token - Status 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,26 @@
+meta {
+  name: [067] VEHICULOS - Consultar vehiculo dado de baja sin token (404)
+  type: http
+  seq: 46
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Consultar vehiculo dado de baja sin token - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Consultar vehiculo dado de baja sin token - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

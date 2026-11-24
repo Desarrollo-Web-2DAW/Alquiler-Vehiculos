@@ -1,0 +1,22 @@
+meta {
+  name: [048] VEHICULOS - Listar sin token (401)
+  type: http
+  seq: 27
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Listar sin token - Status 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

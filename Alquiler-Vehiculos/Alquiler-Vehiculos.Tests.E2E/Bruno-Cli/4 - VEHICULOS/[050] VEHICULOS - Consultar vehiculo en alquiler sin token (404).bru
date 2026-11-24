@@ -1,0 +1,30 @@
+meta {
+  name: [050] VEHICULOS - Consultar vehiculo en alquiler sin token (404)
+  type: http
+  seq: 29
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Consultar vehiculo en alquiler sin token - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Consultar vehiculo en alquiler sin token - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  El catálogo público solo muestra unidades activas y Disponibles.
+}

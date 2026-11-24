@@ -1,0 +1,45 @@
+meta {
+  name: [022] VEHICULOS - Listar como Admin (200)
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Listar como Admin - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Listar como Admin - Contenido de la respuesta", function () {
+    expect(res.getBody()).to.be.an("array").that.is.not.empty;
+  });
+
+  if (res.getStatus() === 200) {
+    const lista = res.getBody();
+    const disponible = lista.find(v => v.matricula === "1234BCD");
+    const enAlquiler = lista.find(v => v.matricula === "0123NPR");
+    bru.setVar("vehiculoDisponibleId", disponible.id);
+    bru.setVar("vehiculoDisponibleMatricula", disponible.matricula);
+    bru.setVar("vehiculoEnAlquilerId", enAlquiler.id);
+    bru.setVar("vehiculoEnAlquilerMatricula", enAlquiler.matricula);
+    bru.setVar("concesionarioId", disponible.concesionario);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Política Trabajador (incluye Admin). Guarda los IDs de la semilla (1234BCD Disponible, 0123NPR EnAlquiler) y un concesionario válido para el resto de la carpeta.
+}

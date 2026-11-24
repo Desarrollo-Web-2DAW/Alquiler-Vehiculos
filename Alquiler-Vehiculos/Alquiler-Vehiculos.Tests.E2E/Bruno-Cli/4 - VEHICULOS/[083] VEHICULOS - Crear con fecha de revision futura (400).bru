@@ -1,0 +1,49 @@
+meta {
+  name: [083] VEHICULOS - Crear con fecha de revision futura (400)
+  type: http
+  seq: 62
+}
+
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaAleatoria}}
+  marca: Toyota
+  modelo: Corolla Sedán
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2099-01-01
+  concesionario: {{concesionarioId}}
+}
+
+script:pre-request {
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  const n = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  const l = Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join("");
+  bru.setVar("matriculaAleatoria", n + l);
+}
+
+script:post-response {
+  test("Crear con fecha de revision futura - Status 400", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

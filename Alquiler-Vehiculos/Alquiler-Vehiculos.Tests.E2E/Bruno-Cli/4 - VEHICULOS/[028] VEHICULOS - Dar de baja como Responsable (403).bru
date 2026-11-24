@@ -1,0 +1,30 @@
+meta {
+  name: [028] VEHICULOS - Dar de baja como Responsable (403)
+  type: http
+  seq: 7
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/noExiste000
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{responsableToken}}
+}
+
+script:post-response {
+  test("Dar de baja como Responsable - Status 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  La política se evalúa antes de buscar el vehículo: se usa un ID inexistente para no tocar datos.
+}

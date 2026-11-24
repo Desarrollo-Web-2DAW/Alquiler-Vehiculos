@@ -1,0 +1,46 @@
+meta {
+  name: [086] VEHICULOS - Actualizar con matricula de otro vehiculo (409)
+  type: http
+  seq: 65
+}
+
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{vehiculoDisponibleMatricula}}
+  marca: Toyota
+  modelo: Corolla Sedán
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioId}}
+}
+
+script:post-response {
+  test("Actualizar con matricula de otro vehiculo - Status 409", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("Actualizar con matricula de otro vehiculo - Código MATRICULA_DUPLICADA", function () {
+    expect(res.getBody().code).to.equal("MATRICULA_DUPLICADA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -1,0 +1,26 @@
+meta {
+  name: [046] VEHICULOS - Dar de baja como Cliente (403)
+  type: http
+  seq: 25
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/noExiste000
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+script:post-response {
+  test("Dar de baja como Cliente - Status 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

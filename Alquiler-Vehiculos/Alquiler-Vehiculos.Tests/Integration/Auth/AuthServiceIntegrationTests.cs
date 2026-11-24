@@ -67,6 +67,8 @@ public class AuthServiceIntegrationTests {
     public async Task ReiniciarDatos() {
         using var scope = _provider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContextUsuarios>();
+        // La oficina semilla referencia a su responsable: se borra antes que los trabajadores.
+        await db.Oficinas.ExecuteDeleteAsync();
         await db.Users.ExecuteDeleteAsync();
         await db.Clientes.ExecuteDeleteAsync();
         await db.Trabajadores.ExecuteDeleteAsync();
@@ -81,7 +83,7 @@ public class AuthServiceIntegrationTests {
 
     private SignupDto CrearAlta() => new() {
         Email = "nuevo@example.com", Password = _password, Nombre = " Lucia ", Apellidos = " Fuertes ",
-        Telefono = "600123456", FechaNacimiento = new(2000, 1, 1), Dni = " 12345678z "
+        Telefono = "600123456", FechaNacimiento = new(2000, 1, 1), Dni = " 87654321x "
     };
 
     [TestCase("admin@example.com", "Admin")]
@@ -93,7 +95,7 @@ public class AuthServiceIntegrationTests {
         var service = scope.ServiceProvider.GetRequiredService<IAuthService>();
 
         // Act
-        var resultado = await service.Login(new LoginDto { Email = email, Password = _password });
+        var resultado = await service.LoginAsync(new LoginDto { Email = email, Password = _password });
 
         // Assert
         resultado.IsSuccess.Should().BeTrue();
@@ -121,7 +123,7 @@ public class AuthServiceIntegrationTests {
         var service = scope.ServiceProvider.GetRequiredService<IAuthService>();
 
         // Act
-        var resultado = await service.Login(new LoginDto { Email = email, Password = borrada ? _password : "Incorrecta123!" });
+        var resultado = await service.LoginAsync(new LoginDto { Email = email, Password = borrada ? _password : "Incorrecta123!" });
 
         // Assert
         resultado.IsFailure.Should().BeTrue();
@@ -151,7 +153,7 @@ public class AuthServiceIntegrationTests {
         var service = scope.ServiceProvider.GetRequiredService<IAuthService>();
 
         // Act
-        var resultado = await service.Login(new LoginDto { Email = user.Email!, Password = _password });
+        var resultado = await service.LoginAsync(new LoginDto { Email = user.Email!, Password = _password });
 
         // Assert
         resultado.IsFailure.Should().BeTrue();
@@ -177,7 +179,7 @@ public class AuthServiceIntegrationTests {
         user.Cliente.Should().NotBeNull();
         user.Cliente!.Nombre.Should().Be("Lucia");
         user.Cliente.Apellidos.Should().Be("Fuertes");
-        user.Cliente.Dni.Should().Be("12345678Z");
+        user.Cliente.Dni.Should().Be("87654321X");
         user.Cliente.Nie.Should().BeNull();
         (await lectura.ServiceProvider.GetRequiredService<UserManager<User>>().GetRolesAsync(user))
             .Should().ContainSingle().Which.Should().Be("Cliente");
@@ -192,7 +194,7 @@ public class AuthServiceIntegrationTests {
         var dto = CrearAlta();
         dto = caso switch {
             "email" => dto with { Email = "cliente@example.com" },
-            "documento" => dto with { Dni = "00000000T" },
+            "documento" => dto with { Dni = "12345678Z" }, // DNI del cliente semilla
             _ => dto with { Password = "", Dni = null }
         };
         var service = scope.ServiceProvider.GetRequiredService<IAuthService>();
@@ -208,8 +210,8 @@ public class AuthServiceIntegrationTests {
     }
 
     [TestCase("admin@example.com", "", "Admin")]
-    [TestCase("cliente@example.com", "Cliente", "Cliente")]
-    [TestCase("trabajador@example.com", "Trabajador", "Trabajador")]
+    [TestCase("cliente@example.com", "Ana", "Cliente")]
+    [TestCase("trabajador@example.com", "Carlos", "Trabajador")]
     public async Task GetMeAsync_CuentaExistente_DevuelvePersonaYRol(string email, string nombre, string rol) {
         // Arrange
         using var scope = _provider.CreateScope();

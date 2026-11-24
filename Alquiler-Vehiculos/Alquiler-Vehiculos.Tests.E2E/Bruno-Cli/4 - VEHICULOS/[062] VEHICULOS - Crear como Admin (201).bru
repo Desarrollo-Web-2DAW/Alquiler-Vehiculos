@@ -1,0 +1,67 @@
+meta {
+  name: [062] VEHICULOS - Crear como Admin (201)
+  type: http
+  seq: 41
+}
+
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaAleatoria}}
+  marca: Toyota
+  modelo: Corolla Sedán
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioId}}
+}
+
+script:pre-request {
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  const n = String(Math.floor(Math.random() * 10000)).padStart(4, "0");
+  const l = Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join("");
+  bru.setVar("matriculaAleatoria", n + l);
+}
+
+script:post-response {
+  test("Crear como Admin - Status 201", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Crear como Admin - Contenido de la respuesta", function () {
+    const body = res.getBody();
+    expect(body.id).to.be.a("string").and.not.be.empty;
+    expect(body.matricula).to.equal(bru.getVar("matriculaAleatoria"));
+    expect(body.marca).to.equal("Toyota");
+    expect(body.isActivo).to.equal(true);
+    expect(res.getHeader("location")).to.include(body.id);
+  });
+
+  if (res.getStatus() === 201) {
+    bru.setVar("vehiculoCreadoId", res.getBody().id);
+    bru.setVar("vehiculoCreadoMatricula", res.getBody().matricula);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Alta con foto (multipart). La matrícula se genera aleatoriamente para que la colección se pueda repetir.
+}

@@ -20,6 +20,17 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     public async Task<Result<VehiculoModel, DomainError>> Create(VehiculoModel item)
     {
         logger.LogInformation("Creando Vehiculo: {matricula}", item.Matrícula);
+
+        // La foto puede llegar leída sin tracking aunque ya esté insertada (el StorageService la
+        // guarda en este mismo contexto): se reutiliza la instancia rastreada o se adjunta la
+        // existente para que EF no rastree dos objetos con la misma clave ni la inserte otra vez.
+        // Si la foto es nueva, se deja que EF la inserte junto al vehículo.
+        if (item.Foto is not null) {
+            var fotoRastreada = context.Fotos.Local.FirstOrDefault(f => f.Nombre == item.Foto.Nombre);
+            if (fotoRastreada is not null) item = item with { Foto = fotoRastreada };
+            else if (await context.Fotos.AnyAsync(f => f.Nombre == item.Foto.Nombre)) context.Fotos.Attach(item.Foto);
+        }
+
         await context.Vehiculos.AddAsync(item);
         try {
             await context.SaveChangesAsync();

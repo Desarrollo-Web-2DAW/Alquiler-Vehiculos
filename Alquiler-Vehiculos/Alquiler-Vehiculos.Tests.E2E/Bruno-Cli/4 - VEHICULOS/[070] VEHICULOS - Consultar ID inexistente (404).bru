@@ -1,0 +1,30 @@
+meta {
+  name: [070] VEHICULOS - Consultar ID inexistente (404)
+  type: http
+  seq: 49
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/noExiste000
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Consultar ID inexistente - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Consultar ID inexistente - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

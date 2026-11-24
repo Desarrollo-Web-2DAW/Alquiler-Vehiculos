@@ -1,0 +1,34 @@
+meta {
+  name: [056] VEHICULOS - Paginar primera pagina (200)
+  type: http
+  seq: 35
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/paged?page=1&pageSize=5
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Paginar primera pagina - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Paginar primera pagina - Contenido de la respuesta", function () {
+    const body = res.getBody();
+    expect(body.items).to.be.an("array").with.length.at.most(5);
+    expect(body.page).to.equal(1);
+    expect(body.pageSize).to.equal(5);
+    expect(body.totalPages).to.equal(Math.ceil(body.totalItems / 5));
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

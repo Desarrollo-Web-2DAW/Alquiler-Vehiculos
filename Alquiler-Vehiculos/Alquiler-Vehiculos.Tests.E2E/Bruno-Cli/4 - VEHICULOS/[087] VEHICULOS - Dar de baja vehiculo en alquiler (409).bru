@@ -1,0 +1,34 @@
+meta {
+  name: [087] VEHICULOS - Dar de baja vehiculo en alquiler (409)
+  type: http
+  seq: 66
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Dar de baja vehiculo en alquiler - Status 409", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("Dar de baja vehiculo en alquiler - Código VEHICULO_NO_DISPONIBLE", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_DISPONIBLE");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-01: solo se da de baja una unidad Disponible.
+}

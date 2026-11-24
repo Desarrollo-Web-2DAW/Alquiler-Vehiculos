@@ -1,4 +1,5 @@
 using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Dto.Usuarios;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Models.Usuarios;
@@ -10,6 +11,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Moq;
@@ -22,6 +25,7 @@ public class AuthServiceTests {
     private Mock<UserManager<User>> _users = null!;
     private Mock<IClienteRepository> _clientes = null!;
     private AuthService _service = null!;
+    private AppDbContextUsuarios _db = null!;
     private readonly string _password = Guid.NewGuid() + "aA1!";
 
     [SetUp]
@@ -33,17 +37,25 @@ public class AuthServiceTests {
             new UserClaimsPrincipalFactory<User>(_users.Object, identity), identity,
             NullLogger<SignInManager<User>>.Instance,
             new AuthenticationSchemeProvider(Options.Create(new AuthenticationOptions())), new DefaultUserConfirmation<User>());
-        _service = new AuthService(_users.Object, signIn, _clientes.Object,
+        // SignUpAsync abre una transacción: InMemory la ignora, lo que basta para un test unitario.
+        _db = new AppDbContextUsuarios(new DbContextOptionsBuilder<AppDbContextUsuarios>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .ConfigureWarnings(w => w.Ignore(InMemoryEventId.TransactionIgnoredWarning))
+            .Options);
+        _service = new AuthService(_users.Object, signIn, _db, _clientes.Object,
             Options.Create(new JwtSettings { Key = Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N"), Issuer = "tests", Audience = "tests" }),
             new SignupValidator(), new LoginValidator(), NullLogger<AuthService>.Instance);
     }
+
+    [TearDown]
+    public void TearDown() => _db.Dispose();
 
     private SignupDto Alta() => new() { Email = "nueva@example.com", Password = _password,
         Nombre = " Lucia ", Apellidos = " Fuertes ", Telefono = "600123456", FechaNacimiento = new(2000, 1, 1), Dni = " 12345678z " };
 
     [TestCase(false)]
     [TestCase(true)]
-    public async Task SignUpAsync_ErrorIdentity_AgrupaErroresYDeshaceSoloSiFallaRol(bool fallaRol) {
+    public async Task SignUpAsync_ErrorIdentity_AgrupaErroresSinBorrarCuenta(bool fallaRol) {
         // Arrange
         var dto = Alta();
         var fallo = IdentityResult.Failed(
@@ -69,7 +81,8 @@ public class AuthServiceTests {
         _clientes.Verify(c => c.DocumentoEnUsoAsync("12345678Z", null, null, default), Times.Once);
         _users.Verify(u => u.CreateAsync(It.Is<User>(u => u.Email == dto.Email && u.Cliente!.Dni == "12345678Z"), dto.Password), Times.Once);
         _users.Verify(u => u.AddToRoleAsync(It.IsAny<User>(), "Cliente"), fallaRol ? Times.Once() : Times.Never());
-        _users.Verify(u => u.DeleteAsync(It.IsAny<User>()), fallaRol ? Times.Once() : Times.Never());
+        // El rollback lo hace la transacción: ya no se compensa borrando la cuenta.
+        _users.Verify(u => u.DeleteAsync(It.IsAny<User>()), Times.Never);
     }
 
     [TestCase("nie", true)]
@@ -114,7 +127,7 @@ public class AuthServiceTests {
         var dto = new LoginDto { Email = "no-es-email", Password = "" };
 
         // Act
-        var resultado = await _service.Login(dto);
+        var resultado = await _service.LoginAsync(dto);
 
         // Assert
         resultado.IsFailure.Should().BeTrue();

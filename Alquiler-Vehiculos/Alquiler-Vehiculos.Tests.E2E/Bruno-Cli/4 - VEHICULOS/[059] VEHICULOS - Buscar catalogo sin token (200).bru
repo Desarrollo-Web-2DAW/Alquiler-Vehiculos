@@ -1,0 +1,33 @@
+meta {
+  name: [059] VEHICULOS - Buscar catalogo sin token (200)
+  type: http
+  seq: 38
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/search
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Buscar catalogo sin token - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Buscar catalogo sin token - Contenido de la respuesta", function () {
+    const grupos = res.getBody();
+    expect(grupos).to.be.an("array").that.is.not.empty;
+    grupos.forEach(g => expect(g.unidadesLibres).to.be.above(0));
+    expect(grupos.find(g => g.marca === "Renault" && g.modelo === "Megane")).to.be.undefined;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-06: el público solo ve grupos con unidades libres (Renault Megane no tiene ninguna Disponible en la semilla).
+}

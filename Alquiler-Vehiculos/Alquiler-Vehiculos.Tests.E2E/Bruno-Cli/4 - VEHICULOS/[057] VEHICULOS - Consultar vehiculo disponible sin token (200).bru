@@ -1,0 +1,31 @@
+meta {
+  name: [057] VEHICULOS - Consultar vehiculo disponible sin token (200)
+  type: http
+  seq: 36
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoDisponibleId}}
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Consultar vehiculo disponible sin token - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Consultar vehiculo disponible sin token - Contenido de la respuesta", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("vehiculoDisponibleId"));
+    expect(body.matricula).to.equal("1234BCD");
+    expect(body.marca).to.equal("Toyota");
+    expect(body.estado).to.equal("Disponible");
+    expect(body.isActivo).to.equal(true);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

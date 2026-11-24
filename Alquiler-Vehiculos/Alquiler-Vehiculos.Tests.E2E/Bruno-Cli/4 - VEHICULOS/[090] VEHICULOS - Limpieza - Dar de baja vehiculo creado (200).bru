@@ -1,0 +1,30 @@
+meta {
+  name: [090] VEHICULOS - Limpieza - Dar de baja vehiculo creado (200)
+  type: http
+  seq: 69
+}
+
+delete {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoCreadoId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+script:post-response {
+  test("Limpieza - Dar de baja vehiculo creado - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Deja de baja la unidad creada por la colección para que el listado no crezca en cada ejecución.
+}

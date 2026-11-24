@@ -1,0 +1,65 @@
+meta {
+  name: 4 - VEHICULOS
+  seq: 4
+}
+
+auth {
+  mode: inherit
+}
+
+script:pre-request {
+  // Permite ejecutar esta carpeta sola: si falta un token o va a caducar, se hace login.
+  const axios = require("axios");
+  const perfiles = {
+    adminToken: ["adminEmail", "adminPassword"],
+    responsableToken: ["responsableEmail", "responsablePassword"],
+    mecanicoToken: ["mecanicoEmail", "mecanicoPassword"],
+    trabajadorToken: ["trabajadorEmail", "trabajadorPassword"],
+    clienteToken: ["clienteEmail", "clientePassword"]
+  };
+
+  const vigente = (token) => {
+    if (!token || token.split(".").length !== 3) return false;
+    try {
+      const base64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      const payload = JSON.parse(Buffer.from(base64, "base64").toString("utf8"));
+      return payload.exp * 1000 > Date.now() + 60000;
+    } catch (e) {
+      return true;
+    }
+  };
+
+  for (const [variable, [email, password]] of Object.entries(perfiles)) {
+    if (vigente(bru.getVar(variable))) continue;
+    const res = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+      email: bru.getEnvVar(email),
+      password: bru.getEnvVar(password)
+    });
+    bru.setVar(variable, res.data.token);
+  }
+
+  // Los IDs de la semilla son aleatorios: se resuelven una vez desde el listado.
+  if (!bru.getVar("vehiculoDisponibleId")) {
+    const res = await axios.get(`${bru.getEnvVar("baseUrl")}/api/vehiculo`, {
+      headers: { Authorization: `Bearer ${bru.getVar("adminToken")}` }
+    });
+    const disponible = res.data.find(v => v.matricula === "1234BCD");
+    const enAlquiler = res.data.find(v => v.matricula === "0123NPR");
+    bru.setVar("vehiculoDisponibleId", disponible.id);
+    bru.setVar("vehiculoDisponibleMatricula", disponible.matricula);
+    bru.setVar("vehiculoEnAlquilerId", enAlquiler.id);
+    bru.setVar("vehiculoEnAlquilerMatricula", enAlquiler.matricula);
+    bru.setVar("concesionarioId", disponible.concesionario);
+  }
+}
+
+docs {
+  Catálogo de vehículos (RF-01, RF-06, RF-46).
+
+  Orden: 1) autorización por rol (Admin, Responsable, Mecánico, Trabajador, Cliente, anónimo),
+  2) happy path (consulta, búsqueda, alta, modificación, baja y restauración),
+  3) casos alternativos (validaciones, conflictos y recursos inexistentes).
+
+  Las altas usan fixtures/vehiculo.jpg y una matrícula aleatoria; la última petición da de baja
+  la unidad creada para que la colección se pueda repetir.
+}

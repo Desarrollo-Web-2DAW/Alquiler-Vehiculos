@@ -1,0 +1,26 @@
+meta {
+  name: [041] VEHICULOS - Paginar como Cliente (403)
+  type: http
+  seq: 20
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/paged
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+script:post-response {
+  test("Paginar como Cliente - Status 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

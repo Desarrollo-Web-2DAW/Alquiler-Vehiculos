@@ -28,6 +28,7 @@ try {
     builder.Services.AddEmailNotifications(builder.Configuration);
     builder.Services.AddTallerServices();
     builder.Services.AddOficinaServices();
+    builder.Services.AddCatalogoServices(builder.Configuration);
 
     var app = builder.Build();
 
@@ -46,6 +47,7 @@ try {
     app.MapControllers();
 
     await app.InitializeDatabaseAsync();
+    await app.InitializeCatalogoModuleAsync();
 
     await app.RunAsync();
 } catch (HostAbortedException) {

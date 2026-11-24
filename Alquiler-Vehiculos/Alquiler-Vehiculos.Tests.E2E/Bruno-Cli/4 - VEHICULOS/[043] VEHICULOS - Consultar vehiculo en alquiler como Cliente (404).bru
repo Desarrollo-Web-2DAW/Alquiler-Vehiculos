@@ -1,0 +1,34 @@
+meta {
+  name: [043] VEHICULOS - Consultar vehiculo en alquiler como Cliente (404)
+  type: http
+  seq: 22
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+script:post-response {
+  test("Consultar vehiculo en alquiler como Cliente - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Consultar vehiculo en alquiler como Cliente - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: el cliente solo ve unidades activas y Disponibles; el resto responde 404 para no revelar su existencia.
+}

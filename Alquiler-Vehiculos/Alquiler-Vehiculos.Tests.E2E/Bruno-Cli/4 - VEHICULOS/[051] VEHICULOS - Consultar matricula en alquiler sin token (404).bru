@@ -1,0 +1,26 @@
+meta {
+  name: [051] VEHICULOS - Consultar matricula en alquiler sin token (404)
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/matricula/{{vehiculoEnAlquilerMatricula}}
+  body: none
+  auth: none
+}
+
+script:post-response {
+  test("Consultar matricula en alquiler sin token - Status 404", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Consultar matricula en alquiler sin token - Código VEHICULO_NO_ENCONTRADO", function () {
+    expect(res.getBody().code).to.equal("VEHICULO_NO_ENCONTRADO");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
