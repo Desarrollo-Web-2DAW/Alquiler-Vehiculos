@@ -150,8 +150,8 @@ public class
             FechaUltimaRevision = fechaUltimaRevision,
             Concesionario = concesionario
         };
-        
-        var result = await EjecutarConFotoAsync(rutaFoto.Value, () => service.Create(dto));
+
+        var result = await service.Create(dto);
         return result.Match(response => CreatedAtAction(nameof(GetById), new { id = response.Id }, response), error => error.ToHttpResult<VehiculoDto>());
     }
 
@@ -204,7 +204,7 @@ public class
             FechaUltimaRevision = fechaUltimaRevision,
             Concesionario = concesionario
         };
-        var result = await EjecutarConFotoAsync(rutaFoto.Value, () => service.Update(dto, id));
+        var result = await service.Update(dto, id);
         return result.Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
     }
 
@@ -233,21 +233,6 @@ public class
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<VehiculoDto>> Restore(string id) {
         return (await service.Restore(id)).Match(response => Ok(response), error => error.ToHttpResult<VehiculoDto>());
-    }
-
-    /// <summary>
-    /// Si falla el vehículo se retira únicamente la subida nueva, nunca su foto anterior.
-    /// </summary>
-    private async Task<Result<VehiculoDto, DomainError>> EjecutarConFotoAsync(
-        string nombre, Func<Task<Result<VehiculoDto, DomainError>>> operacion) {
-        try {
-            var result = await operacion();
-            if (result.IsFailure) await storageService.DescartarFotoAsync(nombre);
-            return result;
-        } catch {
-            await storageService.DescartarFotoAsync(nombre);
-            throw;
-        }
     }
 
     /// <summary>
