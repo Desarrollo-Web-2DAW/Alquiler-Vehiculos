@@ -4,6 +4,7 @@ using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Repositories.Storage;
 using CSharpFunctionalExtensions;
+using Microsoft.Extensions.Options;
 
 namespace Alquiler_Vehiculos.Services.Storage;
 
@@ -14,6 +15,7 @@ namespace Alquiler_Vehiculos.Services.Storage;
 ///
 public class StorageService : IStorageService
 {
+    private StorageSettings _settings;
     private readonly string _rootPath;
     private readonly string _uploadPath;
     private readonly ILogger<StorageService> _logger;
@@ -24,12 +26,13 @@ public class StorageService : IStorageService
     /// </summary>
     /// <param name="settings">Configuración que contiene la sección Storage.</param>
     /// <param name="logger">Registrador de los mensajes y errores de este servicio.</param>
-    public StorageService(StorageSettings settings, ILogger<StorageService> logger
+    public StorageService(IOptions<StorageSettings> settings, ILogger<StorageService> logger
     )
     {
+        _settings = settings.Value;
         _logger = logger;
-        _uploadPath = settings.UploadPath;
-        var webRoot = settings.CustomRootPath;
+        _uploadPath = _settings.UploadPath;
+        var webRoot = _settings.CustomRootPath;
         _rootPath = Path.Combine(webRoot, _uploadPath);
 
         if (!Directory.Exists(_rootPath)) Directory.CreateDirectory(_rootPath);

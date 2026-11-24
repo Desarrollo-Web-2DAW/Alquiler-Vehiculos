@@ -1,6 +1,7 @@
 using Alquiler_Vehiculos.Config;
 using FluentValidation;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Options;
 
 namespace Alquiler_Vehiculos.Validators.Storage;
 
@@ -10,6 +11,7 @@ namespace Alquiler_Vehiculos.Validators.Storage;
 /// </summary>
 public class FileValidator : AbstractValidator<IFormFile>
 {
+    private StorageSettings _settings;
     private readonly int _maxFileSize;
     private readonly List<string> _allowedExtensions;
     private readonly List<string> _allowedContentTypes;
@@ -19,11 +21,12 @@ public class FileValidator : AbstractValidator<IFormFile>
     /// cargando las restricciones de tamaño, extensiones y tipos permitidos desde la configuración.
     /// </summary>
     /// <param name="settings">Objeto de configuración <see cref="StorageSettings"/> con los parámetros permitidos.</param>
-    public FileValidator(StorageSettings settings)
+    public FileValidator(IOptions<StorageSettings> settingss)
     {
-        _maxFileSize = settings.MaxFileSize;
-        _allowedExtensions = settings.AllowedExtensions;
-        _allowedContentTypes = settings.AllowedContentTypes;
+        _settings = settingss.Value;
+        _maxFileSize = _settings.MaxFileSize;
+        _allowedExtensions = _settings.AllowedExtensions;
+        _allowedContentTypes = _settings.AllowedContentTypes;
 
         // 1. Regla: El archivo no debe ser nulo ni tener un tamaño de 0 bytes
         RuleFor(file => file)
