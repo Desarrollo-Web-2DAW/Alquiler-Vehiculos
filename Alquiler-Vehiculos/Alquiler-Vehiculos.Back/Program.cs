@@ -28,6 +28,7 @@ try {
     builder.Services.AddEmailNotifications(builder.Configuration);
     builder.Services.AddTallerServices();
     builder.Services.AddOficinaServices();
+    builder.Services.AddClientes();
 
     var app = builder.Build();
 
