@@ -10,19 +10,6 @@ namespace Alquiler_Vehiculos.Repositories.Storage;
 /// utilizando Entity Framework Core, usando el Nombre como clave primaria.
 /// </summary>
 public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> logger) : IFotoRepository {
-    
-    /// <inheritdoc cref="IFotoRepository.SoftDeleteSiNoAsociada" />
-    public async Task<bool> SoftDeleteSiNoAsociada(string name) {
-        var fecha = DateTime.UtcNow;
-        
-        var filas = await context.Fotos
-            .Where(f => f.Nombre == name && !context.Vehiculos.Any(v => v.FotoFk == f.Nombre))
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(f => f.Activo, false)
-                .SetProperty(f => f.DeletedAt, fecha)
-                .SetProperty(f => f.UpdatedAt, fecha));
-        return filas > 0;
-    }
 
     /// <inheritdoc cref="IFotoRepository.Create" />
     public async Task<Foto> Create(Foto item) {
@@ -46,6 +33,18 @@ public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> lo
         context.Entry(existente).CurrentValues.SetValues(actualizado);
         await context.SaveChangesAsync();
         return true;
+    }
+    
+    /// <inheritdoc cref="IFotoRepository.HardDelete" />
+    public async Task<bool> HardDelete(string name)
+    {
+        logger.LogInformation("Realizando el borrado físico de la foto con el ID: {Name}", name);
+        
+        var rowsAffected = await context.Set<Foto>()
+            .Where(f => f.Nombre == name)
+            .ExecuteDeleteAsync();
+        
+        return rowsAffected > 0;
     }
 
     /// <inheritdoc cref="IFotoRepository.GetById" />
@@ -89,13 +88,13 @@ public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> lo
     }
 
     /// <inheritdoc cref="IFotoRepository.ExistById" />
-    public async Task<bool> ExistById(string key)
+    public async Task<bool> ExistById(string name)
     {
-        logger.LogDebug("Verificando existencia de Foto por Id: {Id}", key);
+        logger.LogDebug("Verificando existencia de Foto por Id: {Name}", name);
         return await context.Set<Foto>()
             .IgnoreQueryFilters()
             .AsNoTracking()
-            .AnyAsync(f => f.Nombre == key);
+            .AnyAsync(f => f.Nombre == name);
     }
 
     /// <inheritdoc cref="IFotoRepository.Restore" />
