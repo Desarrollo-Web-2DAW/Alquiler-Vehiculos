@@ -1,0 +1,35 @@
+meta {
+  name: [034] TALLER - Comprobar sin partes abiertos RF-01 (200)
+  type: http
+  seq: 34
+}
+
+get {
+  url: {{baseUrl}}/api/taller/vehiculos/VEHICULO001/partes/abiertos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Comprobacion RF-01 tras cierre - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Comprobacion RF-01 tras cierre - El vehiculo ya no tiene partes abiertos", function () {
+    expect(res.getBody().tienePartesAbiertos).to.equal(false);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-01: cerrando el parte, el vehículo queda libre de partes abiertos y la baja
+  ya no se rechaza por este motivo.
+}

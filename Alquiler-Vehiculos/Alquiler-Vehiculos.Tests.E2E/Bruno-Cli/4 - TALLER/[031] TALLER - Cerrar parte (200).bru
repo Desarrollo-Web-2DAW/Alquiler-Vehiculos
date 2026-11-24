@@ -1,0 +1,37 @@
+meta {
+  name: [031] TALLER - Cerrar parte (200)
+  type: http
+  seq: 31
+}
+
+put {
+  url: {{baseUrl}}/api/taller/partes/{{parteId}}/cierre
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Cerrar parte - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Cerrar parte - Queda en estado Cerrado", function () {
+    const body = res.getBody();
+    expect(body.id).to.equal(bru.getVar("parteId"));
+    expect(body.estado).to.equal("Cerrado");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08 y CU-07: el Mecánico cierra el parte al terminar la reparación; el
+  vehículo ya puede volver a Disponible (transición que gestiona su módulo).
+}

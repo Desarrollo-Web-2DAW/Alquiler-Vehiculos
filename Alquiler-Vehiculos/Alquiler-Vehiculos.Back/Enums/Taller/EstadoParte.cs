@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Alquiler_Vehiculos.Enums.Taller;
 
 /// <summary>
@@ -6,6 +8,7 @@ namespace Alquiler_Vehiculos.Enums.Taller;
 /// cuando termina la reparación. No hay partes reabiertas: cada entrada al
 /// taller abre un parte nuevo.
 /// </summary>
+[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum EstadoParte {
     /// <summary>El vehículo está en el taller; se mantiene en <c>Mantenimiento</c> (RF-05, RF-08).</summary>
     Abierto,

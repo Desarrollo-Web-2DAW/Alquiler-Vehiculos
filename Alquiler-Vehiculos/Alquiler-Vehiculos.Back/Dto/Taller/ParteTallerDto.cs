@@ -42,3 +42,9 @@ public record ParteTallerDto(
             parte.Estado);
     }
 }
+
+/// <summary>
+/// Resultado de la comprobación de RF-01: si un vehículo tiene partes abiertos,
+/// no se puede dar de baja hasta cerrarlos.
+/// </summary>
+public record TienePartesAbiertosDto(bool TienePartesAbiertos);

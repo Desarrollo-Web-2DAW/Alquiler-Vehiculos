@@ -1,0 +1,55 @@
+meta {
+  name: [022] TALLER - Abrir parte como Mecanico (201)
+  type: http
+  seq: 22
+}
+
+post {
+  url: {{baseUrl}}/api/taller/partes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "vehiculoId": "VEHICULO001",
+    "descripcion": "Cambio de frenos"
+  }
+}
+
+script:post-response {
+  test("Abrir parte - Status 201 Created", function () {
+    expect(res.getStatus()).to.equal(201);
+  });
+
+  test("Abrir parte - Nace en estado Abierto con los datos enviados", function () {
+    const body = res.getBody();
+    expect(body.estado).to.equal("Abierto");
+    expect(body.vehiculoId).to.equal("VEHICULO001");
+    expect(body.descripcion).to.equal("Cambio de frenos");
+    expect(body.id).to.be.a("string").and.not.be.empty;
+    expect(body.fecha).to.be.a("string").and.not.be.empty;
+  });
+
+  if (res.getStatus() === 201) {
+    bru.setVar("parteId", res.getBody().id);
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08 y CU-07: un Mecánico abre el parte de la entrada del vehículo al taller.
+  Guarda parteId para el cierre y las consultas.
+}

@@ -1,0 +1,37 @@
+meta {
+  name: [024] TALLER - Abrir parte sin token (401)
+  type: http
+  seq: 24
+}
+
+post {
+  url: {{baseUrl}}/api/taller/partes
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "vehiculoId": "VEHICULO001",
+    "descripcion": "Cambio de frenos"
+  }
+}
+
+script:post-response {
+  test("Abrir sin token - Status 401 Unauthorized", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-46: sin token no se puede abrir un parte de taller.
+}

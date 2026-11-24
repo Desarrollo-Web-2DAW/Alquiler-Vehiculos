@@ -1,0 +1,36 @@
+meta {
+  name: [029] TALLER - Historial por vehiculo (200)
+  type: http
+  seq: 29
+}
+
+get {
+  url: {{baseUrl}}/api/taller/vehiculos/VEHICULO001/partes
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Historial por vehiculo - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Historial por vehiculo - Devuelve el parte del vehiculo", function () {
+    const body = res.getBody();
+    expect(body).to.be.an("array").and.not.be.empty;
+    expect(body.every((p) => p.vehiculoId === "VEHICULO001")).to.equal(true);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08: historial completo de partes de un vehículo, ordenado por fecha de entrada.
+}

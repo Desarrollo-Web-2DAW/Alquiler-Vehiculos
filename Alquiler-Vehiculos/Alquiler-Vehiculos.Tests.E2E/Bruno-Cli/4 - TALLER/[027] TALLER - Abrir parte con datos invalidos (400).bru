@@ -1,0 +1,42 @@
+meta {
+  name: [027] TALLER - Abrir parte con datos invalidos (400)
+  type: http
+  seq: 27
+}
+
+post {
+  url: {{baseUrl}}/api/taller/partes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "vehiculoId": "corto",
+    "descripcion": "Revision general"
+  }
+}
+
+script:post-response {
+  test("Datos invalidos - Status 400 Bad Request", function () {
+    expect(res.getStatus()).to.equal(400);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-01 y RF-08: el identificador del vehículo debe tener 11 caracteres; un
+  identificador corto se rechaza con 400 y el detalle por campo.
+}

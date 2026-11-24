@@ -1,0 +1,35 @@
+meta {
+  name: [030] TALLER - Comprobar parte abierto RF-01 (200)
+  type: http
+  seq: 30
+}
+
+get {
+  url: {{baseUrl}}/api/taller/vehiculos/VEHICULO001/partes/abiertos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Comprobacion RF-01 - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Comprobacion RF-01 - El vehiculo tiene un parte abierto", function () {
+    expect(res.getBody().tienePartesAbiertos).to.equal(true);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-01: comprobación de «sin partes abiertos» que usará el módulo de vehículos
+  antes de dar de baja un vehículo (si hay parte abierto, la baja responde 409).
+}

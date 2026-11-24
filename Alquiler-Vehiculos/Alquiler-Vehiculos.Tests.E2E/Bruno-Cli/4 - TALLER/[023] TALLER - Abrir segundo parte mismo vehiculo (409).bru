@@ -1,0 +1,46 @@
+meta {
+  name: [023] TALLER - Abrir segundo parte mismo vehiculo (409)
+  type: http
+  seq: 23
+}
+
+post {
+  url: {{baseUrl}}/api/taller/partes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "vehiculoId": "VEHICULO001",
+    "descripcion": "Revision de frenos"
+  }
+}
+
+script:post-response {
+  test("Segundo parte - Status 409 Conflict", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("Segunto parte - Codigo PARTE_ABIERTA_EXISTENTE", function () {
+    expect(res.getBody().code).to.equal("PARTE_ABIERTA_EXISTENTE");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08: un vehículo no puede tener dos partes abiertos; el segundo intento se
+  rechaza con 409 y el motivo.
+}

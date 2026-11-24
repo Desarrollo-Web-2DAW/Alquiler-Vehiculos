@@ -1,0 +1,42 @@
+meta {
+  name: [026] TALLER - Abrir parte como Trabajador de Operaciones (403)
+  type: http
+  seq: 26
+}
+
+post {
+  url: {{baseUrl}}/api/taller/partes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "vehiculoId": "VEHICULO001",
+    "descripcion": "Cambio de frenos"
+  }
+}
+
+script:post-response {
+  test("Abrir como Operaciones - Status 403 Forbidden", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08 y RF-12: solo el tipo Mecánico abre partes; un Trabajador de Operaciones
+  recibe 403 aunque esté autenticado.
+}

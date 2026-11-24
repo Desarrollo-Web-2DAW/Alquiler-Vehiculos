@@ -391,9 +391,17 @@ _**Fecha de registro:**_ 22/11/2026 · _**Rama:**_ `feature/taller` · _**Estado
 - **Cobertura del módulo de taller: 211/211 líneas (100 %)** con `dotnet test --collect:"XPlat Code Coverage"`.
 - Suite completa de la rama: **96/96 OK · 0 omitidas**.
 
+### Endpoints REST y pruebas E2E con Bruno (24/11/2026)
+
+- `Controllers/Taller/ParteTallerController` (RF-08) con el estilo del equipo (`Result` + `ToHttpResult()`): `POST /api/taller/partes`, `PUT /api/taller/partes/{id}/cierre`, `GET /api/taller/partes/{id}`, `GET /api/taller/partes/abiertos` (CU-08), `GET /api/taller/vehiculos/{vehiculoId}/partes` (historial) y `GET /api/taller/vehiculos/{vehiculoId}/partes/abiertos` (comprobación de RF-01). El tramitador se resuelve del claim `trabajador_id` del token con `ITrabajadorRepository`.
+- Autorización con las políticas existentes: `PolicyNames.Mecanico` para abrir y cerrar (RF-12) y `PolicyNames.Trabajador` para las consultas (los clientes no ven partes, RF-46). El estado del parte se serializa como texto (`Abierto`/`Cerrado`).
+- **Colección E2E `4 - TALLER` de Bruno** (13 peticiones): apertura (201), segundo parte abierto (409), sin token (401), como Cliente (403), como Trabajador de Operaciones (403), datos inválidos (400), partes abiertos con fecha (CU-08), historial, comprobación RF-01 antes y después del cierre, cierre (200), cierre doble (409) y parte inexistente (404).
+- **16 pruebas unitarias nuevas del controlador** (Moq sobre `IParteTallerService` e `ITrabajadorRepository`).
+- Resultados: suite unitaria **54/54 del módulo** y cobertura **290/290 líneas (100 %)**; E2E con la API en local y servicios en Docker: **34/34 peticiones de las colecciones 1–4 en verde**.
+
 ### Pendientes
 
-- Endpoints REST de partes: pendientes de la superficie de API que fije el equipo y de la matriz de permisos (RF-46).
+- ~~Endpoints REST de partes~~ (hechos: ver el registro de 24/11/2026).
 - Transiciones del vehículo a `Mantenimiento` y vuelta al abrir/cerrar partes (RF-05, RF-33) cuando se fusione el módulo de vehículos.
 - RF-07 (entrar en taller con reservas vivas) y CU-12 (avería durante el alquiler) cuando exista el servicio de reservas.
 - Eventos en tiempo real `EntradaTaller`/`SalidaTaller` (RF-37) y semilla con partes en distintos estados (RI-03).

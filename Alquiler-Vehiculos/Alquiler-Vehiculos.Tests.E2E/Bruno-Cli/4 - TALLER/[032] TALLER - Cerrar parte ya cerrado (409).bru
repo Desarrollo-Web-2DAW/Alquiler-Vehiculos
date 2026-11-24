@@ -1,0 +1,35 @@
+meta {
+  name: [032] TALLER - Cerrar parte ya cerrado (409)
+  type: http
+  seq: 32
+}
+
+put {
+  url: {{baseUrl}}/api/taller/partes/{{parteId}}/cierre
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Cerrar doble - Status 409 Conflict", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+
+  test("Cerrar doble - Codigo PARTE_YA_CERRADA", function () {
+    expect(res.getBody().code).to.equal("PARTE_YA_CERRADA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08 y RF-32: las transiciones prohibidas se rechazan con 409; el parte no se
+  reabre ni se cierra dos veces.
+}

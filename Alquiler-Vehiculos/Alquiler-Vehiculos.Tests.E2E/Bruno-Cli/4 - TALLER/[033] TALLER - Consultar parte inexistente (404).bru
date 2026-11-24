@@ -1,0 +1,34 @@
+meta {
+  name: [033] TALLER - Consultar parte inexistente (404)
+  type: http
+  seq: 33
+}
+
+get {
+  url: {{baseUrl}}/api/taller/partes/7f3a1c22-9b41-4d0e-8c55-11aa22bb33cc
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Parte inexistente - Status 404 Not Found", function () {
+    expect(res.getStatus()).to.equal(404);
+  });
+
+  test("Parte inexistente - Codigo PARTE_NO_ENCONTRADA", function () {
+    expect(res.getBody().code).to.equal("PARTE_NO_ENCONTRADA");
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08: consultar un parte que no existe responde 404 con el motivo.
+}

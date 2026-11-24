@@ -1,0 +1,39 @@
+meta {
+  name: [028] TALLER - Partes abiertos con fecha de entrada (200)
+  type: http
+  seq: 28
+}
+
+get {
+  url: {{baseUrl}}/api/taller/partes/abiertos
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+
+script:post-response {
+  test("Partes abiertos - Status 200 OK", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Partes abiertos - Incluye el parte abierto con su fecha de entrada (CU-08)", function () {
+    const body = res.getBody();
+    expect(body).to.be.an("array").and.not.be.empty;
+    const abierto = body.find((p) => p.vehiculoId === "VEHICULO001");
+    expect(abierto).to.not.be.undefined;
+    expect(abierto.estado).to.equal("Abierto");
+    expect(abierto.fecha).to.be.a("string").and.not.be.empty;
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  CU-08: los vehículos que están en el taller ahora mismo, con su fecha de entrada.
+}

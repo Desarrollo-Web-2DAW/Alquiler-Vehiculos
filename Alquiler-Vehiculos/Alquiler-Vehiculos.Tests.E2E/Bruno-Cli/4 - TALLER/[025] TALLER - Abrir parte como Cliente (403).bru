@@ -1,0 +1,41 @@
+meta {
+  name: [025] TALLER - Abrir parte como Cliente (403)
+  type: http
+  seq: 25
+}
+
+post {
+  url: {{baseUrl}}/api/taller/partes
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{clienteToken}}
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "vehiculoId": "VEHICULO001",
+    "descripcion": "Cambio de frenos"
+  }
+}
+
+script:post-response {
+  test("Abrir como Cliente - Status 403 Forbidden", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  RF-08 y RF-46: los partes son internos del taller; un Cliente no puede abrirlos.
+}
