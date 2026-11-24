@@ -1,5 +1,6 @@
 using Alquiler_Vehiculos.Entities;
 using Alquiler_Vehiculos.Repositories.Clientes;
+using Alquiler_Vehiculos.Repositories.Trabajadores;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -33,6 +34,7 @@ public static class DatabaseConfig {
             options.UseNpgsql(connectionString));
 
         services.AddScoped<IClienteRepository, ClienteRepository>();
+        services.AddScoped<ITrabajadorRepository, TrabajadorRepository>();
 
         Log.Information("PostgreSQL configurado correctamente.");
         return services;
