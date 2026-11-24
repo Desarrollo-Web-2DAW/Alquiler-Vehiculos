@@ -1,0 +1,35 @@
+meta {
+  name: V09 - Maletero excesivo
+  type: http
+  seq: 9
+}
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoValidacionId}}
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaValidacion}}
+  marca: {{marcaValidacion}}
+  modelo: Modelo validacion
+  acriss: ILAH
+  color: Negro
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 6001
+  autonomiaKm: 900
+  kilometraje: 1500
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioValidacionId}}
+}
+tests {
+  // Assert
+  test("Maletero sobre el límite rechazado por MaleteroLitros", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.MaleteroLitros).to.include("La capacidad del maletero debe estar entre 0 y 6.000 litros.");
+  });
+}

@@ -1,0 +1,16 @@
+meta {
+  name: F23 - Metadatos historicos anonimo
+  type: http
+  seq: 23
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoIndependiente}}
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Anónimo no consulta metadatos históricos: 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

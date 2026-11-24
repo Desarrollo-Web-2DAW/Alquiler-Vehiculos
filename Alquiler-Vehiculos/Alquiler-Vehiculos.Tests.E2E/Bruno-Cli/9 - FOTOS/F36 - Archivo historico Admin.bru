@@ -1,0 +1,21 @@
+meta {
+  name: F36 - Archivo historico Admin
+  type: http
+  seq: 36
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoIndependiente}}/archivo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("Admin descarga histórico", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    expect(Number(res.getHeader("content-length"))).to.equal(bru.getVar("metadatosIndependiente").tamano);
+  });
+}

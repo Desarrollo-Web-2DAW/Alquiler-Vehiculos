@@ -1,0 +1,17 @@
+meta {
+  name: F11 - Foto inexistente
+  type: http
+  seq: 11
+}
+get {
+  url: {{baseUrl}}/api/fotos/bruno-inexistente.jpg
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("404 con FOTO_NO_ENCONTRADA", function () {
+    expect(res.getStatus()).to.equal(404);
+    expect(res.getBody().code).to.equal("FOTO_NO_ENCONTRADA");
+  });
+}

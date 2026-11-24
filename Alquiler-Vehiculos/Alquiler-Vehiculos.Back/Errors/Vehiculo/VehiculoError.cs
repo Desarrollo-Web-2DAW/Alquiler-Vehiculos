@@ -99,6 +99,17 @@ public static class VehiculoError
     }
 
     /// <summary>
+    /// Crea un error de tipo <see cref="ConflictError"/> cuando se intenta restaurar un vehículo
+    /// que no está retirado (RF-01 y RF-05).
+    /// </summary>
+    /// <param name="estado">Estado actual del vehículo.</param>
+    /// <returns>Una instancia de <see cref="ConflictError"/> (HTTP 409).</returns>
+    public static ConflictError NoRetiradoParaRestaurar(EstadoVehiculo estado)
+    {
+        return new ConflictError("VEHICULO_NO_RETIRADO", $"Solo se puede restaurar un vehículo retirado. Estado actual: {estado}.");
+    }
+
+    /// <summary>
     /// Crea un error de tipo <see cref="ConflictError"/> cuando se intenta dar de baja un vehículo
     /// que tiene un parte de taller abierto (RF-01 y RF-08).
     /// </summary>

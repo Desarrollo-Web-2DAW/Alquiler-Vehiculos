@@ -1,0 +1,20 @@
+meta {
+  name: F14 - Flota intacta
+  type: http
+  seq: 14
+}
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("Subir una foto independiente no cambia fotos de vehículos", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().map(v => ({ id: v.id, foto: v.foto })).sort((a,b) => a.id.localeCompare(b.id))).to.deep.equal(bru.getVar("flotaAntesFotos"));
+  });
+}

@@ -1,0 +1,22 @@
+meta {
+  name: 9 - FOTOS
+  seq: 9
+}
+script:pre-request {
+  // Arrange: autenticación real; ejecutar la carpeta completa en orden.
+  const axios = require("axios");
+  for (const perfil of ["admin", "cliente", "trabajador", "responsable", "mecanico"]) {
+    if (!bru.getVar(`${perfil}Token`)) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`), password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+docs {
+  Arrange: login y captura de fotos/flota iniciales. Act: petición de cada archivo.
+  Assert: tests con estado exacto, error y persistencia posterior.
+  Ejecutar con sandbox developer y bases aisladas. Los cuerpos vacíos/grandes y el
+  MIME explícito se construyen en memoria: no se guardan binarios grandes en Git.
+}

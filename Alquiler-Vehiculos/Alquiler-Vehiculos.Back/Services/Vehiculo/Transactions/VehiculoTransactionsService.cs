@@ -138,15 +138,43 @@ public sealed class VehiculoTransactionsService(
     }
 
     /// <inheritdoc cref="IVehiculoTransactionsService.RestoreAsync" />
+    /// <remarks>
+    /// Enfoque mixto de concurrencia: la fase 1 solo <b>lee</b> para responder con el
+    /// estado real, y la garantía la da la fase 2, un <c>UPDATE ... WHERE Estado</c> que
+    /// solo reactiva un vehículo retirado. Un vehículo reservado, alquilado o en
+    /// mantenimiento no se libera por esta vía.
+    /// </remarks>
     public Task<Result<VehiculoModel, DomainError>> RestoreAsync(string id, CancellationToken ct = default)
         => transactionManager.ExecuteAsync(async () =>
         {
             logger.LogInformation("Restaurando vehículo {Id}", id);
 
+            // ── Fase 1: validación optimista (solo lectura) ─────────────────────
+            var vehiculo = await vehiculoRepository.GetById(id);
+            if (vehiculo is null)
+            {
+                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
+            }
+
+            if (vehiculo.Activo || vehiculo.Estado != EstadoVehiculo.Retirado)
+            {
+                return Result.Failure<VehiculoModel, DomainError>(
+                    VehiculoError.NoRetiradoParaRestaurar(vehiculo.Estado));
+            }
+
+            // ── Fase 2: compare-and-set (la garantía real) ──────────────────────
             var restaurado = await vehiculoRepository.Restore(id);
             if (restaurado is null)
             {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
+                // 0 filas = otro proceso cambió el estado entre la fase 1 y la fase 2.
+                var ultimo = await vehiculoRepository.GetById(id);
+                if (ultimo is null)
+                {
+                    return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
+                }
+
+                return Result.Failure<VehiculoModel, DomainError>(
+                    VehiculoError.NoRetiradoParaRestaurar(ultimo.Estado));
             }
 
             if (!string.IsNullOrEmpty(restaurado.FotoFk))

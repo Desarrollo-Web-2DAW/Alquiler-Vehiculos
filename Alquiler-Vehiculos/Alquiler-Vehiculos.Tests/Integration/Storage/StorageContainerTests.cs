@@ -17,6 +17,7 @@ public class StorageContainerTests {
     [OneTimeSetUp]
     public async Task ArrancarContenedor() {
         _postgres = new PostgreSqlBuilder("postgres:17-alpine")
+            .WithName("alquiler-storage-postgres")
             .WithDatabase("storage_tests")
             .Build();
         using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
@@ -27,6 +28,7 @@ public class StorageContainerTests {
         var archivos = new DirectoryInfo(Path.Combine(AppContext.BaseDirectory, "StorageContainer"));
         archivos.Exists.Should().BeTrue("la compilación debe copiar el proyecto auxiliar de tests");
         _container = new ContainerBuilder("mcr.microsoft.com/dotnet/sdk:10.0")
+            .WithName("alquiler-storage-tests")
             .WithResourceMapping(DirectoryPath.Of(archivos.FullName), DirectoryPath.Of("/tests/"), uid: 1654, gid: 1654)
             .WithWorkingDirectory("/tests")
             // Docker Desktop no siempre publica host.docker.internal dentro de los contenedores.
@@ -47,6 +49,7 @@ public class StorageContainerTests {
     [TestCase("StorageServiceTests")]
     [TestCase("StorageInitializationExtensionsTests")]
     [TestCase("FotosArchivoControllerTests")]
+    [TestCase("VehiculoFotosDescarteTests")]
     public async Task Storage_EscenariosEnContenedor_TodosLosCasosPasan(string clase) {
         // Arrange
         var destino = $"/tmp/results/{clase}";
@@ -84,6 +87,7 @@ public class StorageContainerTests {
         var claseMedida = clase switch {
             "StorageServiceTests" => "Services.Storage.StorageService",
             "FotosArchivoControllerTests" => "Controllers.Vehiculo.FotosController",
+            "VehiculoFotosDescarteTests" => "Controllers.Vehiculo.VehiculoController",
             _ => "Infrastructure.StorageInitializationExtensions"
         };
         informeCobertura.Descendants("class").Should().Contain(c =>

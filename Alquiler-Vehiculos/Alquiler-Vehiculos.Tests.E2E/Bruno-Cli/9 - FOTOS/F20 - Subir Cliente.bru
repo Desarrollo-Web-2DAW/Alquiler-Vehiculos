@@ -1,0 +1,22 @@
+meta {
+  name: F20 - Subir Cliente
+  type: http
+  seq: 20
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{clienteToken}}
+}
+body:multipart-form {
+  archivo: @file(fixtures/vehiculo.jpg)
+}
+tests {
+  // Assert
+  test("Cliente no sube fotos: 403", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}

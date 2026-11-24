@@ -1,0 +1,18 @@
+meta {
+  name: F05 - Descargar sin token
+  type: http
+  seq: 5
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoIndependiente}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Descarga real de la foto independiente", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    expect(Number(res.getHeader("content-length"))).to.equal(bru.getVar("metadatosIndependiente").tamano);
+  });
+}

@@ -1,0 +1,23 @@
+meta {
+  name: 10 - VALIDACIONES VEHICULOS
+  seq: 10
+}
+script:pre-request {
+  // Arrange: datos propios, sin modificar vehículos ni catálogos semilla.
+  const axios = require("axios");
+  for (const perfil of ["admin", "trabajador"]) {
+    if (!bru.getVar(`${perfil}Token`)) {
+      const respuesta = await axios.post(`${bru.getEnvVar("baseUrl")}/api/auth/login`, {
+        email: bru.getEnvVar(`${perfil}Email`), password: bru.getEnvVar(`${perfil}Password`)
+      });
+      bru.setVar(`${perfil}Token`, respuesta.data.token);
+    }
+  }
+}
+docs {
+  Ejecutar completa, en orden y con bases aisladas. Arrange: crear catálogos y
+  vehículo propios y capturar las fotos activas. Act: altas/PUT inválidos.
+  Assert: campo concreto, vehículo intacto, foto anterior accesible y mismo
+  conjunto de fotos activas. La conservación física de las subidas descartadas
+  requiere integración: su nombre no se devuelve en las respuestas de error.
+}

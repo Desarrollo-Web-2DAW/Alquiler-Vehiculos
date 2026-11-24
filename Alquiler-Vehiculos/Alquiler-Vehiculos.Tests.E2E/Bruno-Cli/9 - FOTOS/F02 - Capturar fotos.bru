@@ -1,0 +1,18 @@
+meta {
+  name: F02 - Capturar fotos
+  type: http
+  seq: 2
+}
+get {
+  url: {{baseUrl}}/api/fotos
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Listado de fotos público y punto de partida", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.be.an("array");
+    bru.setVar("fotosAntesSubida", res.getBody().map(f => f.nombre).sort());
+  });
+}

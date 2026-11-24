@@ -1,0 +1,20 @@
+meta {
+  name: V13 - Vehiculo intacto
+  type: http
+  seq: 14
+}
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoValidacionId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("Los PUT rechazados conservan todos los datos y la foto anterior", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.deep.equal(bru.getVar("vehiculoValidacionOriginal"));
+  });
+}

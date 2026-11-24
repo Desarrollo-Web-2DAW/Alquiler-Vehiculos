@@ -1,0 +1,21 @@
+meta {
+  name: F01 - Capturar flota
+  type: http
+  seq: 1
+}
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert; estos datos son el Arrange de la comprobación de independencia.
+  test("Capturar identidades y fotos de toda la flota", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.be.an("array").that.is.not.empty;
+    bru.setVar("flotaAntesFotos", res.getBody().map(v => ({ id: v.id, foto: v.foto })).sort((a,b) => a.id.localeCompare(b.id)));
+  });
+}

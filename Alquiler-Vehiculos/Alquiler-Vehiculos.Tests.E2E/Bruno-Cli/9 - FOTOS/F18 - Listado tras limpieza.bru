@@ -1,0 +1,17 @@
+meta {
+  name: F18 - Listado tras limpieza
+  type: http
+  seq: 18
+}
+get {
+  url: {{baseUrl}}/api/fotos
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("El listado vuelve al conjunto inicial", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().map(f => f.nombre).sort()).to.deep.equal(bru.getVar("fotosAntesSubida"));
+  });
+}

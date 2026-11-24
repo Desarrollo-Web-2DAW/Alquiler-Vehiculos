@@ -1,0 +1,20 @@
+meta {
+  name: F30 - Baja Responsable
+  type: http
+  seq: 30
+}
+delete {
+  url: {{baseUrl}}/api/fotos/{{fotoPerfilResponsable}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{responsableToken}}
+}
+tests {
+  // Assert
+  test("Responsable retira la foto propia", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

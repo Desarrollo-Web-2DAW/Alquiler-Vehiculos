@@ -1,0 +1,25 @@
+meta {
+  name: F08 - Archivo mayor de 5 MiB
+  type: http
+  seq: 8
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: text
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+script:pre-request {
+  // Arrange: 5 MiB + 1 byte, sin añadir un binario al repositorio.
+  req.setHeader("Content-Type", "multipart/form-data; boundary=bruno-foto");
+  req.setBody('--bruno-foto\r\nContent-Disposition: form-data; name="archivo"; filename="grande.jpg"\r\nContent-Type: image/jpeg\r\n\r\n' + "x".repeat(5 * 1024 * 1024 + 1) + '\r\n--bruno-foto--\r\n');
+}
+tests {
+  // Assert
+  test("422 con ARCHIVO_MUY_GRANDE", function () {
+    expect(res.getStatus()).to.equal(422);
+    expect(res.getBody().code).to.equal("ARCHIVO_MUY_GRANDE");
+  });
+}

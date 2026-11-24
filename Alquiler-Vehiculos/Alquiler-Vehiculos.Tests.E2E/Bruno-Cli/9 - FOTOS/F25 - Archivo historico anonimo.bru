@@ -1,0 +1,16 @@
+meta {
+  name: F25 - Archivo historico anonimo
+  type: http
+  seq: 25
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoIndependiente}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Anónimo no descarga histórico: 401", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

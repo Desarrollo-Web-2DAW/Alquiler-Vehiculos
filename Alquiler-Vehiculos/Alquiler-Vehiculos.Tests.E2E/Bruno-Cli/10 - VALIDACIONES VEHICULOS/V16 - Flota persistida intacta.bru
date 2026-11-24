@@ -1,0 +1,22 @@
+meta {
+  name: V16 - Flota persistida intacta
+  type: http
+  seq: 17
+}
+get {
+  url: {{baseUrl}}/api/vehiculo
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert: el listado no usa la caché individual del GET por ID.
+  test("La conservación no es solo una respuesta antigua de caché", function () {
+    expect(res.getStatus()).to.equal(200);
+    const propios = res.getBody().filter(v => v.marca === bru.getVar("marcaValidacion"));
+    expect(propios).to.have.lengthOf(1);
+    expect(propios[0]).to.deep.equal(bru.getVar("vehiculoValidacionOriginal"));
+  });
+}

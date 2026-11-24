@@ -1,0 +1,25 @@
+meta {
+  name: F31 - Subir Mecanico
+  type: http
+  seq: 31
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+body:multipart-form {
+  archivo: @file(fixtures/vehiculo.jpg)
+}
+tests {
+  // Assert
+  test("Mecánico sube una foto propia", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().activo).to.equal(true);
+    expect(res.getBody().nombre).to.be.a("string").that.is.not.empty;
+    bru.setVar("fotoPerfilMecanico", res.getBody().nombre);
+  });
+}

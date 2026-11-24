@@ -1,0 +1,35 @@
+meta {
+  name: V05 - Alta con vocales
+  type: http
+  seq: 5
+}
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: 9876ABC
+  marca: {{marcaValidacion}}
+  modelo: Modelo validacion
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioValidacionId}}
+}
+tests {
+  // Assert
+  test("Alta rechazada por vocales en la matrícula", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.Matricula).to.include("La matrícula debe tener un formato válido (4 números y 3 letras).");
+  });
+}

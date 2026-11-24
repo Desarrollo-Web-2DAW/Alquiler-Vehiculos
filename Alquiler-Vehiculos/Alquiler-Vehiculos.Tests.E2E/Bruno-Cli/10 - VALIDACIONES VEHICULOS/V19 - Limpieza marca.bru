@@ -1,0 +1,20 @@
+meta {
+  name: V19 - Limpieza marca
+  type: http
+  seq: 21
+}
+delete {
+  url: {{baseUrl}}/api/marca/{{marcaValidacionId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("Retirar marca propia", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

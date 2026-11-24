@@ -88,6 +88,10 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
         VehiculoModel? existente = await context.Vehiculos.FirstOrDefaultAsync(f => f.Id == key);
         if (existente == null || !existente.Activo) return null;
 
+        // El PUT no es una transición de estado ni una baja: Activo, Estado y DeletedAt
+        // se conservan tal y como están ahora en la base de datos. Si otro proceso cambió
+        // el estado entre la lectura del servicio y esta escritura, esas columnas no se
+        // envían en el UPDATE y el cambio ajeno no se pisa.
         var actualizado = existente with {
             FotoFk = item.FotoFk,
             Foto = item.Foto,
@@ -106,12 +110,8 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             Kilometraje = item.Kilometraje,
             FechaUltimaRevision = item.FechaUltimaRevision,
             ConesionarioFk = item.ConesionarioFk,
-            Activo = item.Activo,
-            UpdatedAt = DateTime.UtcNow,
-            DeletedAt = item.DeletedAt
+            UpdatedAt = DateTime.UtcNow
         };
-
-        actualizado.CambiarEstadoMapper(item.Estado);
 
         context.Entry(existente).CurrentValues.SetValues(actualizado);
         await context.SaveChangesAsync();
@@ -253,24 +253,28 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
     /// <inheritdoc cref="IVehiculoRepository.Restore" />
     public async Task<VehiculoModel?> Restore(string key)
     {
-        logger.LogDebug("Restaurando vehiculo por Id: {Id}", key);
+        logger.LogInformation("Restaurando vehiculo {Id} solo si esta retirado", key);
 
-        VehiculoModel? existente = await context.Set<VehiculoModel>().FirstOrDefaultAsync(f => f.Id == key);
-        if (existente == null) return null;
+        var ahora = DateTime.UtcNow;
 
-        var actualizado = existente with
-        {
-            Activo = true,
-            UpdatedAt = DateTime.UtcNow,
-            DeletedAt = null
-        };
-        // Simétrico a SoftDelete: al reactivarlo vuelve a estar Disponible.
-        actualizado.CambiarEstadoMapper(EstadoVehiculo.Disponible);
+        // Compare-and-set: igual que en la baja, el estado esperado viaja en el WHERE.
+        // Un vehículo reservado, alquilado o en mantenimiento no se libera por esta vía.
+        var filas = await context.Vehiculos
+            .Where(v => v.Id == key && !v.Activo && v.Estado == EstadoVehiculo.Retirado)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(v => v.Activo, true)
+                .SetProperty(v => v.Estado, EstadoVehiculo.Disponible)
+                .SetProperty(v => v.UpdatedAt, ahora)
+                .SetProperty(v => v.DeletedAt, (DateTime?)null));
 
-        context.Entry(existente).CurrentValues.SetValues(actualizado);
-        await context.SaveChangesAsync();
+        if (filas == 0) return null;
 
-        return actualizado;
+        // ExecuteUpdate no pasa por SaveChanges ni sincroniza el ChangeTracker:
+        // se relee la fila para devolver el vehículo tal y como quedó.
+        return await context.Vehiculos
+            .AsNoTracking()
+            .Include(v => v.Foto)
+            .FirstOrDefaultAsync(v => v.Id == key);
     }
 
     /// <inheritdoc cref="IVehiculoRepository.SoftDeleteSiEstado" />

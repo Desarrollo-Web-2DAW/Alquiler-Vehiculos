@@ -1,0 +1,19 @@
+meta {
+  name: F22 - Baja Cliente
+  type: http
+  seq: 22
+}
+delete {
+  url: {{baseUrl}}/api/fotos/{{fotoIndependiente}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{clienteToken}}
+}
+tests {
+  // Assert
+  test("Cliente no da de baja: 403 antes de consultar la foto", function () {
+    expect(res.getStatus()).to.equal(403);
+  });
+}
