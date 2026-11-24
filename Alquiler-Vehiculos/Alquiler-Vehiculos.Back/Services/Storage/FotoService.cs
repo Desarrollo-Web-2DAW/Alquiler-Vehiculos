@@ -66,7 +66,7 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
     public async Task<Result<bool, DomainError>> HardDelete(string nombre) {
         var existente = await GetById(nombre);
         if (existente.IsFailure) return existente.Error;
-        var resultRepository = await repository.SoftDelete(nombre);
+        var resultRepository = await repository.HardDelete(nombre);
         if (!resultRepository) return FotoError.NoSePudoDarDeBaja();
         var result =  await storage.DeleteFileAsync(nombre);
         return result.IsFailure? result.Error : result.Value;

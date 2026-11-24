@@ -18,8 +18,7 @@ public static class FotoError
     }
 
     /// <summary>
-    /// Genera un error cuando no se puede dar de baja la foto anterior de un vehículo
-    /// durante la sustitución de su imagen.
+    /// Genera un error cuando no se puede dar de baja una foto
     /// </summary>
     /// <param name="nombre">Nombre de la foto que no se pudo dar de baja.</param>
     /// <returns>Error técnico de tipo <see cref="InternalError"/> (HTTP 500).</returns>
@@ -30,8 +29,7 @@ public static class FotoError
     }
 
     /// <summary>
-    /// Genera un error cuando no se puede restaurar la foto asociada a un vehículo
-    /// al reactivar el vehículo.
+    /// Genera un error cuando no se puede restaurar una foto
     /// </summary>
     /// <param name="nombre">Nombre de la foto que no se pudo restaurar.</param>
     /// <returns>Error técnico de tipo <see cref="InternalError"/> (HTTP 500).</returns>
@@ -47,9 +45,8 @@ public static class FotoError
     /// </summary>
     /// <param name="nombre">Nombre de la foto que no se pudo restaurar.</param>
     /// <returns>Error técnico de tipo <see cref="BusinessRuleError"/> (HTTP 422).</returns>
-    public static BusinessRuleError NosePudoCrear(string nombre)
+    public static InternalError NosePudoCrear(string nombre)
     {
-        return new BusinessRuleError(
-            "ERROR_CREADO",$"No se pudo restaurar la foto '{nombre}' asociada al vehículo.");
+        return new InternalError($"No se pudo restaurar la foto '{nombre}' asociada al vehículo.");
     }
 }
