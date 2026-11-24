@@ -24,6 +24,10 @@ public class LoginModel(AuthApiService authApiService) : PageModel {
                 return Page();
             }
 
+            if (result.Role is not ("Trabajador" or "Responsable" or "Admin")) {
+                return RedirectToPage("/Auth/AccesoDenegado");
+            }
+
             var claims = new List<Claim> {
                 new(ClaimTypes.Name, result.Email),
                 new(ClaimTypes.Email, result.Email),
@@ -43,7 +47,7 @@ public class LoginModel(AuthApiService authApiService) : PageModel {
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, properties);
 
-            return RedirectToPage("/Index");
+            return RedirectToPage("/Notificaciones");
         }
         catch (HttpRequestException) {
             ErrorMessage = "No se ha podido conectar con el servidor.";

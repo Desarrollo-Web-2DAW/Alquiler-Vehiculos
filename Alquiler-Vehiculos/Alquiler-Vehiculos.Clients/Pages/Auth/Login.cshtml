@@ -5,32 +5,42 @@
     ViewData["Title"] = "Iniciar sesión";
 }
 
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <h1 class="text-center mb-4">Iniciar sesión</h1>
+<section class="login-shell">
+    <div class="login-aside">
+        <span class="eyebrow">ÁREA DE PERSONAL</span>
+        <h1>Bienvenido<br /><span>de nuevo.</span></h1>
+        <p>Accede a la plataforma de gestión de alquiler y taller para consultar la actividad de la flota.</p>
+        <div class="login-aside-rule"></div>
+        <span class="login-aside-caption">GESTIÓN · CONTROL · MOVILIDAD</span>
+    </div>
+    <div class="login-card">
+        <div class="login-card-heading">
+            <span class="login-icon" aria-hidden="true">↗</span>
+            <div>
+                <h2>Iniciar sesión</h2>
+                <p>Introduce tus credenciales de acceso</p>
+            </div>
+        </div>
         <form method="post">
             <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
             <div class="mb-3">
                 <label asp-for="LoginRequest.Email" class="form-label">Correo electrónico</label>
-                <input asp-for="LoginRequest.Email" class="form-control" type="email"/>
+                <input asp-for="LoginRequest.Email" class="form-control" type="email" autocomplete="username" placeholder="nombre@empresa.com" />
                 <span asp-validation-for="LoginRequest.Email" class="text-danger"></span>
             </div>
-            <div class="mb-3">
+            <div class="mb-4">
                 <label asp-for="LoginRequest.Password" class="form-label">Contraseña</label>
-                <input asp-for="LoginRequest.Password" class="form-control" type="password"/>
+                <input asp-for="LoginRequest.Password" class="form-control" type="password" autocomplete="current-password" placeholder="Tu contraseña" />
                 <span asp-validation-for="LoginRequest.Password" class="text-danger"></span>
             </div>
             @if (!string.IsNullOrEmpty(Model.ErrorMessage)) {
-                <div class="alert alert-danger">
-                    @Model.ErrorMessage
-                </div>
+                <div class="alert alert-danger" role="alert">@Model.ErrorMessage</div>
             }
-            <button type="submit" class="btn btn-primary w-100">
-                Entrar
-            </button>
+            <button type="submit" class="btn btn-accent w-100">Entrar al sistema <span aria-hidden="true">→</span></button>
         </form>
+        <a class="login-back" asp-page="/Index">← Volver al inicio</a>
     </div>
-</div>
+</section>
 
 @section Scripts {
     <partial name="_ValidationScriptsPartial"/>

@@ -1,32 +1,44 @@
 ﻿<!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>@ViewData["Title"] - Alquiler_Vehiculos.Clients</title>
+    <title>@ViewData["Title"] - MotorHub</title>
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css"/>
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true"/>
-    <link rel="stylesheet" href="~/Alquiler_Vehiculos.Clients.styles.css" asp-append-version="true"/>
     @await RenderSectionAsync("Styles", false)
 </head>
 <body>
-<header>
-    <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
+<header class="site-header">
+    <nav class="navbar navbar-expand-sm">
         <div class="container">
-            <a class="navbar-brand" asp-area="" asp-page="/Index">Alquiler_Vehiculos.Clients</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse"
-                    aria-controls="navbarSupportedContent"
-                    aria-expanded="false" aria-label="Toggle navigation">
+            <a class="navbar-brand brand-lockup" asp-area="" asp-page="/Index">
+                <span class="brand-symbol" aria-hidden="true">M</span>
+                <span>MOTOR<span class="brand-accent">HUB</span><small>ALQUILER · TALLER</small></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavigation"
+                    aria-controls="mainNavigation" aria-expanded="false" aria-label="Abrir navegación">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                <ul class="navbar-nav flex-grow-1">
-                    @if (User.IsInRole("Trabajador") || User.IsInRole("Responsable") || User.IsInRole("Admin")) {
+            <div class="collapse navbar-collapse" id="mainNavigation">
+                <ul class="navbar-nav ms-auto align-items-sm-center">
+                    @if (User.Identity?.IsAuthenticated == true &&
+                         (User.IsInRole("Trabajador") || User.IsInRole("Responsable") || User.IsInRole("Admin"))) {
                         <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-page="/Notificaciones">
-                                Notificaciones
-                            </a>
+                            <a class="nav-link nav-link-active" asp-area="" asp-page="/Notificaciones">Notificaciones</a>
+                        </li>
+                        <li class="nav-item ms-sm-3">
+                            <form method="post" asp-page="/Index" asp-page-handler="Logout">
+                                <button type="submit" class="btn btn-nav-logout">Cerrar sesión</button>
+                            </form>
+                        </li>
+                    } else {
+                        <li class="nav-item">
+                            <a class="nav-link" asp-area="" asp-page="/Index">Inicio</a>
+                        </li>
+                        <li class="nav-item ms-sm-3">
+                            <a class="btn btn-nav-login" asp-area="" asp-page="/Auth/Login">Iniciar sesión</a>
                         </li>
                     }
                 </ul>
@@ -34,23 +46,21 @@
         </div>
     </nav>
 </header>
-<div class="container">
-    <main role="main" class="pb-3">
-        @RenderBody()
-    </main>
-</div>
 
-<footer class="border-top footer text-muted">
-    <div class="container">
-        &copy; 2026 - Alquiler_Vehiculos.Clients - <a asp-area="" asp-page="/Privacy">Privacy</a>
+<main role="main">
+    @RenderBody()
+</main>
+
+<footer class="site-footer">
+    <div class="container d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span>© 2026 MOTORHUB</span>
+        <span>GESTIÓN DE ALQUILER Y MANTENIMIENTO DE VEHÍCULOS</span>
     </div>
 </footer>
 
 <script src="~/lib/jquery/dist/jquery.min.js"></script>
 <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@@microsoft/signalr@10.0.0/dist/browser/signalr.min.js"></script>
 <script src="~/js/site.js" asp-append-version="true"></script>
-
 @await RenderSectionAsync("Scripts", false)
 </body>
 </html>

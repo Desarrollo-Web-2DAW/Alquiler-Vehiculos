@@ -1,0 +1,17 @@
+@page
+@{
+    ViewData["Title"] = "Acceso restringido";
+}
+
+<section class="access-denied-shell">
+    <div class="access-denied-card">
+        <span class="access-denied-code">ACCESO RESTRINGIDO · 403</span>
+        <div class="access-denied-icon" aria-hidden="true">!</div>
+        <h1>Esta zona es exclusiva<br /><span>del personal.</span></h1>
+        <p>La cuenta con la que has intentado acceder es de cliente. Esta plataforma está destinada al personal de MotorHub.</p>
+        <div class="access-denied-actions">
+            <a class="btn btn-accent" asp-page="/Auth/Login">Volver al inicio de sesión</a>
+            <a class="access-denied-link" asp-page="/Index">Volver a la página principal</a>
+        </div>
+    </div>
+</section>

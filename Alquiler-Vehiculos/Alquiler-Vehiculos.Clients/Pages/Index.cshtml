@@ -1,10 +1,47 @@
-﻿@page
+@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Inicio";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="hero-panel">
+    <div class="hero-content">
+        <span class="eyebrow">MOVILIDAD · MANTENIMIENTO · CONFIANZA</span>
+        <h1>Tu vehículo,<br /><span>en buenas manos.</span></h1>
+        <p class="hero-lead">
+            Gestión profesional de alquiler y mantenimiento de vehículos.
+            Accede al área de trabajo para mantenerte al día con la actividad de la flota.
+        </p>
+        <a class="btn btn-accent btn-lg" asp-page="/Auth/Login">
+            Acceder al sistema <span aria-hidden="true">→</span>
+        </a>
+        <div class="hero-footnote">PLATAFORMA DE GESTIÓN · ÁREA DE PERSONAL</div>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+        <div class="visual-orbit orbit-one"></div>
+        <div class="visual-orbit orbit-two"></div>
+        <div class="vehicle-mark">
+            <div class="vehicle-roof"></div>
+            <div class="vehicle-body"></div>
+            <span class="wheel wheel-left"></span>
+            <span class="wheel wheel-right"></span>
+        </div>
+        <div class="visual-label">FLEET<br />MANAGEMENT</div>
+        <div class="visual-line"></div>
+    </div>
+</section>
+
+<section class="feature-strip" aria-label="Áreas de servicio">
+    <article>
+        <span class="feature-number">01</span>
+        <div><h2>Alquiler</h2><p>Organización y seguimiento de la flota.</p></div>
+    </article>
+    <article>
+        <span class="feature-number">02</span>
+        <div><h2>Taller</h2><p>Control de entradas y salidas de vehículos.</p></div>
+    </article>
+    <article>
+        <span class="feature-number">03</span>
+        <div><h2>Notificaciones</h2><p>Información de actividad en tiempo real.</p></div>
+    </article>
+</section>
