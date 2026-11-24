@@ -9,6 +9,5 @@ public interface IFotoService {
     Task<Result<Foto, DomainError>> Create(IFormFile archivo, string folderName);
     Task<IEnumerable<Foto>> GetAll();
     Task<Result<Foto, DomainError>> GetById(string nombre);
-    Task<Result<Foto, DomainError>> GetHistoricoById(string nombre);
     Task<Result<bool, DomainError>> SoftDelete(string nombre);
 }

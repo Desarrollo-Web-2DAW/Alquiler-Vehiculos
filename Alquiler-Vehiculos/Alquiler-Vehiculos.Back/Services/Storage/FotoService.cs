@@ -51,33 +51,25 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
     }
 
     public async Task<Result<Foto, DomainError>> GetById(string nombre) {
-        var result = await GetHistoricoById(nombre);
-        if (result.IsFailure) return result.Error;
-        if (!result.Value.Activo || result.Value.DeletedAt is not null) return FotoError.FotoNotFound(nombre);
-        return result.Value;
-    }
-
-    public async Task<Result<Foto, DomainError>> GetHistoricoById(string nombre) {
-        if (string.IsNullOrWhiteSpace(nombre) || nombre.Contains("..") ||
-            nombre.Contains('/') || nombre.Contains('\\') || Path.IsPathRooted(nombre)) {
-            return ValidationError.Create("El identificador debe ser un nombre de foto, no una ruta.");
-        }
-
         var foto = await repository.GetById(nombre);
-        if (foto is null)
-            return FotoError.FotoNotFound(nombre);
-
+        if (foto is null) return FotoError.FotoNotFound(nombre);
         return foto;
     }
-
+    
     public async Task<Result<bool, DomainError>> SoftDelete(string nombre) {
         var existente = await GetById(nombre);
         if (existente.IsFailure) return existente.Error;
-
-        // RF-48: no llamar a DeleteFileAsync, que elimina el fichero físico.
-        // Se conserva siempre, incluso cuando todavía no hay módulo de reservas.
         if (!await repository.SoftDelete(nombre)) return FotoError.FotoNotFound(nombre);
         return true;
+    }
+    
+    public async Task<Result<bool, DomainError>> HardDelete(string nombre) {
+        var existente = await GetById(nombre);
+        if (existente.IsFailure) return existente.Error;
+        var resultRepository = await repository.SoftDelete(nombre);
+        if (!resultRepository) return FotoError.NoSePudoDarDeBaja();
+        var result =  await storage.DeleteFileAsync(nombre);
+        return result.IsFailure? result.Error : result.Value;
     }
     
     /// <summary>

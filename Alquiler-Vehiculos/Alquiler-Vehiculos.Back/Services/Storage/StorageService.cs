@@ -12,10 +12,9 @@ namespace Alquiler_Vehiculos.Services.Storage;
 /// Gestiona los archivos en el disco del servidor y las rutas utilizadas para localizarlos.
 /// Comprueba los archivos recibidos antes de guardarlos y devuelve los fallos mediante Result.
 /// </summary>
-///
 public class StorageService : IStorageService
 {
-    private StorageSettings _settings;
+    private readonly StorageSettings _settings;
     private readonly string _rootPath;
     private readonly string _uploadPath;
     private readonly ILogger<StorageService> _logger;
@@ -26,18 +25,25 @@ public class StorageService : IStorageService
     /// </summary>
     /// <param name="settings">Configuración que contiene la sección Storage.</param>
     /// <param name="logger">Registrador de los mensajes y errores de este servicio.</param>
-    public StorageService(IOptions<StorageSettings> settings, ILogger<StorageService> logger
-    )
+    public StorageService(IOptions<StorageSettings> settings, ILogger<StorageService> logger)
     {
         _settings = settings.Value;
         _logger = logger;
         _uploadPath = _settings.UploadPath;
-        var webRoot = _settings.CustomRootPath;
+        
+        var webRoot = string.IsNullOrEmpty(_settings.CustomRootPath) 
+            ? AppContext.BaseDirectory 
+            : _settings.CustomRootPath;
+            
         _rootPath = Path.Combine(webRoot, _uploadPath);
 
-        if (!Directory.Exists(_rootPath)) Directory.CreateDirectory(_rootPath);
+        if (!Directory.Exists(_rootPath))
+        {
+            Directory.CreateDirectory(_rootPath);
+            _logger.LogInformation("Directorio raíz de almacenamiento creado en: {Path}", _rootPath);
+        }
         
-        _logger.LogInformation("Storage service inicializado en: {Path}", _rootPath);
+        _logger.LogInformation("Storage service inicializado correctamente en: {Path}", _rootPath);
     }
 
     /// <inheritdoc cref="IStorageService.SaveFileAsync"/>
@@ -46,14 +52,24 @@ public class StorageService : IStorageService
         try
         {
             var mainFolderPath = Path.Combine(_rootPath, folder);
-            if (!Directory.Exists(mainFolderPath)) Directory.CreateDirectory(mainFolderPath);
+            if (!Directory.Exists(mainFolderPath))
+            {
+                Directory.CreateDirectory(mainFolderPath);
+                _logger.LogInformation("Carpeta de categoría creada: {FolderPath}", mainFolderPath);
+            }
 
             var filePath = Path.Combine(mainFolderPath, fileName);
             var relativePath = GetRelativePath(fileName, folder);
             
-            using var stream = new FileStream(filePath, FileMode.Create);
-            await file.CopyToAsync(stream);
+            _logger.LogInformation("Iniciando guardado de archivo: {FileName} en ruta: {FilePath}", fileName, filePath);
+
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
             
+            _logger.LogInformation("Archivo guardado exitosamente: {FileName} ({Size} bytes)", fileName, file.Length);
+
             var fotoModel = new Foto
             {
                 Nombre = fileName,
@@ -68,37 +84,19 @@ public class StorageService : IStorageService
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error guardando archivo");
-            return await Task.FromResult(Result.Failure<Foto, DomainError>(StorageError.ErrorGuardando()));
-        }
-    }
-
-    /// <inheritdoc cref="IStorageService.DescartarFotoAsync" />
-    public async Task<Result<bool, DomainError>> DescartarFotoAsync(string nombre) {
-        try {
-            if (string.IsNullOrWhiteSpace(nombre) || nombre.Contains("..") ||
-                nombre.Contains('/') || nombre.Contains('\\') || Path.IsPathRooted(nombre)) {
-                _logger.LogError("No se puede descartar la foto: el identificador no es un nombre válido.");
-                return ValidationError.Create("El identificador debe ser un nombre de foto, no una ruta.");
-            }
-
-            if (await _fotoRepository.SoftDeleteSiNoAsociada(nombre)) return true;
-            var foto = await _fotoRepository.GetById(nombre);
-            if (foto is null || !foto.Activo || foto.DeletedAt is not null) return true;
-
-            // Puede haberse confirmado el vehículo antes de fallar una operación posterior (p. ej., caché).
-            _logger.LogWarning("Se conserva la foto {Nombre}: está asociada a un vehículo.", nombre);
-            return new ConflictError("FOTO_ASOCIADA", "No se descarta una foto asociada a un vehículo.");
-        } catch (Exception e) {
-            _logger.LogError(e, "No se pudo descartar la foto {Nombre}; requiere revisión.", nombre);
-            return StorageError.ErrorEliminando();
+            _logger.LogError(e, "Error crítico al guardar el archivo {FileName} en la carpeta {Folder}", fileName, folder);
+            return StorageError.ErrorGuardando();
         }
     }
 
     /// <inheritdoc cref="IStorageService.DeleteFileAsync"/>
     public async Task<Result<bool, DomainError>> DeleteFileAsync(string filename)
     {
-        if (string.IsNullOrEmpty(filename)) return await Task.FromResult(Result.Success<bool, DomainError>(true));
+        if (string.IsNullOrEmpty(filename))
+        {
+            _logger.LogWarning("Se intentó eliminar un archivo con nombre nulo o vacío.");
+            return true;
+        }
 
         try
         {
@@ -106,15 +104,19 @@ public class StorageService : IStorageService
             if (File.Exists(fullPath))
             {
                 File.Delete(fullPath);
-                _logger.LogInformation("Archivo eliminado: {Filename}", filename);
+                _logger.LogInformation("Archivo eliminado físicamente del servidor: {Filename} (Ruta: {FullPath})", filename, fullPath);
+            }
+            else
+            {
+                _logger.LogWarning("Se intentó eliminar el archivo {Filename}, pero no se encontró en la ruta: {FullPath}", filename, fullPath);
             }
 
-            return await Task.FromResult(Result.Success<bool, DomainError>(true));
+            return true;
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Error eliminando archivo {Filename}", filename);
-            return await Task.FromResult(Result.Failure<bool, DomainError>(StorageError.ErrorEliminando()));
+            _logger.LogError(e, "Error al intentar eliminar el archivo {Filename}", filename);
+            return StorageError.ErrorEliminando();
         }
     }
 
@@ -122,7 +124,10 @@ public class StorageService : IStorageService
     public bool FileExists(string filename)
     {
         if (string.IsNullOrEmpty(filename)) return false;
-        return File.Exists(GetFullPath(filename));
+        
+        var exists = File.Exists(GetFullPath(filename));
+        _logger.LogDebug("Comprobando existencia del archivo {Filename}: {Exists}", filename, exists);
+        return exists;
     }
 
     /// <inheritdoc cref="IStorageService.GetFullPath"/>
@@ -135,7 +140,9 @@ public class StorageService : IStorageService
         if (Path.IsPathRooted(filename)) return filename;
         var prefix = $"/{_uploadPath}/";
 
-        if (filename.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) filename = filename[prefix.Length..];
+        if (filename.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) 
+            filename = filename[prefix.Length..];
+            
         return Path.Combine(_rootPath, filename);
     }
 
@@ -148,33 +155,11 @@ public class StorageService : IStorageService
     /// <inheritdoc cref="IStorageService.IsEmpty"/>
     public bool IsEmpty(IFormFile? file)
     {
-        return file is null or { Length: 0 };
-    }
-
-    /// <summary>
-    /// Revisa que el archivo tenga contenido, no supere el tamaño permitido
-    /// y cumpla las comprobaciones de extensión, tipo de contenido y nombre.
-    /// </summary>
-    /// <param name="file">Archivo que se comprueba antes de escribirlo en disco.</param>
-    /// <returns>Éxito sin un valor asociado, o el primer error detectado.</returns>
-    private UnitResult<DomainError> ValidateFile(IFormFile file)
-    {
-        if (file is null || file.Length == 0)
-            return UnitResult.Failure<DomainError>(ValidationError.Create("Debe proporcionar una imagen con contenido."));
-        if (file.Length > _maxFileSize) return UnitResult.Failure<DomainError>(StorageError.ArchivoMuyGrande());
-
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (!_allowedExtensions.Contains(extension))
-            return UnitResult.Failure<DomainError>(StorageError.ExtensionNoPermitida());
-
-        var contentType = file.ContentType?.ToLowerInvariant();
-        if (contentType is null || !_allowedContentTypes.Contains(contentType, StringComparer.OrdinalIgnoreCase))
-            return UnitResult.Failure<DomainError>(StorageError.TipoContenidoNoPermitido());
-
-        var filename = Path.GetFileName(file.FileName);
-        if (filename.Contains("..") || filename.Contains('/') || filename.Contains('\\'))
-            return UnitResult.Failure<DomainError>(StorageError.NombreArchivoInvalido());
-
-        return UnitResult.Success<DomainError>();
+        var isEmpty = file is null or { Length: 0 };
+        if (isEmpty)
+        {
+            _logger.LogDebug("Se evaluó un archivo y se determinó que está vacío o es nulo.");
+        }
+        return isEmpty;
     }
 }
