@@ -9,6 +9,12 @@ public class StorageSettings {
     /// Nombre de la sección en el archivo de configuración (por defecto: "Storage").
     /// </summary>
     public const string SectionName = "Storage";
+    
+    /// <summary>
+    /// Carpeta base del volumen en el que estarán las imágenes
+    /// </summary>
+    public string CustomRootPath { get; set; } = string.Empty;
+
 
     /// <summary>
     /// Obtiene o establece la ruta base en el servidor donde se almacenarán físicamente los archivos cargados.

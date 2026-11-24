@@ -1,3 +1,4 @@
+using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
 using Alquiler_Vehiculos.Models.Storage;
@@ -15,41 +16,24 @@ public class StorageService : IStorageService
 {
     private readonly string _rootPath;
     private readonly string _uploadPath;
-    private readonly long _maxFileSize;
-    private readonly string[] _allowedExtensions;
-    private readonly string[] _allowedContentTypes;
     private readonly ILogger<StorageService> _logger;
-    private IFotoRepository _fotoRepository;
 
     /// <summary>
     /// Lee los límites y tipos admitidos, calcula la ubicación del almacenamiento
     /// y crea su carpeta si todavía no existe, sin borrar su contenido.
     /// </summary>
-    /// <param name="configuration">Configuración que contiene la sección Storage.</param>
+    /// <param name="settings">Configuración que contiene la sección Storage.</param>
     /// <param name="logger">Registrador de los mensajes y errores de este servicio.</param>
-    /// <param name="env">Entorno del que se obtiene la raíz web o, si es nula, la raíz del proyecto.</param>
-    /// <param name="fotoRepository">Repositorio de <see cref="Foto"/></param>
-    public StorageService(IConfiguration configuration, ILogger<StorageService> logger,
-        IWebHostEnvironment env,
-        IFotoRepository fotoRepository
-        )
+    public StorageService(StorageSettings settings, ILogger<StorageService> logger
+    )
     {
         _logger = logger;
-
-        _uploadPath = configuration["Storage:UploadPath"] ?? "uploads";
-        _maxFileSize = configuration.GetValue<long>("Storage:MaxFileSize", 5 * 1024 * 1024);
-        _allowedExtensions = configuration.GetSection("Storage:AllowedExtensions").Get<string[]>() ??
-                             [".jpg", ".jpeg", ".png", ".gif"];
-        _allowedContentTypes = configuration.GetSection("Storage:AllowedContentTypes").Get<string[]>() ??
-                               ["image/jpeg", "image/png", "image/gif"];
-
-        var webRoot = env.WebRootPath ?? env.ContentRootPath;
+        _uploadPath = settings.UploadPath;
+        var webRoot = settings.CustomRootPath;
         _rootPath = Path.Combine(webRoot, _uploadPath);
 
         if (!Directory.Exists(_rootPath)) Directory.CreateDirectory(_rootPath);
-
-        _fotoRepository = fotoRepository;
-
+        
         _logger.LogInformation("Storage service inicializado en: {Path}", _rootPath);
     }
 
