@@ -1,0 +1,39 @@
+meta {
+  name: V03 - Crear vehiculo
+  type: http
+  seq: 3
+}
+post {
+  url: {{baseUrl}}/api/vehiculo
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaValidacion}}
+  marca: {{marcaValidacion}}
+  modelo: Modelo validacion
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1000
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioValidacionId}}
+}
+tests {
+  // Assert
+  test("Vehículo propio y foto inicial", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().id).to.match(/^[A-Za-z0-9_-]{11}$/);
+    expect(res.getBody().foto).to.be.a("string").that.is.not.empty;
+    bru.setVar("vehiculoValidacionId", res.getBody().id);
+    bru.setVar("vehiculoValidacionOriginal", res.getBody());
+    bru.setVar("fotoValidacionOriginal", res.getBody().foto);
+  });
+}

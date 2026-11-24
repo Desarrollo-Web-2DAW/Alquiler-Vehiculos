@@ -1,0 +1,19 @@
+meta {
+  name: V04 - Fotos antes de rechazos
+  type: http
+  seq: 4
+}
+get {
+  url: {{baseUrl}}/api/fotos
+  body: none
+  auth: none
+}
+tests {
+  // Assert; punto de partida para detectar subidas activas huérfanas.
+  test("Capturar fotos activas antes de altas y PUT inválidos", function () {
+    expect(res.getStatus()).to.equal(200);
+    const nombres = res.getBody().map(f => f.nombre).sort();
+    expect(nombres).to.include(bru.getVar("fotoValidacionOriginal"));
+    bru.setVar("fotosAntesValidaciones", nombres);
+  });
+}

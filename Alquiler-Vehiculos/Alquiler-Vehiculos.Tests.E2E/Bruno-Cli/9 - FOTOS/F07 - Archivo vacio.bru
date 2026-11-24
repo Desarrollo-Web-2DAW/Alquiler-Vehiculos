@@ -1,0 +1,25 @@
+meta {
+  name: F07 - Archivo vacio
+  type: http
+  seq: 7
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: text
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+script:pre-request {
+  // Arrange: parte multipart con nombre y MIME válidos, pero cero bytes.
+  req.setHeader("Content-Type", "multipart/form-data; boundary=bruno-foto");
+  req.setBody('--bruno-foto\r\nContent-Disposition: form-data; name="archivo"; filename="vacia.jpg"\r\nContent-Type: image/jpeg\r\n\r\n\r\n--bruno-foto--\r\n');
+}
+tests {
+  // Assert
+  test("400 por archivo presente pero vacío", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.archivo).to.include("Debe proporcionar una imagen con contenido.");
+  });
+}

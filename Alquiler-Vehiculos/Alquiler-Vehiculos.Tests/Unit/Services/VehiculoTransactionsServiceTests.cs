@@ -76,6 +76,13 @@ public class VehiculoTransactionsServiceTests
         Foto = new Foto { Nombre = fotoFk, Ruta = fotoFk }
     };
 
+    private static VehiculoModel CrearVehiculoRetirado(string fotoFk = FotoId)
+    {
+        var vehiculo = CrearVehiculo(fotoFk) with { Activo = false };
+        vehiculo.CambiarEstadoMapper(EstadoVehiculo.Retirado);
+        return vehiculo;
+    }
+
     // Id no numérico a propósito: antes NotFoundVehiculo hacía Convert.ToInt64 y lanzaba FormatException.
     private static NotFoundError ErrorNoEncontrado() => VehiculoError.NotFoundVehiculo(VehiculoId);
 
@@ -487,7 +494,7 @@ public class VehiculoTransactionsServiceTests
     public async Task RestoreAsync_CuandoElVehiculoNoExiste_DevuelveNotFound()
     {
         // Arrange
-        _repository.Setup(r => r.Restore(VehiculoId)).ReturnsAsync((VehiculoModel?)null);
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync((VehiculoModel?)null);
 
         // Act
         var resultado = await _service.RestoreAsync(VehiculoId);
@@ -495,13 +502,83 @@ public class VehiculoTransactionsServiceTests
         // Assert
         resultado.Error.Should().Be(ErrorNoEncontrado());
 
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
         _fotoRepository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        VerificarTransaccionEjecutada();
+    }
+
+    [TestCase(EstadoVehiculo.Disponible)]
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    public async Task RestoreAsync_CuandoNoEstaRetirado_DevuelveConflictoSinRestaurar(EstadoVehiculo estado)
+    {
+        // Arrange
+        var vehiculo = CrearVehiculo();
+        vehiculo.CambiarEstadoMapper(estado);
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(vehiculo);
+
+        // Act
+        var resultado = await _service.RestoreAsync(VehiculoId);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(VehiculoError.NoRetiradoParaRestaurar(estado));
+
+        _repository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        VerificarTransaccionEjecutada();
+    }
+
+    [Test]
+    public async Task RestoreAsync_CuandoYaEstaActivoAunqueEsteRetirado_DevuelveConflictoSinRestaurar()
+    {
+        // Arrange
+        var vehiculo = CrearVehiculoRetirado() with { Activo = true };
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(vehiculo);
+
+        // Act
+        var resultado = await _service.RestoreAsync(VehiculoId);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(VehiculoError.NoRetiradoParaRestaurar(EstadoVehiculo.Retirado));
+
+        _repository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        _fotoRepository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        VerificarTransaccionEjecutada();
+    }
+
+    [Test]
+    public async Task RestoreAsync_CuandoOtroProcesoCambiaElEstadoAntesDeRestaurar_DevuelveConflicto()
+    {
+        // Arrange
+        var retirado = CrearVehiculoRetirado();
+        var alquilado = CrearVehiculo();
+        alquilado.CambiarEstadoMapper(EstadoVehiculo.EnAlquiler);
+        _repository.SetupSequence(r => r.GetById(VehiculoId))
+            .ReturnsAsync(retirado)
+            .ReturnsAsync(alquilado);
+        _repository.Setup(r => r.Restore(VehiculoId)).ReturnsAsync((VehiculoModel?)null);
+
+        // Act
+        var resultado = await _service.RestoreAsync(VehiculoId);
+
+        // Assert
+        resultado.IsFailure.Should().BeTrue();
+        resultado.Error.Should().Be(VehiculoError.NoRetiradoParaRestaurar(EstadoVehiculo.EnAlquiler));
+
+        _repository.Verify(r => r.Restore(VehiculoId), Times.Once);
+        _fotoRepository.Verify(r => r.Restore(It.IsAny<string>()), Times.Never);
+        VerificarTransaccionEjecutada();
     }
 
     [Test]
     public async Task RestoreAsync_CuandoNoTieneFoto_RestauraSoloElVehiculo()
     {
         // Arrange
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculoRetirado(string.Empty));
         _repository.Setup(r => r.Restore(VehiculoId)).ReturnsAsync(CrearVehiculo(fotoFk: string.Empty));
 
         // Act
@@ -518,6 +595,7 @@ public class VehiculoTransactionsServiceTests
     public async Task RestoreAsync_CuandoLaFotoNoSeRestaura_DevuelveInternalError()
     {
         // Arrange
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculoRetirado());
         _repository.Setup(r => r.Restore(VehiculoId)).ReturnsAsync(CrearVehiculo());
         _fotoRepository.Setup(r => r.Restore(FotoId)).ReturnsAsync((Foto?)null);
 
@@ -539,6 +617,7 @@ public class VehiculoTransactionsServiceTests
     {
         // Arrange
         var restaurado = CrearVehiculo();
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearVehiculoRetirado());
         _repository.Setup(r => r.Restore(VehiculoId)).ReturnsAsync(restaurado);
         _fotoRepository.Setup(r => r.Restore(FotoId)).ReturnsAsync(new Foto { Nombre = FotoId, Ruta = FotoId });
 
@@ -548,6 +627,7 @@ public class VehiculoTransactionsServiceTests
         // Assert
         resultado.Value.Should().BeSameAs(restaurado);
 
+        _repository.Verify(r => r.Restore(VehiculoId), Times.Once);
         _fotoRepository.Verify(r => r.Restore(FotoId), Times.Once);
         VerificarTransaccionEjecutada();
     }

@@ -1,0 +1,35 @@
+meta {
+  name: V12 - ACRISS no admitido
+  type: http
+  seq: 12
+}
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoValidacionId}}
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaValidacion}}
+  marca: {{marcaValidacion}}
+  modelo: Modelo validacion
+  acriss: ZZZZ
+  color: Negro
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: 1500
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioValidacionId}}
+}
+tests {
+  // Assert
+  test("ACRISS de cuatro letras pero valores no admitidos", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.Acriss).to.include("El código ACRISS contiene valores no válidos en sus letras.");
+  });
+}

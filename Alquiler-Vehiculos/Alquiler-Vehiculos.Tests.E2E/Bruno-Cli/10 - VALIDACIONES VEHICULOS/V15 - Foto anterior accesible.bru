@@ -1,0 +1,18 @@
+meta {
+  name: V15 - Foto anterior accesible
+  type: http
+  seq: 16
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoValidacionOriginal}}/archivo
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("El descarte de subidas fallidas no borra el archivo original", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getHeader("content-type")).to.include("image/jpeg");
+    expect(Number(res.getHeader("content-length"))).to.be.above(0);
+  });
+}

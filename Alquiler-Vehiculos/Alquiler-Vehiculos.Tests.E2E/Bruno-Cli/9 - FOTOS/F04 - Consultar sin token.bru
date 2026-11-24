@@ -1,0 +1,17 @@
+meta {
+  name: F04 - Consultar sin token
+  type: http
+  seq: 4
+}
+get {
+  url: {{baseUrl}}/api/fotos/{{fotoIndependiente}}
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Metadatos públicos de la foto exacta", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.deep.equal(bru.getVar("metadatosIndependiente"));
+  });
+}

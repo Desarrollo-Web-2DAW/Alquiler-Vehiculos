@@ -1,0 +1,25 @@
+meta {
+  name: F29 - Subir Responsable
+  type: http
+  seq: 29
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{responsableToken}}
+}
+body:multipart-form {
+  archivo: @file(fixtures/vehiculo.jpg)
+}
+tests {
+  // Assert
+  test("Responsable sube una foto propia", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().activo).to.equal(true);
+    expect(res.getBody().nombre).to.be.a("string").that.is.not.empty;
+    bru.setVar("fotoPerfilResponsable", res.getBody().nombre);
+  });
+}

@@ -1,0 +1,35 @@
+meta {
+  name: V11 - Kilometraje negativo
+  type: http
+  seq: 11
+}
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoValidacionId}}
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaValidacion}}
+  marca: {{marcaValidacion}}
+  modelo: Modelo validacion
+  acriss: ILAH
+  color: Negro
+  precioBaseDia: 55
+  plazas: 5
+  maleteroLitros: 470
+  autonomiaKm: 900
+  kilometraje: -1
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioValidacionId}}
+}
+tests {
+  // Assert
+  test("Kilometraje negativo rechazado por Kilometraje", function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().details.Kilometraje).to.include("El kilometraje no puede ser negativo.");
+  });
+}

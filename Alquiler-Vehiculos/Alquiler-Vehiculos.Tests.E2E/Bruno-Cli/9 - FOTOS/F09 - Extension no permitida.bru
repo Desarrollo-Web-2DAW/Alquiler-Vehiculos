@@ -1,0 +1,25 @@
+meta {
+  name: F09 - Extension no permitida
+  type: http
+  seq: 9
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: text
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+script:pre-request {
+  // Arrange: MIME permitido para aislar únicamente la extensión.
+  req.setHeader("Content-Type", "multipart/form-data; boundary=bruno-foto");
+  req.setBody('--bruno-foto\r\nContent-Disposition: form-data; name="archivo"; filename="rechazada.exe"\r\nContent-Type: image/jpeg\r\n\r\nx\r\n--bruno-foto--\r\n');
+}
+tests {
+  // Assert
+  test("422 con EXTENSION_NO_PERMITIDA", function () {
+    expect(res.getStatus()).to.equal(422);
+    expect(res.getBody().code).to.equal("EXTENSION_NO_PERMITIDA");
+  });
+}

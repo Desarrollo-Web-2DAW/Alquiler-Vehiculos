@@ -1,0 +1,25 @@
+meta {
+  name: F27 - Subir Admin
+  type: http
+  seq: 27
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:multipart-form {
+  archivo: @file(fixtures/vehiculo.jpg)
+}
+tests {
+  // Assert
+  test("Admin sube una foto propia", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().activo).to.equal(true);
+    expect(res.getBody().nombre).to.be.a("string").that.is.not.empty;
+    bru.setVar("fotoPerfilAdmin", res.getBody().nombre);
+  });
+}

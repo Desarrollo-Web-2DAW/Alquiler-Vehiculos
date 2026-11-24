@@ -1,0 +1,19 @@
+meta {
+  name: F19 - Subir anonimo
+  type: http
+  seq: 19
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: multipartForm
+  auth: none
+}
+body:multipart-form {
+  archivo: @file(fixtures/vehiculo.jpg)
+}
+tests {
+  // Assert
+  test("Anónimo no sube fotos: 401, no error del archivo", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

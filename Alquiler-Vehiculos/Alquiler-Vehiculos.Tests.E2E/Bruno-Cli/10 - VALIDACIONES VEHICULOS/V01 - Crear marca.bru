@@ -1,0 +1,32 @@
+meta {
+  name: V01 - Crear marca
+  type: http
+  seq: 1
+}
+post {
+  url: {{baseUrl}}/api/marca
+  body: json
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+body:json {
+  { "nombre": "{{marcaValidacion}}", "pais": "España", "web": "https://validaciones.example", "modelosDisponibles": ["Modelo validacion"] }
+}
+script:pre-request {
+  // Arrange
+  bru.setVar("marcaValidacion", `Marca Validacion ${Date.now()}`);
+  bru.setVar("telefonoValidacion", `9${String(Math.floor(Math.random() * 100000000)).padStart(8, "0")}`);
+  const letras = "BCDFGHJKLMNPRSTVWXYZ";
+  bru.setVar("matriculaValidacion", String(Math.floor(Math.random() * 10000)).padStart(4, "0") +
+    Array.from({ length: 3 }, () => letras[Math.floor(Math.random() * letras.length)]).join(""));
+}
+tests {
+  // Assert
+  test("Marca propia preparada", function () {
+    expect(res.getStatus()).to.equal(201);
+    expect(res.getBody().nombre).to.equal(bru.getVar("marcaValidacion"));
+    bru.setVar("marcaValidacionId", res.getBody().id);
+  });
+}

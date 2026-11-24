@@ -1,0 +1,21 @@
+meta {
+  name: F33 - Historico Admin
+  type: http
+  seq: 33
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoIndependiente}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("Admin consulta histórico", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(bru.getVar("fotoIndependiente"));
+    expect(res.getBody().activo).to.equal(false);
+  });
+}

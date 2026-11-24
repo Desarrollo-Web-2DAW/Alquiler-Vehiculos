@@ -1,0 +1,16 @@
+meta {
+  name: F21 - Baja anonimo
+  type: http
+  seq: 21
+}
+delete {
+  url: {{baseUrl}}/api/fotos/{{fotoIndependiente}}
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Anónimo no da de baja: 401 antes de consultar la foto", function () {
+    expect(res.getStatus()).to.equal(401);
+  });
+}

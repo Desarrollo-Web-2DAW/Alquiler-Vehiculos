@@ -1,0 +1,55 @@
+meta {
+  name: V16b - Limites validos
+  type: http
+  seq: 18
+}
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoValidacionId}}
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+body:multipart-form {
+  foto: @file(fixtures/vehiculo.jpg)
+  matricula: {{matriculaValidacion}}
+  marca: {{marcaValidacion}}
+  modelo: Modelo validacion
+  acriss: ILAH
+  color: Blanco
+  precioBaseDia: 0.01
+  plazas: {{plazasLimiteValido}}
+  maleteroLitros: {{maleteroLimiteValido}}
+  autonomiaKm: 1
+  kilometraje: 0
+  fechaUltimaRevision: 2026-01-15
+  concesionario: {{concesionarioValidacionId}}
+}
+script:pre-request {
+  // Arrange: ambos extremos admitidos, después de comprobar los rechazos.
+  const superior = bru.getVar("limiteValidoSuperior") || false;
+  bru.setVar("plazasLimiteValido", superior ? 9 : 2);
+  bru.setVar("maleteroLimiteValido", superior ? 6000 : 0);
+}
+tests {
+  // Assert
+  test(`Acepta plazas ${bru.getVar("plazasLimiteValido")} y maletero ${bru.getVar("maleteroLimiteValido")}`, function () {
+    expect(res.getStatus()).to.equal(200);
+    const vehiculo = res.getBody();
+    expect(vehiculo.id).to.equal(bru.getVar("vehiculoValidacionId"));
+    expect(vehiculo.plazas).to.equal(bru.getVar("plazasLimiteValido"));
+    expect(vehiculo.maleteroLitros).to.equal(bru.getVar("maleteroLimiteValido"));
+    expect(vehiculo.precioBaseDia).to.equal(0.01);
+    expect(vehiculo.autonomiaKm).to.equal(1);
+    expect(vehiculo.kilometraje).to.equal(0);
+    expect(vehiculo.foto).to.not.equal(bru.getVar("fotoValidacionOriginal"));
+    bru.setVar("fotoValidacionOriginal", vehiculo.foto);
+  });
+  if (!bru.getVar("limiteValidoSuperior")) {
+    bru.setVar("limiteValidoSuperior", true);
+    bru.runner.setNextRequest("V16b - Limites validos");
+  } else {
+    bru.deleteVar("limiteValidoSuperior");
+  }
+}

@@ -1,0 +1,17 @@
+meta {
+  name: V14 - Fotos sin huerfanas activas
+  type: http
+  seq: 15
+}
+get {
+  url: {{baseUrl}}/api/fotos
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Alta y modificaciones fallidas descartan sus nuevas fotos del catálogo activo", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().map(f => f.nombre).sort()).to.deep.equal(bru.getVar("fotosAntesValidaciones"));
+  });
+}

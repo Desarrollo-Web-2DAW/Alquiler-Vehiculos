@@ -1,0 +1,21 @@
+meta {
+  name: F35 - Historico Mecanico
+  type: http
+  seq: 35
+}
+get {
+  url: {{baseUrl}}/api/fotos/historico/{{fotoIndependiente}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{mecanicoToken}}
+}
+tests {
+  // Assert
+  test("Mecánico consulta histórico", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().nombre).to.equal(bru.getVar("fotoIndependiente"));
+    expect(res.getBody().activo).to.equal(false);
+  });
+}

@@ -1,0 +1,35 @@
+meta {
+  name: [092] VEHICULOS - Restaurar en alquiler conserva el estado (200)
+  type: http
+  seq: 71
+}
+
+get {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoEnAlquilerId}}
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{adminToken}}
+}
+
+tests {
+  test("Restaurar en alquiler conserva el estado - Status 200", function () {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("Restaurar en alquiler conserva el estado - Sigue en alquiler y activo", function () {
+    expect(res.getBody().estado).to.equal("EnAlquiler");
+    expect(res.getBody().isActivo).to.equal(true);
+  });
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  Tras el rechazo del restore, la unidad en alquiler conserva su estado.
+}

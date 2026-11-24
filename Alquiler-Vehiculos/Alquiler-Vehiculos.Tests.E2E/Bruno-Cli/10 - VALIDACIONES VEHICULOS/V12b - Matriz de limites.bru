@@ -1,0 +1,90 @@
+meta {
+  name: V12b - Matriz de limites
+  type: http
+  seq: 13
+}
+put {
+  url: {{baseUrl}}/api/vehiculo/{{vehiculoValidacionId}}
+  body: text
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+script:pre-request {
+  // Arrange: un solo campo inválido por petición; misma matriz para POST y PUT.
+  const casos = [
+    ["matricula", "123BCD", "Matricula"],
+    ["matricula", "1234BCDA", "Matricula"],
+    ["matricula", "1234BCA", "Matricula"],
+    ["marca", "A", "Marca"],
+    ["marca", "A".repeat(101), "Marca"],
+    ["modelo", "A", "Modelo"],
+    ["modelo", "A".repeat(101), "Modelo"],
+    ["acriss", "ILA", "Acriss"],
+    ["acriss", "ILAHH", "Acriss"],
+    ["acriss", "1234", "Acriss"],
+    ["acriss", "ILAJ", "Acriss"],
+    ["color", "999", "Color"],
+    ["color", "NoExiste", "Color"],
+    ["precioBaseDia", "0", "PrecioBaseDia"],
+    ["precioBaseDia", "-0.01", "PrecioBaseDia"],
+    ["plazas", "1", "Plazas"],
+    ["plazas", "10", "Plazas"],
+    ["maleteroLitros", "-1", "MaleteroLitros"],
+    ["maleteroLitros", "6001", "MaleteroLitros"],
+    ["autonomiaKm", "0", "AutonomiaKm"],
+    ["autonomiaKm", "-1", "AutonomiaKm"],
+    ["kilometraje", "-1", "Kilometraje"],
+    ["fechaUltimaRevision", "no-es-fecha", "FechaUltimaRevision"],
+    ["fechaUltimaRevision", new Date(Date.now() + 86400000).toISOString(), "FechaUltimaRevision"],
+    ["concesionario", "0", "Concesionario"],
+    ["concesionario", "-1", "Concesionario"]
+  ];
+  const indice = bru.getVar("indiceLimites") || 0;
+  const caso = casos[indice % casos.length];
+  const metodo = indice < casos.length ? "POST" : "PUT";
+  bru.setVar("campoLimites", caso[2]);
+  bru.setVar("casoLimites", `${metodo}: ${caso[0]}=${caso[1]}`);
+  bru.setVar("totalLimites", casos.length * 2);
+  req.setMethod(metodo);
+  req.setUrl(`${bru.getEnvVar("baseUrl")}/api/vehiculo` + (metodo === "PUT" ? `/${bru.getVar("vehiculoValidacionId")}` : ""));
+  const campos = {
+    matricula: bru.getVar("matriculaValidacion"), marca: bru.getVar("marcaValidacion"),
+    modelo: "Modelo validacion", acriss: "ILAH", color: "Blanco", precioBaseDia: "55",
+    plazas: "5", maleteroLitros: "470", autonomiaKm: "900", kilometraje: "1000",
+    fechaUltimaRevision: "2026-01-15", concesionario: bru.getVar("concesionarioValidacionId")
+  };
+  campos[caso[0]] = caso[1];
+  const boundary = "bruno-limites";
+  let cuerpo = Object.entries(campos).map(([campo, valor]) =>
+    `--${boundary}\r\nContent-Disposition: form-data; name="${campo}"\r\n\r\n${valor}\r\n`).join("");
+  // El archivo válido real se envía como bytes, no como texto convertido de JPEG.
+  const fs = require("fs");
+  const imagen = fs.readFileSync("fixtures/vehiculo.jpg");
+  const inicio = Buffer.from(cuerpo + `--${boundary}\r\nContent-Disposition: form-data; name="foto"; filename="limites.jpg"\r\nContent-Type: image/jpeg\r\n\r\n`);
+  req.setHeader("Content-Type", `multipart/form-data; boundary=${boundary}`);
+  req.setBody(Buffer.concat([inicio, imagen, Buffer.from(`\r\n--${boundary}--\r\n`)]));
+}
+tests {
+  // Assert
+  test(bru.getVar("casoLimites"), function () {
+    expect(res.getStatus()).to.equal(400);
+    expect(res.getBody().code).to.equal("VALIDACION");
+    const detalles = res.getBody().details;
+    expect(Object.keys(detalles)).to.deep.equal([bru.getVar("campoLimites")]);
+    expect(detalles[bru.getVar("campoLimites")]).to.be.an("array").that.is.not.empty;
+  });
+  const siguiente = (bru.getVar("indiceLimites") || 0) + 1;
+  if (siguiente < bru.getVar("totalLimites")) {
+    bru.setVar("indiceLimites", siguiente);
+    bru.runner.setNextRequest("V12b - Matriz de limites");
+  } else {
+    bru.deleteVar("indiceLimites");
+  }
+}
+docs {
+  Ejecutar con el runner de carpeta: repite esta petición 52 veces (26 POST y 26 PUT).
+  No es un 400 genérico: exige VALIDACION y únicamente el campo inválido del caso.
+  Después, V13–V16 comprueban vehículo original y ausencia de fotos activas huérfanas.
+}

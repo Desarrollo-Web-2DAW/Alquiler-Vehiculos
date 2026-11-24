@@ -1,0 +1,20 @@
+meta {
+  name: V20 - Limpieza concesionario
+  type: http
+  seq: 22
+}
+delete {
+  url: {{baseUrl}}/api/concesionario/{{concesionarioValidacionId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{adminToken}}
+}
+tests {
+  // Assert
+  test("Retirar concesionario propio", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody()).to.equal(true);
+  });
+}

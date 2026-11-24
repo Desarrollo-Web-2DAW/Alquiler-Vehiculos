@@ -1,0 +1,17 @@
+meta {
+  name: F39 - Listado final
+  type: http
+  seq: 39
+}
+get {
+  url: {{baseUrl}}/api/fotos
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Todos los perfiles limpian sus fotos y los denegados no dejan altas", function () {
+    expect(res.getStatus()).to.equal(200);
+    expect(res.getBody().map(f => f.nombre).sort()).to.deep.equal(bru.getVar("fotosAntesSubida"));
+  });
+}

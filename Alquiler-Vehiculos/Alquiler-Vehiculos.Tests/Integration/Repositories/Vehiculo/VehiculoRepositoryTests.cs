@@ -290,6 +290,61 @@ public partial class VehiculoRepositoryTests : RepositoryTestBase {
         else guardado.Should().BeNull();
     }
 
+    [TestCase(EstadoVehiculo.Disponible)]
+    [TestCase(EstadoVehiculo.Reservado)]
+    [TestCase(EstadoVehiculo.EnAlquiler)]
+    [TestCase(EstadoVehiculo.Mantenimiento)]
+    public async Task Restore_VehiculoNoRetirado_NoLoLibera(EstadoVehiculo estado) {
+        // Arrange
+        var original = await GuardarVehiculo();
+        await using (var db = CrearContexto()) {
+            await db.Vehiculos.Where(v => v.Id == original.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.Estado, estado));
+        }
+        await using var contexto = CrearContexto();
+        var repository = new VehiculoRepository(contexto, NullLogger<VehiculoRepository>.Instance);
+
+        // Act
+        var resultado = await repository.Restore(original.Id);
+
+        // Assert
+        resultado.Should().BeNull("solo se restaura un vehículo retirado");
+        await using var lectura = CrearContexto();
+        var guardado = await lectura.Vehiculos.SingleAsync();
+        guardado.Activo.Should().BeTrue();
+        guardado.Estado.Should().Be(estado);
+        guardado.DeletedAt.Should().BeNull();
+    }
+
+    [Test]
+    public async Task Update_CuandoOtroProcesoCambioElEstado_NoSobrescribeElEstadoNiLaActividad() {
+        // Arrange
+        var original = await GuardarVehiculo();
+        await using (var db = CrearContexto()) {
+            await db.Vehiculos.Where(v => v.Id == original.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(v => v.Estado, EstadoVehiculo.EnAlquiler));
+        }
+
+        // El servicio leyó el vehículo antes del cambio: su copia todavía dice Disponible.
+        var datosObsoletos = original with { Modelo = "Corolla Cross", Activo = true, DeletedAt = null };
+        datosObsoletos.CambiarEstadoMapper(EstadoVehiculo.Disponible);
+
+        await using var contexto = CrearContexto();
+        var repository = new VehiculoRepository(contexto, NullLogger<VehiculoRepository>.Instance);
+
+        // Act
+        var resultado = await repository.Update(original.Id, datosObsoletos);
+
+        // Assert
+        resultado.Should().NotBeNull();
+        await using var lectura = CrearContexto();
+        var guardado = await lectura.Vehiculos.SingleAsync();
+        guardado.Modelo.Should().Be("Corolla Cross");
+        guardado.Estado.Should().Be(EstadoVehiculo.EnAlquiler, "el PUT no realiza transiciones de estado");
+        guardado.Activo.Should().BeTrue();
+        guardado.DeletedAt.Should().BeNull();
+    }
+
     [TestCase(true)]
     [TestCase(false)]
     public async Task Restore_VehiculoEliminadoOInexistente_ReactivaSoloSiExiste(bool existe) {

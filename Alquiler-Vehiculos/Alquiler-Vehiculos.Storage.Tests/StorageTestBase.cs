@@ -25,8 +25,10 @@ public abstract class StorageTestBase {
             ?? throw new InvalidOperationException("Falta la conexión al PostgreSQL de pruebas.");
         Db = new PostgreDbContext(new DbContextOptionsBuilder<PostgreDbContext>()
             .UseNpgsql(conexion).Options);
-        await Db.Database.EnsureCreatedAsync();
+        await Db.Database.MigrateAsync();
+        await Db.Vehiculos.ExecuteDeleteAsync();
         await Db.Fotos.ExecuteDeleteAsync();
+        await Db.Concesionarios.ExecuteDeleteAsync();
     }
 
     [TearDown]

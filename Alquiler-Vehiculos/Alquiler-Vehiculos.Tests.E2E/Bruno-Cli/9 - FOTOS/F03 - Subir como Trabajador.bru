@@ -1,0 +1,31 @@
+meta {
+  name: F03 - Subir como Trabajador
+  type: http
+  seq: 3
+}
+post {
+  url: {{baseUrl}}/api/fotos
+  body: multipartForm
+  auth: bearer
+}
+auth:bearer {
+  token: {{trabajadorToken}}
+}
+body:multipart-form {
+  archivo: @file(fixtures/vehiculo.jpg)
+}
+tests {
+  // Assert
+  test("Subida independiente con metadatos y Location", function () {
+    expect(res.getStatus()).to.equal(201);
+    const foto = res.getBody();
+    expect(foto.nombre).to.be.a("string").that.is.not.empty;
+    expect(foto.extension).to.equal(".jpg");
+    expect(foto.tamano).to.be.above(0);
+    expect(foto.activo).to.equal(true);
+    expect(foto.deletedAt).to.equal(null);
+    expect(res.getHeader("location")).to.include(foto.nombre);
+    bru.setVar("fotoIndependiente", foto.nombre);
+    bru.setVar("metadatosIndependiente", foto);
+  });
+}

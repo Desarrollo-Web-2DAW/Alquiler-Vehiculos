@@ -43,6 +43,11 @@ public interface IVehiculoRepository {
     /// <param name="key">Identificador del vehículo que se desea modificar.</param>
     /// <param name="item">Datos que se aplicarán al vehículo existente.</param>
     /// <returns>El vehículo actualizado o null si no existe o está inactivo.</returns>
+    /// <remarks>
+    /// No modifica <c>Activo</c>, <c>Estado</c> ni <c>DeletedAt</c>: el alta, la baja y
+    /// las transiciones de estado tienen sus propias operaciones. Así un PUT concurrente
+    /// no sobrescribe un cambio de estado hecho por otro proceso.
+    /// </remarks>
     Task<VehiculoModel?> Update(string key, VehiculoModel item);
 
     /// <summary>
@@ -93,10 +98,15 @@ public interface IVehiculoRepository {
     Task<(IEnumerable<VehiculoModel> Items, int TotalItems)> GetPaged(int page, int pageSize);
     
     /// <summary>
-    /// Reactiva un vehículo por su identificador, dejándolo Disponible y con Activo en true.
+    /// Reactiva un vehículo por su identificador, <b>solo si está retirado</b>,
+    /// dejándolo Disponible y con Activo en true.
     /// </summary>
     /// <param name="key">Identificador del vehículo que se desea restaurar.</param>
-    /// <returns>El vehículo restaurado o null si no existe.</returns>
+    /// <returns>El vehículo restaurado o null si no existe o no está retirado.</returns>
+    /// <remarks>
+    /// La comprobación del estado viaja en el <c>WHERE</c> del <c>UPDATE</c>:
+    /// un vehículo reservado, alquilado o en mantenimiento nunca se libera.
+    /// </remarks>
     Task<VehiculoModel?> Restore(string key);
 
     /// <summary>

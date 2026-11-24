@@ -1,0 +1,18 @@
+meta {
+  name: F13 - Fotos tras rechazos
+  type: http
+  seq: 13
+}
+get {
+  url: {{baseUrl}}/api/fotos
+  body: none
+  auth: none
+}
+tests {
+  // Assert
+  test("Solo hay una foto nueva; los archivos rechazados no se registran", function () {
+    expect(res.getStatus()).to.equal(200);
+    const esperadas = [...bru.getVar("fotosAntesSubida"), bru.getVar("fotoIndependiente")].sort();
+    expect(res.getBody().map(f => f.nombre).sort()).to.deep.equal(esperadas);
+  });
+}
