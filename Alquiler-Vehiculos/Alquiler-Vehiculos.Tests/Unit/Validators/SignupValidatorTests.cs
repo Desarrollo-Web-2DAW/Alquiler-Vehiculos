@@ -27,7 +27,7 @@ public class SignupValidatorTests {
         string apellidos = "García López",
         string telefono = "600123456",
         DateOnly? fechaNacimiento = null,
-        string? dni = "12345678A",
+        string? dni = "12345678Z",
         string? nie = null,
         string? pasaporte = null) {
         return new SignupDto {
@@ -68,7 +68,7 @@ public class SignupValidatorTests {
     [Test]
     public async Task ValidateAsync_DatosValidosConNie_EsValido() {
         // Arrange
-        var dto = SignupCon(dni: null, nie: "X1234567B");
+        var dto = SignupCon(dni: null, nie: "X1234567L");
 
         // Act
         var resultado = await _validator.ValidateAsync(dto);
@@ -84,7 +84,7 @@ public class SignupValidatorTests {
     [Test]
     public async Task ValidateAsync_DatosValidosConPasaporte_EsValido() {
         // Arrange
-        var dto = SignupCon(dni: null, pasaporte: "AB1234567");
+        var dto = SignupCon(dni: null, pasaporte: "AAA1234565");
 
         // Act
         var resultado = await _validator.ValidateAsync(dto);
@@ -387,6 +387,23 @@ public class SignupValidatorTests {
         // Assert
         resultado.IsValid.Should().BeFalse();
         resultado.Errors.Should().Contain(e => e.PropertyName == "documentos");
+    }
+
+    /// <summary>
+    /// Dado un SignupDto con DNI cuya letra de control no coincide (RF-16),
+    /// cuando se valida, entonces falla en el campo Dni.
+    /// </summary>
+    [Test]
+    public async Task ValidateAsync_DniConLetraInvalida_FallaEnDni() {
+        // Arrange
+        var dto = SignupCon(dni: "12345678A");
+
+        // Act
+        var resultado = await _validator.ValidateAsync(dto);
+
+        // Assert
+        resultado.IsValid.Should().BeFalse();
+        resultado.Errors.Should().Contain(e => e.PropertyName == "Dni");
     }
 
     #endregion

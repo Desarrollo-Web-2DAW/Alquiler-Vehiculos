@@ -123,7 +123,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
 
         // Act
@@ -141,7 +141,7 @@ public class AuthServiceIntegrationTests
         user.Should().NotBeNull();
         user!.Cliente.Should().NotBeNull();
         user.Cliente!.Nombre.Should().Be("Carlos");
-        user.Cliente.Dni.Should().Be("12345678A");
+        user.Cliente.Dni.Should().Be("12345678Z");
 
         var roles = await GetUserManager().GetRolesAsync(user);
         roles.Should().Contain("Cliente");
@@ -163,7 +163,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
 
         // Crear el primer usuario
@@ -193,7 +193,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
 
         await GetSut().SignUpAsync(signupDto1);
@@ -206,7 +206,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "Usuario",
             Telefono = "600987654",
             FechaNacimiento = new DateOnly(1995, 3, 20),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
 
         // Act
@@ -233,7 +233,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
 
         // Act
@@ -260,7 +260,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Nie = "x9876543b"
+            Nie = "x9876543k"
         };
 
         // Act
@@ -272,7 +272,7 @@ public class AuthServiceIntegrationTests
         var db = _scope.ServiceProvider.GetRequiredService<AppDbContextUsuarios>();
         var user = await db.Users.FirstOrDefaultAsync(u => u.Email == "nie@ejemplo.com");
         user.Should().NotBeNull();
-        user!.Cliente!.Nie.Should().Be("X9876543B");
+        user!.Cliente!.Nie.Should().Be("X9876543K");
     }
 
     #endregion
@@ -295,7 +295,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
         await GetSut().SignUpAsync(signupDto);
 
@@ -331,7 +331,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
         await GetSut().SignUpAsync(signupDto);
 
@@ -413,7 +413,7 @@ public class AuthServiceIntegrationTests
             Apellidos = "López",
             Telefono = "600123456",
             FechaNacimiento = new DateOnly(1990, 5, 15),
-            Dni = "12345678A"
+            Dni = "12345678Z"
         };
         var signupResult = await GetSut().SignUpAsync(signupDto);
         var userId = (await GetUserManager().FindByEmailAsync("getme@ejemplo.com"))!.Id;
