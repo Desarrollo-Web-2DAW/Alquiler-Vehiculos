@@ -248,7 +248,7 @@ public partial class VehiculoServiceTests
     private static VehiculoDto CrearDto(string matricula = Matricula) => new()
     {
         Id = VehiculoId,
-        Foto = FotoId,
+        FotoRuta = FotoId,
         Matricula = matricula,
         Marca = "Toyota",
         Modelo = "Corolla",

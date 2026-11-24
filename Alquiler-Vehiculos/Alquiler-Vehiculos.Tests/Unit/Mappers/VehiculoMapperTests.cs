@@ -135,6 +135,7 @@ public class VehiculoMapperTests
         {
             Id = "vehiculo-01",
             FotoFk = "delantera.jpg",
+            Foto = CrearFoto(),
             Matrícula = "1234BCD",
             Marca = "Toyota",
             Modelo = "Corolla",
@@ -582,7 +583,7 @@ public class VehiculoMapperTests
         dto.Should().BeEquivalentTo(new
         {
             Id = "vehiculo-01",
-            Foto = "delantera.jpg",
+            FotoRuta = "/uploads/vehiculos/delantera.jpg",
             Matricula = "1234BCD",
             Marca = "Toyota",
             Modelo = "Corolla",
