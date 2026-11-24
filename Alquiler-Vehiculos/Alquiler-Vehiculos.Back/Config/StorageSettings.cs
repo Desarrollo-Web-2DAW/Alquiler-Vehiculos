@@ -18,17 +18,17 @@ public class StorageSettings {
     /// <summary>
     /// Obtiene o establece el tamaño máximo permitido para los archivos subidos (por ejemplo, representado como cadena tipo "5MB").
     /// </summary>
-    public string MaxFileSize { get; set; } = string.Empty;
+    public int MaxFileSize { get; set; }
 
     /// <summary>
     /// Obtiene o establece las extensiones de archivo permitidas para la validación de seguridad (separadas por comas o en formato listado).
     /// </summary>
-    public string AllowedExtensions { get; set; } = string.Empty;
+    public List<string> AllowedExtensions { get; set; } = new ();
 
     /// <summary>
     /// Obtiene o establece los tipos de contenido MIME permitidos para validar las subidas (por ejemplo, "image/jpeg,image/png").
     /// </summary>
-    public string AllowedContentTypes { get; set; } = string.Empty;
+    public List<string> AllowedContentTypes { get; set; } = new ();
 
     /// <summary>
     /// Obtiene o establece la ruta o nombre de la imagen predeterminada que se mostrará o utilizará como respaldo.

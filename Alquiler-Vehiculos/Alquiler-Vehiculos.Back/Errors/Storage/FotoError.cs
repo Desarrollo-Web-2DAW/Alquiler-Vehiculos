@@ -40,4 +40,16 @@ public static class FotoError
         return new InternalError(
             $"No se pudo restaurar la foto '{nombre}' asociada al vehículo.");
     }
+    
+    
+    /// <summary>
+    /// Genera un error cuando no se puede crear una foto
+    /// </summary>
+    /// <param name="nombre">Nombre de la foto que no se pudo restaurar.</param>
+    /// <returns>Error técnico de tipo <see cref="BusinessRuleError"/> (HTTP 422).</returns>
+    public static BusinessRuleError NosePudoCrear(string nombre)
+    {
+        return new BusinessRuleError(
+            "ERROR_CREADO",$"No se pudo restaurar la foto '{nombre}' asociada al vehículo.");
+    }
 }

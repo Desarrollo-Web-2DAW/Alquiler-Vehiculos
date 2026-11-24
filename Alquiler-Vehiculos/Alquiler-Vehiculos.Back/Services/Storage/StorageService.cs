@@ -54,21 +54,19 @@ public class StorageService : IStorageService
     }
 
     /// <inheritdoc cref="IStorageService.SaveFileAsync"/>
-    public async Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder)
+    public async Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder, string fileName)
     {
-        var validation = ValidateFile(file);
-        if (validation.IsFailure) return await Task.FromResult(Result.Failure<string, DomainError>(validation.Error));
-
-        string? fileName = null;
         try
         {
-            fileName = GenerateUniqueFilename(file.FileName);
             var mainFolderPath = Path.Combine(_rootPath, folder);
             if (!Directory.Exists(mainFolderPath)) Directory.CreateDirectory(mainFolderPath);
 
             var filePath = Path.Combine(mainFolderPath, fileName);
             var relativePath = GetRelativePath(fileName, folder);
-
+            
+            using var stream = new FileStream(filePath, FileMode.Create);
+            await file.CopyToAsync(stream);
+            
             var fotoModel = new Foto
             {
                 Nombre = fileName,
@@ -78,19 +76,13 @@ public class StorageService : IStorageService
                 Activo = true,             
                 CreatedAt = DateTime.UtcNow
             };
-            await _fotoRepository.Create(fotoModel);
-            using var stream = new FileStream(filePath, FileMode.Create);
-            await file.CopyToAsync(stream);
 
-            _logger.LogInformation("Archivo guardado: {Path}", relativePath);
-            
-            return await Task.FromResult(Result.Success<string, DomainError>(fileName));
+            return fotoModel;
         }
         catch (Exception e)
         {
             _logger.LogError(e, "Error guardando archivo");
-            if (fileName is not null) await DescartarFotoAsync(fileName);
-            return await Task.FromResult(Result.Failure<string, DomainError>(StorageError.ErrorGuardando()));
+            return await Task.FromResult(Result.Failure<Foto, DomainError>(StorageError.ErrorGuardando()));
         }
     }
 
@@ -126,7 +118,6 @@ public class StorageService : IStorageService
             var fullPath = GetFullPath(filename);
             if (File.Exists(fullPath))
             {
-                await _fotoRepository.SoftDelete(filename);
                 File.Delete(fullPath);
                 _logger.LogInformation("Archivo eliminado: {Filename}", filename);
             }
@@ -198,20 +189,5 @@ public class StorageService : IStorageService
             return UnitResult.Failure<DomainError>(StorageError.NombreArchivoInvalido());
 
         return UnitResult.Success<DomainError>();
-    }
-
-    /// <summary>
-    /// Crea un nombre combinando la fecha UTC, parte de un GUID y el nombre original
-    /// con espacios y guiones sustituidos por guiones bajos. Conserva la extensión en minúsculas.
-    /// </summary>
-    /// <param name="originalFilename">Nombre recibido del que se extraen la base y la extensión.</param>
-    /// <returns>Un nombre generado para reducir las coincidencias entre archivos guardados.</returns>
-    private static string GenerateUniqueFilename(string originalFilename)
-    {
-        var extension = Path.GetExtension(originalFilename).ToLowerInvariant();
-        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
-        var uniqueId = Guid.NewGuid().ToString("N")[..8];
-        var sanitizedName = Path.GetFileNameWithoutExtension(originalFilename).Replace(" ", "_").Replace("-", "_");
-        return $"{timestamp}_{uniqueId}_{sanitizedName}{extension}";
     }
 }

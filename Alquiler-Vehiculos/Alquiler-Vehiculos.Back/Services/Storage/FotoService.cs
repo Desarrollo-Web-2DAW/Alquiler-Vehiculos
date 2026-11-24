@@ -1,26 +1,48 @@
+using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Errors.Storage;
+using Alquiler_Vehiculos.Infrastructure;
 using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Repositories.Storage;
+using Alquiler_Vehiculos.Validators.Storage;
 using CSharpFunctionalExtensions;
+using Microsoft.Extensions.Options;
 
 namespace Alquiler_Vehiculos.Services.Storage;
 
 /// <summary>
 /// Conserva los ficheros físicos aunque se dé de baja su entrada del catálogo.
 /// </summary>
-public class FotoService(IFotoRepository repository, IStorageService storage) : IFotoService {
-    public async Task<Result<Foto, DomainError>> Create(IFormFile? archivo) {
-        if (archivo is null || storage.IsEmpty(archivo)) {
-            return ValidationError.WithFieldErrors(new Dictionary<string, string[]> {
-                ["archivo"] = ["Debe proporcionar una imagen con contenido."]
-            });
+public class FotoService(FileValidator validator, IFotoRepository repository, IStorageService storage, IOptions<StorageSettings> settingss) : IFotoService
+{
+    private StorageSettings _settings = settingss.Value;
+    
+    public async Task<Result<Foto, DomainError>> Create(IFormFile archivo, string folderName) {
+        
+        var validationResult = await validator.ValidateAsync(archivo);
+        
+        if (!validationResult.IsValid)
+        {
+            var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
+            return ValidationError.WithFieldErrors(errorsDictionary);
         }
-        var fotoRuta = await storage.SaveFileAsync(archivo, "vehiculos");
-        if (fotoRuta.IsFailure) return fotoRuta.Error;
-        var foto = await repository.GetById(fotoRuta.Value);
-        if (foto == null) return FotoError.FotoNotFound(fotoRuta.Value);
-        return foto;
+
+        var fileName = GenerateUniqueFilename(archivo.FileName);
+
+        var resultFotoFisica = await storage.SaveFileAsync(archivo, folderName, fileName);
+
+        if (resultFotoFisica.IsFailure) return resultFotoFisica.Error;
+
+        try
+        {
+            var result = await repository.Create(resultFotoFisica.Value);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            await storage.DeleteFileAsync(fileName);
+            return FotoError.NosePudoCrear(fileName);
+        }
     }
 
     public async Task<IEnumerable<Foto>> GetAll() {
@@ -56,5 +78,20 @@ public class FotoService(IFotoRepository repository, IStorageService storage) : 
         // Se conserva siempre, incluso cuando todavía no hay módulo de reservas.
         if (!await repository.SoftDelete(nombre)) return FotoError.FotoNotFound(nombre);
         return true;
+    }
+    
+    /// <summary>
+    /// Genera un nombre de archivo único combinando una marca de tiempo UTC y un GUID corto, 
+    /// conservando únicamente la extensión original en minúsculas. Se descarta el nombre 
+    /// original para evitar problemas de compatibilidad con caracteres especiales o de otros idiomas.
+    /// </summary>
+    /// <param name="fileName">Nombre original del archivo del cual se extraerá la extensión.</param>
+    /// <returns>Un nombre de archivo único y seguro para contenedores y sistemas de almacenamiento.</returns>
+    private static string GenerateUniqueFilename(string fileName)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
+        var timestamp = DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+        var uniqueId = Guid.NewGuid().ToString("N")[..8];
+        return $"{timestamp}_{uniqueId}{extension}";
     }
 }

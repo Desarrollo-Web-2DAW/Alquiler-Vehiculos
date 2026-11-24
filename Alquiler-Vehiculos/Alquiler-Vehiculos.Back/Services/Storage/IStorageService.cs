@@ -15,8 +15,9 @@ namespace Alquiler_Vehiculos.Services.Storage
         /// </summary>
         /// <param name="file">Archivo enviado a la API que se quiere almacenar.</param>
         /// <param name="folder">Carpeta del almacenamiento en la que se guardará.</param>
-        /// <returns>El nombre de la foto si se guarda correctamente, o con el error ocurrido.</returns>
-        Task<Result<string, DomainError>> SaveFileAsync(IFormFile file, string folder);
+        ///  /// <param name="fileName">CEl nombre definitivo del archivo.</param>
+        /// <returns>El modelo <see cref="Foto"/> creado a partir de los datos del archivo</returns>
+        Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder, string fileName);
 
         /// <summary>
         /// Retira una subida fallida sin borrar su fichero ni desactivar fotos asociadas a vehículos.
