@@ -212,8 +212,7 @@ public class VehiculoService(
         var mapeadoResult = item.ToVehiculoModel(fotoPreparada.Value);
         if (mapeadoResult.IsFailure)
         {
-            Log.Warning("El archivo preparado {Nombre} queda conservado porque los datos del vehículo no se pudieron mapear: {Error}",
-                fotoPreparada.Value.Nombre, mapeadoResult.Error);
+            await EliminarArchivoPreparadoAsync(fotoPreparada.Value.Nombre);
             return Result.Failure<VehiculoDto, DomainError>(mapeadoResult.Error);
         }
 
@@ -222,14 +221,16 @@ public class VehiculoService(
         try {
             result = await transactionsService.UpdateAsync(key, vehiculo);
         } catch (Exception ex) {
-            Log.Error(ex, "Falló la actualización del vehículo {Id}; se conserva el archivo preparado {Nombre}",
+            Log.Error(ex, "Falló la actualización del vehículo {Id}; se eliminará el archivo preparado {Nombre}",
                 key, fotoPreparada.Value.Nombre);
+            await EliminarArchivoPreparadoAsync(fotoPreparada.Value.Nombre);
             throw;
         }
         if (result.IsFailure)
         {
-            Log.Warning("No se actualizó el vehículo {Id}; se conserva el archivo preparado {Nombre}: {Error}",
+            Log.Warning("No se actualizó el vehículo {Id}; se eliminará el archivo preparado {Nombre}: {Error}",
                 key, fotoPreparada.Value.Nombre, result.Error);
+            await EliminarArchivoPreparadoAsync(fotoPreparada.Value.Nombre);
             return Result.Failure<VehiculoDto, DomainError>(result.Error);
         }
 
@@ -321,6 +322,16 @@ public class VehiculoService(
             }
         } catch (Exception ex) {
             Log.Error(ex, "No se pudo descartar la foto nueva {Nombre}", nombre);
+        }
+    }
+
+    private async Task EliminarArchivoPreparadoAsync(string nombre) {
+        try {
+            var resultado = await fotoService.DeletePreparedFileAsync(nombre, "vehiculos");
+            if (resultado.IsFailure)
+                Log.Error("No se pudo eliminar el archivo preparado {Nombre}: {Error}", nombre, resultado.Error);
+        } catch (Exception ex) {
+            Log.Error(ex, "No se pudo eliminar el archivo preparado {Nombre}", nombre);
         }
     }
 }

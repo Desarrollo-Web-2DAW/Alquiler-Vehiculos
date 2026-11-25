@@ -32,7 +32,7 @@ public class StorageConfigTests {
         var services = new ServiceCollection();
         var configuration = new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?> {
             ["Storage:UploadPath"] = "imagenes", ["Storage:MaxFileSize"] = "1024",
-            ["Storage:AllowedExtensions"] = ".png", ["Storage:AllowedContentTypes"] = "image/png",
+            ["Storage:AllowedExtensions:0"] = ".png", ["Storage:AllowedContentTypes:0"] = "image/png",
             ["Storage:DefaultImage"] = "default.png", ["Storage:Folders:Vehiculos"] = "coches"
         }).Build();
 
@@ -43,9 +43,9 @@ public class StorageConfigTests {
 
         // Assert
         settings.UploadPath.Should().Be("imagenes");
-        settings.MaxFileSize.Should().Be("1024");
-        settings.AllowedExtensions.Should().Be(".png");
-        settings.AllowedContentTypes.Should().Be("image/png");
+        settings.MaxFileSize.Should().Be(1024);
+        settings.AllowedExtensions.Should().Equal(".png");
+        settings.AllowedContentTypes.Should().Equal("image/png");
         settings.DefaultImage.Should().Be("default.png");
         settings.Folders["vehiculos"].Should().Be("coches");
     }

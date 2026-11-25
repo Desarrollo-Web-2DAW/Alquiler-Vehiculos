@@ -34,6 +34,28 @@ public class FotoRepository(PostgreDbContext context, ILogger<FotoRepository> lo
         await context.SaveChangesAsync();
         return true;
     }
+
+    public Task<bool> IsReferencedByVehicle(string name, string? excludingVehicleId = null) {
+        var referencias = context.Vehiculos.IgnoreQueryFilters().Where(v => v.FotoFk == name);
+        if (excludingVehicleId is not null)
+            referencias = referencias.Where(v => v.Id != excludingVehicleId);
+        return referencias.AnyAsync();
+    }
+
+    public async Task<bool> SoftDeleteSiNoAsociada(string name, string? excludingVehicleId = null) {
+        var ahora = DateTime.UtcNow;
+        var fotos = context.Fotos.Where(f => f.Nombre == name);
+        var referencias = context.Vehiculos.IgnoreQueryFilters().Where(v => v.FotoFk == name);
+        if (excludingVehicleId is not null)
+            referencias = referencias.Where(v => v.Id != excludingVehicleId);
+
+        return await fotos
+            .Where(_ => !referencias.Any())
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(f => f.Activo, false)
+                .SetProperty(f => f.DeletedAt, ahora)
+                .SetProperty(f => f.UpdatedAt, ahora)) > 0;
+    }
     
     /// <inheritdoc cref="IFotoRepository.HardDelete" />
     public async Task<bool> HardDelete(string name)

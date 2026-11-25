@@ -55,7 +55,7 @@ public sealed class VehiculoTransactionsService(
                 var actualizado = vehiculoRepository.ApplyChanges(actual, datos);
 
                 if (!string.IsNullOrEmpty(fotoAnterior) && fotoAnterior != fotoNueva.Nombre)
-                    await fotoRepository.SoftDelete(fotoAnterior);
+                    await fotoRepository.SoftDeleteSiNoAsociada(fotoAnterior, id);
 
                 return Result.Success<UpdateVehiculoResult, DomainError>(
                     new(actualizado, matriculaAnterior));

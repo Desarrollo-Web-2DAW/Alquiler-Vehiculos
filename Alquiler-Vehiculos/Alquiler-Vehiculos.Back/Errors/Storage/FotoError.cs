@@ -17,6 +17,11 @@ public static class FotoError
         return new NotFoundError("FOTO_NO_ENCONTRADA", $"No se ha encontrado la foto con el nombre:{nombre}");
     }
 
+    public static ConflictError FotoReferenciada(string nombre)
+    {
+        return new ConflictError("FOTO_REFERENCIADA", $"No se puede dar de baja ni eliminar la foto '{nombre}' porque está asociada a un vehículo.");
+    }
+
     /// <summary>
     /// Genera un error cuando no se puede dar de baja una foto
     /// </summary>

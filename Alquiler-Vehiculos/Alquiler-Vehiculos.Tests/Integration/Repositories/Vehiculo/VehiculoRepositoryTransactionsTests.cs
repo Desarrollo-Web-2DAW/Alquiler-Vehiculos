@@ -16,23 +16,26 @@ public partial class VehiculoRepositoryTests {
     [TestCase(EstadoVehiculo.EnAlquiler)]
     [TestCase(EstadoVehiculo.Mantenimiento)]
     [TestCase(EstadoVehiculo.Retirado)]
-    public async Task SoftDeleteSiEstado_EstadoRealEnBaseDeDatos_SoloDaDeBajaDisponible(EstadoVehiculo estado) {
+    public async Task SoftDelete_EstadoRealEnBaseDeDatos_SoloDaDeBajaDisponible(EstadoVehiculo estado) {
         // Arrange
         var original = await GuardarVehiculo();
+        var activoAntes = estado != EstadoVehiculo.Retirado;
         await using var db = CrearContexto();
         await db.Vehiculos.Where(v => v.Id == original.Id)
-            .ExecuteUpdateAsync(s => s.SetProperty(v => v.Estado, estado));
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(v => v.Estado, estado)
+                .SetProperty(v => v.Activo, activoAntes));
         var repository = new VehiculoRepository(db, NullLogger<VehiculoRepository>.Instance);
 
         // Act
-        var resultado = await repository.SoftDeleteSiEstado(original.Id, EstadoVehiculo.Disponible);
+        var resultado = await repository.SoftDelete(original.Id);
 
         // Assert
         var eliminado = estado == EstadoVehiculo.Disponible;
         resultado.Should().Be(eliminado);
         await using var lectura = CrearContexto();
         var guardado = await lectura.Vehiculos.SingleAsync();
-        guardado.Activo.Should().Be(!eliminado);
+        guardado.Activo.Should().Be(eliminado ? false : activoAntes);
         guardado.Estado.Should().Be(eliminado ? EstadoVehiculo.Retirado : estado);
         guardado.DeletedAt.HasValue.Should().Be(eliminado);
         (await lectura.Fotos.SingleAsync()).Activo.Should().BeTrue();
@@ -50,7 +53,7 @@ public partial class VehiculoRepositoryTests {
 
         // Act
         var resultado = await manager.ExecuteAsync<VehiculoModel>(async () => {
-            await repository.SoftDeleteSiEstado(original.Id, EstadoVehiculo.Disponible);
+            await repository.SoftDelete(original.Id);
             return exito ? Result.Success<VehiculoModel, DomainError>(original)
                 : Result.Failure<VehiculoModel, DomainError>(error);
         });
@@ -75,7 +78,7 @@ public partial class VehiculoRepositoryTests {
 
         // Act
         Func<Task> act = () => manager.ExecuteAsync<VehiculoModel>(async () => {
-            await repository.SoftDeleteSiEstado(original.Id, EstadoVehiculo.Disponible);
+            await repository.SoftDelete(original.Id);
             throw new InvalidOperationException("Fallo posterior a la escritura");
         });
 
@@ -113,7 +116,7 @@ public partial class VehiculoRepositoryTests {
 
         // Act
         var resultado = await manager.ExecuteAsync<VehiculoModel>(async () => {
-            await repository.SoftDeleteSiEstado(original.Id, EstadoVehiculo.Disponible);
+            await repository.SoftDelete(original.Id);
             return Result.Success<VehiculoModel, DomainError>(original);
         });
 

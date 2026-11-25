@@ -58,8 +58,10 @@ public partial class VehiculoServiceTests
     public async Task Guardar_ConcesionarioInexistente_Devuelve400SinPersistir(bool actualizar)
     {
         // Arrange
-        _concesionarioRepository.Setup(r => r.ExistById(1)).ReturnsAsync(false);
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+        if (actualizar)
+            _concesionarioRepository.Setup(r => r.GetById(1)).ReturnsAsync((ConcesionarioModel?)null);
+        else
+            _concesionarioRepository.Setup(r => r.ExistById(1)).ReturnsAsync(false);
 
         // Act
         var resultado = actualizar
@@ -70,8 +72,9 @@ public partial class VehiculoServiceTests
         resultado.Error.Should().BeOfType<ValidationError>().Which.Message.Should().Contain("concesionario").And.Contain("no existe");
         Alquiler_Vehiculos.Extensions.DomainErrorExtensions.ToHttpResult(resultado.Error)
             .Should().BeOfType<Microsoft.AspNetCore.Mvc.BadRequestObjectResult>();
-        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
-        _repository.Verify(r => r.GetById(VehiculoId), actualizar ? Times.Once() : Times.Never());
+        _concesionarioRepository.Verify(r => r.ExistById(1), actualizar ? Times.Never() : Times.Once());
+        _concesionarioRepository.Verify(r => r.GetById(1), actualizar ? Times.Once() : Times.Never());
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Never);
         _repository.Verify(r => r.ExistByMatricula(Matricula), actualizar ? Times.Never() : Times.Once());
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
         _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
@@ -161,14 +164,25 @@ public partial class VehiculoServiceTests
         _fotoService = new Mock<IFotoService>();
         _fotoService.Setup(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"))
             .ReturnsAsync(Result.Success<Foto, DomainError>(CrearFoto()));
+        _fotoService.Setup(s => s.PrepareAsync(
+                It.IsAny<IFormFile>(), "vehiculos", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<Foto, DomainError>(CrearFoto()));
+        _fotoService.Setup(s => s.DeletePreparedFileAsync(It.IsAny<string>(), "vehiculos"))
+            .ReturnsAsync(Result.Success<bool, DomainError>(true));
         _fotoService.Setup(s => s.SoftDelete(It.IsAny<string>()))
             .ReturnsAsync(Result.Success<bool, DomainError>(true));
         _transactionsService = new Mock<IVehiculoTransactionsService>();
         _cache = new Mock<ICacheService>();
         _concesionarioRepository = new Mock<IConcesionarioRepository>();
         _concesionarioRepository.Setup(r => r.ExistById(It.IsAny<long>())).ReturnsAsync(true);
+        _concesionarioRepository.Setup(r => r.GetById(It.IsAny<long>()))
+            .ReturnsAsync(new ConcesionarioModel(1, "Concesionario pruebas", "Leganés", "912345678",
+                "pruebas@example.test", false, new DateTime(2026, 1, 1), null, null));
         _marcaRepository = new Mock<IMarcaRepository>();
         _tallerService = new Mock<IParteTallerService>();
+        _tallerService.Setup(s => s.TienePartesAbiertosAsync(
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Success<bool, DomainError>(false));
         _marcaRepository.Setup(r => r.GetAll()).ReturnsAsync([
             new MarcaModel(MongoDB.Bson.ObjectId.Empty, "Toyota", "Japón", "https://toyota.example", ["Corolla"], false, new DateTime(2026, 1, 1), null, null),
             new MarcaModel(MongoDB.Bson.ObjectId.Empty, "Renault", "Francia", "https://renault.example", ["Megane"], false, new DateTime(2026, 1, 1), null, null)
@@ -256,6 +270,10 @@ public partial class VehiculoServiceTests
         Extension = ".jpg",
         Tamano = 1024
     };
+
+    private static Result<UpdateVehiculoResult, DomainError> ResultadoActualizacion(
+        VehiculoModel vehiculo, string matriculaAnterior = Matricula) =>
+        Result.Success<UpdateVehiculoResult, DomainError>(new(vehiculo, matriculaAnterior));
 
     private static IFormFile CrearArchivo() {
         var contenido = new MemoryStream([1]);
@@ -475,8 +493,8 @@ public partial class VehiculoServiceTests
         // Assert
         resultado.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("Acriss");
         _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
-        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
-        _fotoService.Verify(s => s.SoftDelete(It.IsAny<string>()), Times.Once);
+        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Never);
+        _fotoService.Verify(s => s.SoftDelete(It.IsAny<string>()), Times.Never);
 
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
     }
@@ -575,7 +593,10 @@ public partial class VehiculoServiceTests
     public async Task Update_CuandoElVehiculoNoExiste_DevuelveNotFound()
     {
         // Arrange
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync((VehiculoModel?)null);
+        _transactionsService
+            .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<UpdateVehiculoResult, DomainError>(
+                VehiculoError.NotFoundVehiculo(VehiculoId)));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
@@ -583,17 +604,17 @@ public partial class VehiculoServiceTests
         // Assert
         resultado.Error.Should().Be(VehiculoError.NotFoundVehiculo(VehiculoId));
 
-        _transactionsService.Verify(
-            t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+        _fotoService.Verify(s => s.DeletePreparedFileAsync(It.IsAny<string>(), "vehiculos"), Times.Once);
     }
 
     [Test]
     public async Task Update_CuandoLaMatriculaCambiaYEstaEnUso_DevuelveConflict()
     {
         // Arrange
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _repository.Setup(r => r.ExistByMatricula(MatriculaNueva)).ReturnsAsync(true);
+        _transactionsService
+            .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<UpdateVehiculoResult, DomainError>(
+                VehiculoError.VehiculoYaExiste(MatriculaNueva)));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(MatriculaNueva), VehiculoId);
@@ -602,19 +623,17 @@ public partial class VehiculoServiceTests
         resultado.Error.Should().Be(VehiculoError.VehiculoYaExiste(MatriculaNueva));
 
         _transactionsService.Verify(
-            t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
-            Times.Never);
+            t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Test]
     public async Task Update_CuandoLaMatriculaNoCambia_NoConsultaDuplicados()
     {
         // Arrange
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
+            .ReturnsAsync(ResultadoActualizacion(CrearModelo()));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
@@ -629,8 +648,8 @@ public partial class VehiculoServiceTests
     public async Task Update_CuandoLaFotoNoExiste_DevuelveNotFound()
     {
         // Arrange
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoService.Setup(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"))
+        _fotoService.Setup(s => s.PrepareAsync(
+                It.IsAny<IFormFile>(), "vehiculos", It.IsAny<CancellationToken>()))
             .ReturnsAsync(Result.Failure<Foto, DomainError>(FotoError.FotoNotFound(FotoId)));
 
         // Act
@@ -650,17 +669,15 @@ public partial class VehiculoServiceTests
         // Arrange
         var dto = CrearUpdateValido();
         dto.Acriss = AcrissQueFallaEnElMapper;
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
-
         // Act
         var resultado = await _service.Update(dto, VehiculoId);
 
         // Assert
         resultado.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("Acriss");
         _repository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
-        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
-        _fotoService.Verify(s => s.SoftDelete(It.IsAny<string>()), Times.Once);
+        _fotoService.Verify(s => s.PrepareAsync(
+            It.IsAny<IFormFile>(), "vehiculos", It.IsAny<CancellationToken>()), Times.Never);
+        _fotoService.Verify(s => s.DeletePreparedFileAsync(It.IsAny<string>(), "vehiculos"), Times.Never);
 
         _transactionsService.Verify(
             t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
@@ -672,11 +689,9 @@ public partial class VehiculoServiceTests
     {
         // Arrange
         var error = new BusinessRuleError("ACTUALIZACION_FOTO", "No se pudo actualizar el vehículo: fallo al eliminar la foto anterior.");
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<VehiculoModel, DomainError>(error));
+            .ReturnsAsync(Result.Failure<UpdateVehiculoResult, DomainError>(error));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
@@ -696,18 +711,18 @@ public partial class VehiculoServiceTests
     {
         // Arrange
         var existente = CrearModelo();
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(existente);
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
+            .ReturnsAsync(ResultadoActualizacion(existente, Matricula));
 
         // Act
-        await _service.Update(CrearUpdateValido(), VehiculoId);
+        var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
 
         // Assert
-        _transactionsService.Verify(t => t.UpdateAsync(VehiculoId, It.Is<VehiculoModel>(m =>
-            m.Id == existente.Id && m.CreatedAt == existente.CreatedAt)), Times.Once);
+        resultado.Value.Id.Should().Be(existente.Id);
+        resultado.Value.FechaUltimaRevision.Should().Be(existente.FechaUltimaRevision.ToString("yyyy-MM-dd"));
+        _transactionsService.Verify(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Test]
@@ -722,7 +737,7 @@ public partial class VehiculoServiceTests
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
+            .ReturnsAsync(ResultadoActualizacion(CrearModelo()));
 
         // Act
         var resultado = await _service.Update(dto, VehiculoId);
@@ -748,12 +763,9 @@ public partial class VehiculoServiceTests
         // Arrange
         var existente = CrearModelo() with { Activo = activo };
         existente.CambiarEstadoMapper(estado);
-        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(existente);
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync((string _, VehiculoModel datos, CancellationToken _) =>
-                Result.Success<VehiculoModel, DomainError>(datos));
+            .ReturnsAsync(ResultadoActualizacion(existente, Matricula));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
@@ -762,14 +774,14 @@ public partial class VehiculoServiceTests
         resultado.IsSuccess.Should().BeTrue();
         (resultado.Value.Estado, resultado.Value.IsActivo).Should().Be((estado.ToString(), activo));
         (existente.Estado, existente.Activo).Should().Be((estado, activo));
-        _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Never);
         _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
-        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
-        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
+        _fotoService.Verify(s => s.PrepareAsync(
+            It.IsAny<IFormFile>(), "vehiculos", It.IsAny<CancellationToken>()), Times.Once);
+        _concesionarioRepository.Verify(r => r.GetById(1), Times.Once);
         _transactionsService.Verify(t => t.UpdateAsync(VehiculoId,
-            It.Is<VehiculoModel>(m => m.Estado == estado && m.Activo == activo),
+            It.IsAny<VehiculoModel>(),
             It.IsAny<CancellationToken>()), Times.Once);
-        _transactionsService.Verify(t => t.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _transactionsService.Verify(t => t.RestoreAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);
@@ -790,7 +802,7 @@ public partial class VehiculoServiceTests
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         _transactionsService
             .Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo(MatriculaNueva)));
+            .ReturnsAsync(ResultadoActualizacion(CrearModelo(MatriculaNueva), Matricula));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(MatriculaNueva), VehiculoId);
@@ -815,17 +827,17 @@ public partial class VehiculoServiceTests
     public async Task SoftDelete_CuandoLaTransaccionFalla_PropagaElErrorSinTocarLaCache()
     {
         // Arrange
-        var error = new BusinessRuleError("BORRADO_FOTO", "No se pudo eliminar la foto asociada al vehículo.");
-        _transactionsService
-            .Setup(t => t.DeleteAsync(VehiculoId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Failure<VehiculoModel, DomainError>(error));
+        var error = new ConflictError("TALLER_NO_DISPONIBLE", "No se pudo consultar el taller.");
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+        _tallerService.Setup(s => s.TienePartesAbiertosAsync(VehiculoId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<bool, DomainError>(error));
 
         // Act
         var resultado = await _service.SoftDelete(VehiculoId);
 
         // Assert
         resultado.Error.Should().Be(error);
-
+        _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Never);
         _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -833,15 +845,15 @@ public partial class VehiculoServiceTests
     public async Task SoftDelete_CuandoSeBorra_InvalidaLaCachePorIdYMatricula()
     {
         // Arrange
-        _transactionsService
-            .Setup(t => t.DeleteAsync(VehiculoId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(Result.Success<VehiculoModel, DomainError>(CrearModelo()));
+        _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
+        _repository.Setup(r => r.SoftDelete(VehiculoId)).ReturnsAsync(true);
 
         // Act
         var resultado = await _service.SoftDelete(VehiculoId);
 
         // Assert
         resultado.Value.Should().BeTrue();
+        _repository.Verify(r => r.SoftDelete(VehiculoId), Times.Once);
 
         _cache.Verify(c => c.RemoveAsync(ClaveVehiculo + VehiculoId, It.IsAny<CancellationToken>()), Times.Once);
         _cache.Verify(c => c.RemoveAsync(ClaveMatricula + Matricula, It.IsAny<CancellationToken>()), Times.Once);

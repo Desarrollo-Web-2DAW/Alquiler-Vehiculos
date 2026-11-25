@@ -17,7 +17,7 @@ public class StorageSettingsTests {
         // Assert
         StorageSettings.SectionName.Should().Be(seccion);
         settings.UploadPath.Should().BeEmpty();
-        settings.MaxFileSize.Should().BeEmpty();
+        settings.MaxFileSize.Should().Be(0);
         settings.AllowedExtensions.Should().BeEmpty();
         settings.AllowedContentTypes.Should().BeEmpty();
         settings.DefaultImage.Should().BeEmpty();
@@ -31,15 +31,15 @@ public class StorageSettingsTests {
 
         // Act
         var settings = new StorageSettings {
-            UploadPath = "imagenes", MaxFileSize = "1024", AllowedExtensions = ".png",
-            AllowedContentTypes = "image/png", DefaultImage = "default.png", Folders = carpetas
+            UploadPath = "imagenes", MaxFileSize = 1024, AllowedExtensions = [".png"],
+            AllowedContentTypes = ["image/png"], DefaultImage = "default.png", Folders = carpetas
         };
 
         // Assert
         settings.UploadPath.Should().Be("imagenes");
-        settings.MaxFileSize.Should().Be("1024");
-        settings.AllowedExtensions.Should().Be(".png");
-        settings.AllowedContentTypes.Should().Be("image/png");
+        settings.MaxFileSize.Should().Be(1024);
+        settings.AllowedExtensions.Should().Equal(".png");
+        settings.AllowedContentTypes.Should().Equal("image/png");
         settings.DefaultImage.Should().Be("default.png");
         settings.Folders.Should().BeSameAs(carpetas);
     }

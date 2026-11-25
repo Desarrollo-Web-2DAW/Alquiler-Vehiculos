@@ -6,7 +6,7 @@ using Alquiler_Vehiculos.Models.Storage;
 using Alquiler_Vehiculos.Repositories.Storage;
 using Alquiler_Vehiculos.Validators.Storage;
 using CSharpFunctionalExtensions;
-using Microsoft.Extensions.Options;
+using Serilog;
 
 namespace Alquiler_Vehiculos.Services.Storage;
 
@@ -29,6 +29,10 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
         return await storage.SaveFileAsync(archivo, folderName, fileName, ct);
     }
 
+    public Task<Result<bool, DomainError>> DeletePreparedFileAsync(
+        string nombre, string folderName = "vehiculos") =>
+        storage.DeleteFileAsync(Path.Combine(folderName, nombre));
+
     public async Task<Result<Foto, DomainError>> Create(
         IFormFile archivo, string folderName = "vehiculos", CancellationToken ct = default) {
         var preparada = await PrepareAsync(archivo, folderName, ct);
@@ -40,7 +44,11 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
         }
         catch (Exception ex)
         {
-            await storage.DeleteFileAsync(Path.Combine(folderName, preparada.Value.Nombre));
+            Log.Error(ex, "No se pudo crear el registro de la foto {Nombre}", preparada.Value.Nombre);
+            var borrado = await storage.DeleteFileAsync(Path.Combine(folderName, preparada.Value.Nombre));
+            if (borrado.IsFailure)
+                Log.Error("No se pudo eliminar el archivo de la foto fallida {Nombre}: {Error}",
+                    preparada.Value.Nombre, borrado.Error);
             return FotoError.NosePudoCrear(preparada.Value.Nombre);
         }
     }
@@ -61,18 +69,26 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
     public async Task<Result<bool, DomainError>> SoftDelete(string nombre) {
         var existente = await GetById(nombre);
         if (existente.IsFailure) return existente.Error;
-        if (!await repository.SoftDelete(nombre)) return FotoError.FotoNotFound(nombre);
+        if (await repository.IsReferencedByVehicle(nombre))
+            return FotoError.FotoReferenciada(nombre);
+        if (!await repository.SoftDeleteSiNoAsociada(nombre)) {
+            if (await repository.IsReferencedByVehicle(nombre))
+                return FotoError.FotoReferenciada(nombre);
+            return FotoError.FotoNotFound(nombre);
+        }
         return true;
     }
     
     public async Task<Result<bool, DomainError>> HardDelete(string nombre) {
         var existente = await GetById(nombre);
         if (existente.IsFailure) return existente.Error;
+        if (await repository.IsReferencedByVehicle(nombre))
+            return FotoError.FotoReferenciada(nombre);
         
         var resultRepository = await repository.HardDelete(nombre);
         if (!resultRepository) return FotoError.NoSePudoDarDeBaja(nombre);
         
-        var result =  await storage.DeleteFileAsync(nombre);
+        var result = await storage.DeleteFileAsync(Path.Combine("vehiculos", nombre));
         return result.IsFailure? result.Error : result.Value;
     }
     

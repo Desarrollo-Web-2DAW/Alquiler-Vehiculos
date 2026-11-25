@@ -29,6 +29,9 @@ public interface IVehiculoRepository {
     /// <returns>El vehículo encontrado o null si no existe.</returns>
     Task<VehiculoModel?> GetById(string key);
 
+    /// <summary>Obtiene la entidad rastreada para aplicar cambios dentro de una transacción.</summary>
+    Task<VehiculoModel?> GetByIdForUpdate(string key, CancellationToken ct = default);
+
     /// <summary>Applies editable fields to the tracked vehicle without saving changes.</summary>
     VehiculoModel ApplyChanges(VehiculoModel actual, VehiculoModel datos);
 

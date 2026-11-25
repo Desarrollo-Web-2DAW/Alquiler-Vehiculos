@@ -2,9 +2,11 @@ using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Errors.Common;
 using Alquiler_Vehiculos.Extensions;
 using Alquiler_Vehiculos.Models.Vehiculo;
+using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using MongoDB.Bson;
 using Moq;
 
@@ -44,8 +46,9 @@ public partial class VehiculoServiceTests {
             .Which.Key.Should().Be(campo);
         resultado.Error.ToHttpResult<VehiculoDto>().Result.Should().BeOfType<BadRequestObjectResult>();
         _marcaRepository.Verify(r => r.GetAll(), Times.Once);
-        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
-        _repository.Verify(r => r.GetById(VehiculoId), actualizar ? Times.Once() : Times.Never());
+        _concesionarioRepository.Verify(r => r.ExistById(1), actualizar ? Times.Never() : Times.Once());
+        _concesionarioRepository.Verify(r => r.GetById(1), actualizar ? Times.Once() : Times.Never());
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Never());
         _repository.Verify(r => r.ExistByMatricula(Matricula), actualizar ? Times.Never() : Times.Once());
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
         _transactionsService.Verify(t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -65,7 +68,8 @@ public partial class VehiculoServiceTests {
         _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync(CrearFoto());
         if (actualizar) {
             _transactionsService.Setup(t => t.UpdateAsync(VehiculoId, It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync((string _, VehiculoModel v, CancellationToken _) => Result.Success<VehiculoModel, DomainError>(v));
+                .ReturnsAsync((string _, VehiculoModel v, CancellationToken _) =>
+                    Result.Success<UpdateVehiculoResult, DomainError>(new(v, v.Matrícula)));
         } else {
             _repository.Setup(r => r.Create(It.IsAny<VehiculoModel>()))
                 .ReturnsAsync((VehiculoModel v) => Result.Success<VehiculoModel, DomainError>(v with { Id = VehiculoId }));
@@ -81,9 +85,15 @@ public partial class VehiculoServiceTests {
         resultado.Value.Marca.Should().Be(marca);
         resultado.Value.Modelo.Should().Be(modelo);
         _marcaRepository.Verify(r => r.GetAll(), Times.Once);
-        _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
-        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
-        _repository.Verify(r => r.GetById(VehiculoId), actualizar ? Times.Once() : Times.Never());
+        _concesionarioRepository.Verify(r => r.ExistById(1), actualizar ? Times.Never() : Times.Once());
+        _concesionarioRepository.Verify(r => r.GetById(1), actualizar ? Times.Once() : Times.Never());
+        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Never);
+        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"),
+            actualizar ? Times.Never() : Times.Once());
+        _fotoService.Verify(s => s.PrepareAsync(
+            It.IsAny<IFormFile>(), "vehiculos", It.IsAny<CancellationToken>()),
+            actualizar ? Times.Once() : Times.Never());
+        _repository.Verify(r => r.GetById(VehiculoId), Times.Never);
         _repository.Verify(r => r.ExistByMatricula(Matricula), actualizar ? Times.Never() : Times.Once());
         _repository.Verify(r => r.Create(It.Is<VehiculoModel>(v => v.Marca == marca && v.Modelo == modelo)), actualizar ? Times.Never() : Times.Once());
         _transactionsService.Verify(t => t.UpdateAsync(VehiculoId,

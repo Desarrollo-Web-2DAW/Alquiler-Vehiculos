@@ -229,7 +229,6 @@ public partial class VehiculoServiceTests {
         _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
         _concesionarioRepository.Verify(r => r.ExistById(It.IsAny<long>()), Times.Never);
         _transactionsService.Verify(t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()), Times.Never);
-        _transactionsService.Verify(t => t.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _transactionsService.Verify(t => t.RestoreAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _cache.Verify(c => c.RemoveAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
         _cache.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),

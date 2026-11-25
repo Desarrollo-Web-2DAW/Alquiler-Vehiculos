@@ -1,5 +1,5 @@
-using Alquiler_Vehiculos.Errors.Common;
-using Alquiler_Vehiculos.Errors.Storage;
+using Alquiler_Vehiculos.Models.Storage;
+using Alquiler_Vehiculos.Repositories.Storage;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -9,68 +9,57 @@ namespace Alquiler_Vehiculos.Storage.Tests;
 
 public partial class StorageServiceTests {
     [Test]
-    public async Task DescartarFotoAsync_SubidaSinVehiculo_DesactivaYConservaBytes() {
-        // Arrange
-        var storage = CrearServicio();
+    public async Task PrepareAsync_GuardaBytesSinInsertarFotoYDeletePreparedLosElimina() {
+        var service = CrearFotoService();
         byte[] datos = [1, 2, 3];
         using var contenido = new MemoryStream(datos);
-        var subida = await storage.SaveFileAsync(Archivo(contenido), "vehiculos");
-        subida.IsSuccess.Should().BeTrue();
-        var nombre = subida.Value;
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", "foto.jpg") {
+            Headers = new HeaderDictionary(), ContentType = "image/jpeg"
+        };
 
-        // Act
-        var resultado = await storage.DescartarFotoAsync(nombre);
+        var preparada = await service.PrepareAsync(archivo);
 
-        // Assert
-        resultado.IsSuccess.Should().BeTrue();
-        await using var lectura = CrearContextoDeLectura();
-        var foto = await lectura.Fotos.SingleAsync(f => f.Nombre == nombre);
-        foto.Activo.Should().BeFalse();
-        foto.DeletedAt.Should().NotBeNull();
-        File.ReadAllBytes(Path.Combine(RootPath, "uploads", "vehiculos", nombre)).Should().Equal(datos);
+        preparada.IsSuccess.Should().BeTrue();
+        var ruta = Path.Combine(RootPath, "uploads", "vehiculos", preparada.Value.Nombre);
+        File.ReadAllBytes(ruta).Should().Equal(datos);
+        await using (var lectura = CrearContextoDeLectura())
+            (await lectura.Fotos.CountAsync()).Should().Be(0);
+
+        var borrado = await service.DeletePreparedFileAsync(preparada.Value.Nombre);
+
+        borrado.IsSuccess.Should().BeTrue();
+        File.Exists(ruta).Should().BeFalse();
     }
 
     [Test]
-    public async Task SaveFileAsync_FallaLaCopia_NoDejaFotoActiva() {
-        // Arrange
-        var storage = CrearServicio();
-        var archivo = new Mock<IFormFile>();
-        archivo.SetupGet(f => f.Length).Returns(1);
-        archivo.SetupGet(f => f.FileName).Returns("coche.jpg");
-        archivo.SetupGet(f => f.ContentType).Returns("image/jpeg");
-        archivo.Setup(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new IOException("Copia interrumpida"));
+    public async Task PrepareAsync_ArchivoNoValido_NoEscribeEnDisco() {
+        var service = CrearFotoService();
+        using var contenido = new MemoryStream([1]);
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", "foto.pdf") {
+            Headers = new HeaderDictionary(), ContentType = "application/pdf"
+        };
 
-        // Act
-        var resultado = await storage.SaveFileAsync(archivo.Object, "vehiculos");
+        var resultado = await service.PrepareAsync(archivo);
 
-        // Assert
         resultado.IsFailure.Should().BeTrue();
-        resultado.Error.Should().Be(StorageError.ErrorGuardando());
-        await using var lectura = CrearContextoDeLectura();
-        (await lectura.Fotos.CountAsync(f => f.Activo)).Should().Be(0);
-        archivo.VerifyGet(f => f.Length, Times.AtLeastOnce);
-        archivo.VerifyGet(f => f.FileName, Times.AtLeastOnce);
-        archivo.VerifyGet(f => f.ContentType, Times.Once);
-        archivo.Verify(f => f.CopyToAsync(It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Once);
+        Directory.GetFileSystemEntries(Path.Combine(RootPath, "uploads")).Should().BeEmpty();
     }
 
-    [TestCase(true)]
-    [TestCase(false)]
-    public async Task SaveFileAsync_ArchivoNuloOVacio_Devuelve400SinEscribir(bool nulo) {
-        // Arrange
-        var storage = CrearServicio();
-        using var contenido = new MemoryStream();
-        var archivo = nulo ? null : Archivo(contenido);
+    [Test]
+    public async Task Create_FallaLaInsercionDeMetadatos_EliminaElArchivoFisico() {
+        var repository = new Mock<IFotoRepository>();
+        repository.Setup(r => r.Create(It.IsAny<Foto>()))
+            .ThrowsAsync(new InvalidOperationException("Fallo controlado"));
+        var service = CrearFotoService(repository: repository.Object);
+        using var contenido = new MemoryStream([1, 2, 3]);
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", "foto.jpg") {
+            Headers = new HeaderDictionary(), ContentType = "image/jpeg"
+        };
 
-        // Act
-        var resultado = await storage.SaveFileAsync(archivo!, "vehiculos");
+        var resultado = await service.Create(archivo);
 
-        // Assert
         resultado.IsFailure.Should().BeTrue();
-        resultado.Error.Should().BeOfType<ValidationError>();
-        await using var lectura = CrearContextoDeLectura();
-        (await lectura.Fotos.CountAsync()).Should().Be(0);
         Directory.GetFiles(Path.Combine(RootPath, "uploads"), "*", SearchOption.AllDirectories).Should().BeEmpty();
+        repository.Verify(r => r.Create(It.IsAny<Foto>()), Times.Once);
     }
 }

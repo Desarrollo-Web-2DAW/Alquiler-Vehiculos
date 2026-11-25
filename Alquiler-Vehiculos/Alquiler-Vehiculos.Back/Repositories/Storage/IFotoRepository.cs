@@ -18,6 +18,12 @@ public interface IFotoRepository : ICrud<Foto, string>
     /// <param name="name">El id</param>
     /// <returns><see cref="Foto"/>si existe, null si no existe</returns>
     Task<Foto?> Restore(string name);
+
+    /// <summary>Comprueba referencias desde vehículos activos o retirados.</summary>
+    Task<bool> IsReferencedByVehicle(string name, string? excludingVehicleId = null);
+
+    /// <summary>Da de baja la foto solo si ningún otro vehículo la referencia.</summary>
+    Task<bool> SoftDeleteSiNoAsociada(string name, string? excludingVehicleId = null);
     
     /// <summary>
     /// Borra permanentemente una foto

@@ -87,7 +87,7 @@ public class StorageContainerTests {
         var claseMedida = clase switch {
             "StorageServiceTests" => "Services.Storage.StorageService",
             "FotosArchivoControllerTests" => "Controllers.Vehiculo.FotosController",
-            "VehiculoFotosDescarteTests" => "Controllers.Vehiculo.VehiculoController",
+            "VehiculoFotosDescarteTests" => "Services.Vehiculo.VehiculoService",
             _ => "Infrastructure.StorageInitializationExtensions"
         };
         informeCobertura.Descendants("class").Should().Contain(c =>

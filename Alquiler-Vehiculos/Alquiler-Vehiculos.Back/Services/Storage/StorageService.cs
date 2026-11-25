@@ -50,6 +50,7 @@ public class StorageService : IStorageService
     public async Task<Result<Foto, DomainError>> SaveFileAsync(
         IFormFile file, string folder, string fileName, CancellationToken ct = default)
     {
+        string? filePath = null;
         try
         {
             var mainFolderPath = Path.Combine(_rootPath, folder);
@@ -59,7 +60,7 @@ public class StorageService : IStorageService
                 _logger.LogInformation("Carpeta de categoría creada: {FolderPath}", mainFolderPath);
             }
 
-            var filePath = Path.Combine(mainFolderPath, fileName);
+            filePath = Path.Combine(mainFolderPath, fileName);
             var relativePath = GetRelativePath(fileName, folder);
             
             _logger.LogInformation("Iniciando guardado de archivo: {FileName} en ruta: {FilePath}", fileName, filePath);
@@ -83,8 +84,14 @@ public class StorageService : IStorageService
 
             return fotoModel;
         }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            EliminarArchivoParcial(filePath);
+            throw;
+        }
         catch (Exception e)
         {
+            EliminarArchivoParcial(filePath);
             _logger.LogError(e, "Error crítico al guardar el archivo {FileName} en la carpeta {Folder}", fileName, folder);
             return StorageError.ErrorGuardando();
         }
@@ -162,5 +169,14 @@ public class StorageService : IStorageService
             _logger.LogDebug("Se evaluó un archivo y se determinó que está vacío o es nulo.");
         }
         return isEmpty;
+    }
+
+    private void EliminarArchivoParcial(string? filePath) {
+        if (filePath is null || !File.Exists(filePath)) return;
+        try {
+            File.Delete(filePath);
+        } catch (Exception e) {
+            _logger.LogError(e, "No se pudo eliminar el archivo parcial {FilePath}", filePath);
+        }
     }
 }

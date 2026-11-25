@@ -8,6 +8,8 @@ namespace Alquiler_Vehiculos.Services.Storage;
 public interface IFotoService {
     Task<Result<Foto, DomainError>> PrepareAsync(
         IFormFile archivo, string folderName = "vehiculos", CancellationToken ct = default);
+    Task<Result<bool, DomainError>> DeletePreparedFileAsync(
+        string nombre, string folderName = "vehiculos");
     Task<Result<Foto, DomainError>> Create(
         IFormFile archivo, string folderName = "vehiculos", CancellationToken ct = default);
     Task<IEnumerable<Foto>> GetAll();

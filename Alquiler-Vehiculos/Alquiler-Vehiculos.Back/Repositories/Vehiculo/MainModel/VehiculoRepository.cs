@@ -73,6 +73,11 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             .FirstOrDefaultAsync(f => f.Id == key);
     }
 
+    public Task<VehiculoModel?> GetByIdForUpdate(string key, CancellationToken ct = default) {
+        logger.LogDebug("Obteniendo Vehiculo rastreado para actualizar: {Id}", key);
+        return context.Vehiculos.FirstOrDefaultAsync(v => v.Id == key, ct);
+    }
+
     public VehiculoModel ApplyChanges(VehiculoModel actual, VehiculoModel datos) {
         var actualizado = actual with {
             FotoFk = datos.FotoFk,

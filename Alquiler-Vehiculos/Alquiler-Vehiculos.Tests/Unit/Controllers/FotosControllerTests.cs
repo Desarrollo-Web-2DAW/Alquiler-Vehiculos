@@ -91,7 +91,8 @@ public class FotosControllerTests {
         respuesta.RouteValues!["nombre"].Should().Be(Nombre);
         respuesta.Value.Should().BeSameAs(foto);
         _service.Verify(s => s.Create(archivo), Times.Once);
-        _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>()), Times.Never);
+        _storage.Verify(s => s.SaveFileAsync(It.IsAny<IFormFile>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [TestCase(true)]
@@ -126,15 +127,18 @@ public class FotosControllerTests {
             500 => new InternalError("Error guardando la foto"),
             _ => ValidationError.WithFieldErrors(new() { ["archivo"] = ["Imagen obligatoria"] })
         };
+        using var contenido = new MemoryStream([1]);
+        var archivo = new FormFile(contenido, 0, contenido.Length, "archivo", Nombre);
         _service.Setup(s => s.GetById(Nombre)).ReturnsAsync(Result.Failure<Foto, DomainError>(error));
-        _service.Setup(s => s.Create(null)).ReturnsAsync(Result.Failure<Foto, DomainError>(error));
+        _service.Setup(s => s.Create(archivo, "vehiculos", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Result.Failure<Foto, DomainError>(error));
         _service.Setup(s => s.SoftDelete(Nombre)).ReturnsAsync(Result.Failure<bool, DomainError>(error));
 
         // Act
         ActionResult respuesta = accion switch {
             "consulta" => (await _controller.GetById(Nombre)).Result!,
             "archivo" => await _controller.GetArchivo(Nombre),
-            "alta" => (await _controller.Create(null)).Result!,
+            "alta" => (await _controller.Create(archivo)).Result!,
             _ => (await _controller.Delete(Nombre)).Result!
         };
 
@@ -145,7 +149,8 @@ public class FotosControllerTests {
             objeto.Value.Should().BeEquivalentTo(new { code = error.Code, message = error.Message, details = validacion.ValidationErrors });
         else objeto.Value.Should().BeEquivalentTo(new { code = error.Code, message = error.Message });
         _service.Verify(s => s.GetById(Nombre), accion is "consulta" or "archivo" ? Times.Once() : Times.Never());
-        _service.Verify(s => s.Create(null), accion == "alta" ? Times.Once() : Times.Never());
+        _service.Verify(s => s.Create(archivo, "vehiculos", It.IsAny<CancellationToken>()),
+            accion == "alta" ? Times.Once() : Times.Never());
         _service.Verify(s => s.SoftDelete(Nombre), accion == "baja" ? Times.Once() : Times.Never());
         _storage.Verify(s => s.FileExists(It.IsAny<string>()), Times.Never);
         _storage.Verify(s => s.GetFullPath(It.IsAny<string>()), Times.Never);
