@@ -29,6 +29,9 @@ public interface IVehiculoRepository {
     /// <returns>El vehículo encontrado o null si no existe.</returns>
     Task<VehiculoModel?> GetById(string key);
 
+    /// <summary>Applies editable fields to the tracked vehicle without saving changes.</summary>
+    VehiculoModel ApplyChanges(VehiculoModel actual, VehiculoModel datos);
+
     /// <summary>
     /// Realiza la baja lógica de un vehículo, dejándolo Retirado y con Activo en false.
     /// </summary>

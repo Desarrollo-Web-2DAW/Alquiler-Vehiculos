@@ -16,10 +16,9 @@ namespace Alquiler_Vehiculos.Services.Storage;
 public class FotoService(FileValidator validator, IFotoRepository repository, IStorageService storage) : IFotoService
 {
     
-    public async Task<Result<Foto, DomainError>> Create(IFormFile archivo, string folderName) {
-        
-        var validationResult = await validator.ValidateAsync(archivo);
-        
+    public async Task<Result<Foto, DomainError>> PrepareAsync(
+        IFormFile archivo, string folderName = "vehiculos", CancellationToken ct = default) {
+        var validationResult = await validator.ValidateAsync(archivo, ct);
         if (!validationResult.IsValid)
         {
             var errorsDictionary = new Dictionary<string, string[]>(validationResult.ToDictionary());
@@ -27,20 +26,22 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
         }
 
         var fileName = GenerateUniqueFilename(archivo.FileName);
+        return await storage.SaveFileAsync(archivo, folderName, fileName, ct);
+    }
 
-        var resultFotoFisica = await storage.SaveFileAsync(archivo, folderName, fileName);
-
-        if (resultFotoFisica.IsFailure) return resultFotoFisica.Error;
-
+    public async Task<Result<Foto, DomainError>> Create(
+        IFormFile archivo, string folderName = "vehiculos", CancellationToken ct = default) {
+        var preparada = await PrepareAsync(archivo, folderName, ct);
+        if (preparada.IsFailure) return preparada.Error;
         try
         {
-            var result = await repository.Create(resultFotoFisica.Value);
+            var result = await repository.Create(preparada.Value);
             return result;
         }
         catch (Exception ex)
         {
-            await storage.DeleteFileAsync(fileName);
-            return FotoError.NosePudoCrear(fileName);
+            await storage.DeleteFileAsync(Path.Combine(folderName, preparada.Value.Nombre));
+            return FotoError.NosePudoCrear(preparada.Value.Nombre);
         }
     }
 
@@ -54,6 +55,8 @@ public class FotoService(FileValidator validator, IFotoRepository repository, IS
         if (foto is null) return FotoError.FotoNotFound(nombre);
         return foto;
     }
+
+    public Task<Result<Foto, DomainError>> GetHistoricoById(string nombre) => GetById(nombre);
     
     public async Task<Result<bool, DomainError>> SoftDelete(string nombre) {
         var existente = await GetById(nombre);

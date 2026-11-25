@@ -17,7 +17,8 @@ public interface IStorageService
     /// <param name="folder">Carpeta del almacenamiento en la que se guardará.</param>
     /// <param name="fileName">El nombre definitivo del archivo.</param>
     /// <returns>El modelo <see cref="Foto"/> creado a partir de los datos del archivo, o un error de dominio.</returns>
-    Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder, string fileName);
+    Task<Result<Foto, DomainError>> SaveFileAsync(
+        IFormFile file, string folder, string fileName, CancellationToken ct = default);
     
 
     /// <summary>

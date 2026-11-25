@@ -1,6 +1,7 @@
 using Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using FluentAssertions;
+using Microsoft.AspNetCore.Http;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Validators;
 
@@ -12,9 +13,8 @@ public class CreateVehiculoValidatorTests {
     [SetUp]
     public void SetUp() => _validator = new CreateVehiculoValidator();
 
-    // Foto es el Nombre de la foto (clave de IFotoRepository), no una URL.
     private static CreateVehiculoDto CrearDtoValido() => new() {
-        Foto = "coche.jpg",
+        Foto = CrearFoto(),
         Matricula = "1234BCD", Marca = "Toyota", Modelo = "Corolla", Acriss = "ILAH",
         Color = "Azul", PrecioBaseDia = 45.50m,
         Plazas = 5, MaleteroLitros = 361, AutonomiaKm = 700, Kilometraje = 12000,
@@ -33,13 +33,27 @@ public class CreateVehiculoValidatorTests {
         resultado.Errors.Should().BeEmpty();
     }
 
-    [TestCase(null)]
-    [TestCase("")]
-    [TestCase("   ")]
-    public void Validate_SinFoto_DevuelveErrorDeFotoObligatoria(string? foto) {
+    [Test]
+    public void Validate_SinFoto_DevuelveErrorDeFotoObligatoria() {
         // Arrange
         var dto = CrearDtoValido();
-        dto.Foto = foto!;
+        dto.Foto = null;
+
+        // Act
+        var resultado = _validator.Validate(dto);
+
+        // Assert
+        resultado.Errors.Should().ContainSingle()
+            .Which.Should().Match<FluentValidation.Results.ValidationFailure>(e =>
+                e.PropertyName == nameof(dto.Foto) && e.ErrorMessage == "La foto es obligatoria.");
+    }
+
+    [Test]
+    public void Validate_FotoVacia_DevuelveErrorDeFotoObligatoria() {
+        // Arrange
+        using var contenido = new MemoryStream();
+        var dto = CrearDtoValido();
+        dto.Foto = new FormFile(contenido, 0, 0, "foto", "coche.jpg");
 
         // Act
         var resultado = _validator.Validate(dto);
@@ -371,5 +385,10 @@ public class CreateVehiculoValidatorTests {
             case "Color": dto.Color = valor; break;
             case "FechaUltimaRevision": dto.FechaUltimaRevision = valor; break;
         }
+    }
+
+    private static IFormFile CrearFoto() {
+        var contenido = new MemoryStream([1]);
+        return new FormFile(contenido, 0, contenido.Length, "foto", "coche.jpg");
     }
 }

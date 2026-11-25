@@ -10,7 +10,7 @@ namespace Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 public interface IVehiculoTransactionsService
 {
     /// <summary>Actualiza los datos de un vehículo y reemplaza su foto si ha cambiado, sin tocar su estado.</summary>
-    Task<Result<VehiculoModel, DomainError>> UpdateAsync(
+    Task<Result<UpdateVehiculoResult, DomainError>> UpdateAsync(
         string id, VehiculoModel datos, CancellationToken ct = default);
 
     /// <summary>Restaura un vehículo retirado y su foto asociada.</summary>

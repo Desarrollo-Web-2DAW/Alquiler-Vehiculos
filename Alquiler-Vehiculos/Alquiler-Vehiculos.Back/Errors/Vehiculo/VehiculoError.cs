@@ -28,6 +28,11 @@ public static class VehiculoError
         return new ConflictError("MATRICULA_DUPLICADA", $"Ya existe un vehículo con matrícula '{matricula}'");
     }
 
+    public static ConflictError NoActualizable(string id)
+    {
+        return new ConflictError("VEHICULO_NO_ACTUALIZABLE", $"No se puede actualizar el vehículo '{id}' porque está dado de baja.");
+    }
+
     /// <summary>
     /// Crea un error cuando no se encuentra un vehículo por su matrícula.
     /// </summary>

@@ -47,7 +47,8 @@ public class StorageService : IStorageService
     }
 
     /// <inheritdoc cref="IStorageService.SaveFileAsync"/>
-    public async Task<Result<Foto, DomainError>> SaveFileAsync(IFormFile file, string folder, string fileName)
+    public async Task<Result<Foto, DomainError>> SaveFileAsync(
+        IFormFile file, string folder, string fileName, CancellationToken ct = default)
     {
         try
         {
@@ -65,7 +66,7 @@ public class StorageService : IStorageService
 
             await using (var stream = new FileStream(filePath, FileMode.Create))
             {
-                await file.CopyToAsync(stream);
+                await file.CopyToAsync(stream, ct);
             }
             
             _logger.LogInformation("Archivo guardado exitosamente: {FileName} ({Size} bytes)", fileName, file.Length);

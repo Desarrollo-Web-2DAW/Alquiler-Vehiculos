@@ -1,12 +1,14 @@
 ﻿
+﻿using Microsoft.AspNetCore.Http;
+
 namespace Alquiler_Vehiculos.Dto.Catalogo_Vehiculos.Vehiculo;
 
 /// <summary>
 /// Datos de entrada para actualizar un vehículo del catálogo, sin cambiar su estado ni su baja lógica.
 /// </summary>
 public record UpdateVehiculoDto {
-    /// <summary>Referencia de la foto que se asociará al vehículo.</summary>
-    public string Foto { get; set; } = string.Empty;
+    /// <summary>Archivo de foto que se asociará al vehículo.</summary>
+    public IFormFile? Foto { get; set; }
     
     /// <summary>Matrícula del vehículo.</summary>
     public string Matricula { get; set; } = string.Empty;

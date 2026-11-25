@@ -73,6 +73,33 @@ public class VehiculoRepository(PostgreDbContext context, ILogger<VehiculoReposi
             .FirstOrDefaultAsync(f => f.Id == key);
     }
 
+    public VehiculoModel ApplyChanges(VehiculoModel actual, VehiculoModel datos) {
+        var actualizado = actual with {
+            FotoFk = datos.FotoFk,
+            Matrícula = datos.Matrícula,
+            Marca = datos.Marca,
+            Modelo = datos.Modelo,
+            Acriss = datos.Acriss,
+            Carroceria = datos.Carroceria,
+            Combustible = datos.Combustible,
+            Transmision = datos.Transmision,
+            Color = datos.Color,
+            PrecioBaseDia = datos.PrecioBaseDia,
+            Plazas = datos.Plazas,
+            MaleteroLitros = datos.MaleteroLitros,
+            AutonomiaKm = datos.AutonomiaKm,
+            Kilometraje = datos.Kilometraje,
+            FechaUltimaRevision = datos.FechaUltimaRevision,
+            ConesionarioFk = datos.ConesionarioFk,
+            UpdatedAt = DateTime.UtcNow
+        };
+
+        var entry = context.Entry(actual);
+        entry.CurrentValues.SetValues(actualizado);
+        entry.Reference(v => v.Foto).CurrentValue = datos.Foto;
+        return actual;
+    }
+
     /// <inheritdoc cref="IVehiculoRepository.Update" />
     public async Task<VehiculoModel?> Update(string key, VehiculoModel item)
     {

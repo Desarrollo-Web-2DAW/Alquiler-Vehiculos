@@ -7,6 +7,7 @@ using Alquiler_Vehiculos.Models.Vehiculo.Enums;
 using Alquiler_Vehiculos.Models.Vehiculo.Enums.ACRISS;
 using FluentAssertions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
+using Microsoft.AspNetCore.Http;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Mappers;
 
@@ -89,7 +90,7 @@ public class VehiculoMapperTests
 
     private static CreateVehiculoDto CrearDto(string acriss = AcrissValido) => new()
     {
-        Foto = "delantera.jpg",
+        Foto = CrearArchivo(),
         Matricula = "1234BCD",
         Marca = "Toyota",
         Modelo = "Corolla",
@@ -106,7 +107,7 @@ public class VehiculoMapperTests
 
     private static UpdateVehiculoDto CrearUpdateDto(string acriss = AcrissValido) => new()
     {
-        Foto = "delantera.jpg",
+        Foto = CrearArchivo(),
         Matricula = "1234BCD",
         Marca = "Toyota",
         Modelo = "Corolla",
@@ -120,6 +121,11 @@ public class VehiculoMapperTests
         FechaUltimaRevision = "2026-10-01",
         Concesionario = 10L
     };
+
+    private static IFormFile CrearArchivo() {
+        var contenido = new MemoryStream([1]);
+        return new FormFile(contenido, 0, contenido.Length, "foto", "delantera.jpg");
+    }
 
     private static Foto CrearFoto() => new()
     {

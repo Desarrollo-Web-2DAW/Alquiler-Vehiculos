@@ -11,12 +11,15 @@ using Alquiler_Vehiculos.Repositories.Vehiculo.MainModel;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Concesionario;
 using Alquiler_Vehiculos.Repositories.Vehiculo.Marca;
 using Alquiler_Vehiculos.Services.Vehiculo;
+using Alquiler_Vehiculos.Services.Storage;
+using Alquiler_Vehiculos.Services.Taller;
 using Alquiler_Vehiculos.Services.Vehiculo.Transactions;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Query;
 using Alquiler_Vehiculos.Validators.Catalogo_Vehiculos.Vehiculo;
 using CSharpFunctionalExtensions;
 using FluentAssertions;
 using Moq;
+using Microsoft.AspNetCore.Http;
 
 namespace Alquiler_Vehiculos.Tests.Unit.Services;
 
@@ -96,7 +99,7 @@ public partial class VehiculoServiceTests
         _repository.Verify(r => r.ExistByMatricula(Matricula), Times.Once);
         _repository.Verify(r => r.Create(It.Is<VehiculoModel>(v => v.Matrícula == Matricula)), Times.Once);
         _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
-        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
+        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
         _cache.Verify(c => c.SetAsync(It.IsAny<string>(), It.IsAny<VehiculoDto>(), It.IsAny<TimeSpan?>(),
             It.IsAny<IEnumerable<string>?>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -142,10 +145,12 @@ public partial class VehiculoServiceTests
 
     private Mock<IVehiculoRepository> _repository = null!;
     private Mock<IFotoRepository> _fotoRepository = null!;
+    private Mock<IFotoService> _fotoService = null!;
     private Mock<IVehiculoTransactionsService> _transactionsService = null!;
     private Mock<ICacheService> _cache = null!;
     private Mock<IConcesionarioRepository> _concesionarioRepository = null!;
     private Mock<IMarcaRepository> _marcaRepository = null!;
+    private Mock<IParteTallerService> _tallerService = null!;
     private VehiculoService _service = null!;
 
     [SetUp]
@@ -153,11 +158,17 @@ public partial class VehiculoServiceTests
     {
         _repository = new Mock<IVehiculoRepository>();
         _fotoRepository = new Mock<IFotoRepository>();
+        _fotoService = new Mock<IFotoService>();
+        _fotoService.Setup(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"))
+            .ReturnsAsync(Result.Success<Foto, DomainError>(CrearFoto()));
+        _fotoService.Setup(s => s.SoftDelete(It.IsAny<string>()))
+            .ReturnsAsync(Result.Success<bool, DomainError>(true));
         _transactionsService = new Mock<IVehiculoTransactionsService>();
         _cache = new Mock<ICacheService>();
         _concesionarioRepository = new Mock<IConcesionarioRepository>();
         _concesionarioRepository.Setup(r => r.ExistById(It.IsAny<long>())).ReturnsAsync(true);
         _marcaRepository = new Mock<IMarcaRepository>();
+        _tallerService = new Mock<IParteTallerService>();
         _marcaRepository.Setup(r => r.GetAll()).ReturnsAsync([
             new MarcaModel(MongoDB.Bson.ObjectId.Empty, "Toyota", "Japón", "https://toyota.example", ["Corolla"], false, new DateTime(2026, 1, 1), null, null),
             new MarcaModel(MongoDB.Bson.ObjectId.Empty, "Renault", "Francia", "https://renault.example", ["Megane"], false, new DateTime(2026, 1, 1), null, null)
@@ -169,19 +180,20 @@ public partial class VehiculoServiceTests
 
         _service = new VehiculoService(
             _repository.Object,
-            _fotoRepository.Object,
+            _fotoService.Object,
             _transactionsService.Object,
             _cache.Object,
             new CreateVehiculoValidator(),
             new UpdateVehiculoValidator(),
             _concesionarioRepository.Object,
             new QueryRequestVehiculoValidator(),
-            _marcaRepository.Object);
+            _marcaRepository.Object,
+            _tallerService.Object);
     }
 
     private static CreateVehiculoDto CrearCreateValido() => new()
     {
-        Foto = FotoId,
+        Foto = CrearArchivo(),
         Matricula = Matricula,
         Marca = "Toyota",
         Modelo = "Corolla",
@@ -198,7 +210,7 @@ public partial class VehiculoServiceTests
 
     private static UpdateVehiculoDto CrearUpdateValido(string matricula = Matricula) => new()
     {
-        Foto = FotoId,
+        Foto = CrearArchivo(),
         Matricula = matricula,
         Marca = "Toyota",
         Modelo = "Corolla",
@@ -244,6 +256,11 @@ public partial class VehiculoServiceTests
         Extension = ".jpg",
         Tamano = 1024
     };
+
+    private static IFormFile CrearArchivo() {
+        var contenido = new MemoryStream([1]);
+        return new FormFile(contenido, 0, contenido.Length, "foto", "coche.jpg");
+    }
 
     private static VehiculoDto CrearDto(string matricula = Matricula) => new()
     {
@@ -431,7 +448,8 @@ public partial class VehiculoServiceTests
     {
         // Arrange
         _repository.Setup(r => r.ExistByMatricula(Matricula)).ReturnsAsync(false);
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync((Foto?)null);
+        _fotoService.Setup(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"))
+            .ReturnsAsync(Result.Failure<Foto, DomainError>(FotoError.FotoNotFound(FotoId)));
 
         // Act
         var resultado = await _service.Create(CrearCreateValido());
@@ -457,7 +475,8 @@ public partial class VehiculoServiceTests
         // Assert
         resultado.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("Acriss");
         _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
-        _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
+        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
+        _fotoService.Verify(s => s.SoftDelete(It.IsAny<string>()), Times.Once);
 
         _repository.Verify(r => r.Create(It.IsAny<VehiculoModel>()), Times.Never);
     }
@@ -611,7 +630,8 @@ public partial class VehiculoServiceTests
     {
         // Arrange
         _repository.Setup(r => r.GetById(VehiculoId)).ReturnsAsync(CrearModelo());
-        _fotoRepository.Setup(r => r.GetById(FotoId)).ReturnsAsync((Foto?)null);
+        _fotoService.Setup(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"))
+            .ReturnsAsync(Result.Failure<Foto, DomainError>(FotoError.FotoNotFound(FotoId)));
 
         // Act
         var resultado = await _service.Update(CrearUpdateValido(), VehiculoId);
@@ -639,7 +659,8 @@ public partial class VehiculoServiceTests
         // Assert
         resultado.Error.Should().BeOfType<ValidationError>().Which.ValidationErrors.Should().ContainKey("Acriss");
         _repository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
-        _fotoRepository.Verify(r => r.GetById(It.IsAny<string>()), Times.Never);
+        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
+        _fotoService.Verify(s => s.SoftDelete(It.IsAny<string>()), Times.Once);
 
         _transactionsService.Verify(
             t => t.UpdateAsync(It.IsAny<string>(), It.IsAny<VehiculoModel>(), It.IsAny<CancellationToken>()),
@@ -743,7 +764,7 @@ public partial class VehiculoServiceTests
         (existente.Estado, existente.Activo).Should().Be((estado, activo));
         _repository.Verify(r => r.GetById(VehiculoId), Times.Once);
         _repository.Verify(r => r.ExistByMatricula(It.IsAny<string>()), Times.Never);
-        _fotoRepository.Verify(r => r.GetById(FotoId), Times.Once);
+        _fotoService.Verify(s => s.Create(It.IsAny<IFormFile>(), "vehiculos"), Times.Once);
         _concesionarioRepository.Verify(r => r.ExistById(1), Times.Once);
         _transactionsService.Verify(t => t.UpdateAsync(VehiculoId,
             It.Is<VehiculoModel>(m => m.Estado == estado && m.Activo == activo),

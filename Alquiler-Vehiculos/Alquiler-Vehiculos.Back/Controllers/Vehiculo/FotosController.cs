@@ -106,7 +106,8 @@ public class FotosController(IFotoService service, IStorageService storage) : Co
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<ActionResult<Foto>> Create([FromForm] IFormFile? archivo) {
-        return (await service.Create(archivo)).Match(
+        if (archivo is null) return BadRequest();
+        return (await service.Create(archivo, "vehiculos")).Match(
             response => CreatedAtAction(nameof(GetById), new { nombre = response.Nombre }, response),
             error => error.ToHttpResult<Foto>()
         );

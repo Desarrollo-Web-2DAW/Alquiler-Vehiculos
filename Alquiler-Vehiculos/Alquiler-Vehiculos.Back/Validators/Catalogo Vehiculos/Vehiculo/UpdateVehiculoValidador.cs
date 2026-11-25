@@ -20,7 +20,9 @@ public class UpdateVehiculoValidator : AbstractValidator<UpdateVehiculoDto>
     public UpdateVehiculoValidator() 
     {
         RuleFor(v => v.Foto)
-            .NotEmpty().WithMessage("La foto es obligatoria.");
+            .Cascade(CascadeMode.Stop)
+            .NotNull().WithMessage("La foto es obligatoria.")
+            .Must(foto => foto!.Length > 0).WithMessage("La foto es obligatoria.");
         
         RuleFor(m => m.Matricula)
             .NotEmpty().WithMessage("La matrícula no puede estar vacía.")

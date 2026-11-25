@@ -21,7 +21,7 @@ namespace Alquiler_Vehiculos.Controllers.Vehiculo;
 [Route("api/[controller]")]
 [Authorize]
 public class 
-    VehiculoController(IVehiculoService service, IStorageService storageService) : ControllerBase {
+    VehiculoController(IVehiculoService service) : ControllerBase {
 
     /// <summary>
     /// Consulta todos los vehículos para el personal de la oficina.
@@ -131,12 +131,8 @@ public class
         [FromForm] string fechaUltimaRevision,
         [FromForm] long concesionario) 
     {
-        var rutaFoto = await storageService.SaveFileAsync(foto, "vehiculos");
-
-        if (rutaFoto.IsFailure) return rutaFoto.Error.ToHttpResult();
-        
         var dto = new CreateVehiculoDto {
-            Foto = rutaFoto.Value,
+            Foto = foto,
             Matricula = matricula,
             Marca = marca,
             Modelo = modelo,
@@ -185,12 +181,8 @@ public class
         [FromForm] string fechaUltimaRevision,
         [FromForm] long concesionario)
     {
-        var rutaFoto = await storageService.SaveFileAsync(foto, "vehiculos");
-
-        if (rutaFoto.IsFailure) return rutaFoto.Error.ToHttpResult();
-
         var dto = new UpdateVehiculoDto {
-            Foto = rutaFoto.Value,
+            Foto = foto,
             Matricula = matricula,
             Marca = marca,
             Modelo = modelo,

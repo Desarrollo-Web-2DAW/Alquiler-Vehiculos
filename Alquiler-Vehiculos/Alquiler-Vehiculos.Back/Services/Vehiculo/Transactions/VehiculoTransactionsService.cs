@@ -30,44 +30,35 @@ public sealed class VehiculoTransactionsService(
 {
 
     /// <inheritdoc cref="IVehiculoTransactionsService.UpdateAsync" />
-    public async Task<Result<VehiculoModel, DomainError>> UpdateAsync(
+    public async Task<Result<UpdateVehiculoResult, DomainError>> UpdateAsync(
         string id, VehiculoModel datos, CancellationToken ct = default)
     {
         try {
             return await transactionManager.ExecuteAsync(async () =>
-        {
-            logger.LogInformation("Actualizando vehículo {Id}", id);
-
-            var actual = await vehiculoRepository.GetById(id);
-            if (actual is null)
             {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
-            }
-            
-            var fotoAnterior = actual.FotoFk;
+                logger.LogInformation("Actualizando vehículo {Id}", id);
 
-            var actualizado = await vehiculoRepository.Update(id, datos);
-            if (actualizado is null)
-            {
-                return Result.Failure<VehiculoModel, DomainError>(VehiculoError.NotFoundVehiculo(id));
-            }
+                var actual = await vehiculoRepository.GetByIdForUpdate(id, ct);
+                if (actual is null)
+                    return Result.Failure<UpdateVehiculoResult, DomainError>(VehiculoError.NotFoundVehiculo(id));
+                if (!actual.Activo)
+                    return Result.Failure<UpdateVehiculoResult, DomainError>(VehiculoError.NoActualizable(id));
+                if (datos.Matrícula != actual.Matrícula &&
+                    await vehiculoRepository.ExistByMatricula(datos.Matrícula))
+                    return Result.Failure<UpdateVehiculoResult, DomainError>(
+                        VehiculoError.VehiculoYaExiste(datos.Matrícula));
 
-            if (!string.IsNullOrEmpty(fotoAnterior) && fotoAnterior != datos.FotoFk)
-            {
-                var fotoEliminada = await fotoRepository.SoftDelete(fotoAnterior);
+                var fotoNueva = datos.Foto;
+                await fotoRepository.Create(fotoNueva);
+                var matriculaAnterior = actual.Matrícula;
+                var fotoAnterior = actual.FotoFk;
+                var actualizado = vehiculoRepository.ApplyChanges(actual, datos);
 
-                // Idempotencia: si la foto anterior ya no existe o ya estaba de baja,
-                // el estado deseado (que no quede activa) ya se cumple. Devolver un
-                // error aquí sería un conflicto falso, porque el vehículo ya apunta
-                // a la foto nueva y la foto nueva está activa.
-                if (!fotoEliminada && !await EstaDeBajaAsync(fotoAnterior))
-                {
-                    return Result.Failure<VehiculoModel, DomainError>(
-                        FotoError.NoSePudoDarDeBaja(fotoAnterior));
-                }
-            }
+                if (!string.IsNullOrEmpty(fotoAnterior) && fotoAnterior != fotoNueva.Nombre)
+                    await fotoRepository.SoftDelete(fotoAnterior);
 
-            return Result.Success<VehiculoModel, DomainError>(actualizado);
+                return Result.Success<UpdateVehiculoResult, DomainError>(
+                    new(actualizado, matriculaAnterior));
             }, ct);
         } catch (DbUpdateException ex) when (ex.InnerException is PostgresException {
             SqlState: PostgresErrorCodes.UniqueViolation,
@@ -130,15 +121,4 @@ public sealed class VehiculoTransactionsService(
             return Result.Success<VehiculoModel, DomainError>(restaurado);
         }, ct);
 
-    /// <summary>
-    /// Comprueba si una foto ya no está activa: no existe, tiene <c>Activo = false</c>
-    /// o arrastra fecha de borrado lógico.
-    /// </summary>
-    /// <param name="nombre">Clave de la foto.</param>
-    /// <returns><c>true</c> si el estado deseado (foto no activa) ya se cumple.</returns>
-    private async Task<bool> EstaDeBajaAsync(string nombre)
-    {
-        var foto = await fotoRepository.GetById(nombre);
-        return foto is null || !foto.Activo || foto.DeletedAt is not null;
-    }
 }
