@@ -219,3 +219,32 @@ sequenceDiagram
 | Integración | `Integration/Oficina/OficinaIntegrationTests.cs` | 7 | Testcontainers PostgreSQL + `WebApplicationFactory`: `GET` público (`200`), `PATCH /responsable` (`401` sin token, `403` Cliente/Trabajador/Mecánico/Responsable, `422` Mecánico, `200` Operaciones + `EsResponsableAsync`) |
 | E2E | `Alquiler-Vehiculos.Tests.E2E/Bruno-Cli/3 - OFICINA/` | 3 | `[017]` GET público `200`, `[018]` PATCH responsable sin token `401`, `[019]` PATCH responsable como Responsable `403` |
 
+---
+
+## Tarea: Diseño de Persistencia del Módulo de Reservas y Pagos (RF-21 · RF-22 · RF-25 · RF-28 · RF-31 · RI-02 · RI-05 · RNF-02)
+
+> **Fecha de registro:** 26/11/2026 · **Rama:** `feature/Reserva-core` · **Estado:** diseño de entidades y relaciones en `AppDbContextUsuarios` definido.
+
+### Decisiones de diseño
+
+**D15 — Navegación híbrida en EF Core para el agregado `Reserva`: bidireccional (`ICollection`) en composición y unidireccional (`.WithMany()` vacío) en referencias externas.**
+
+- *Contexto:* al modelar `Reserva`, `LineaReserva`, `CambioEstadoReserva` y `Pago` en `AppDbContextUsuarios` existen dos tipos de relaciones muy distintas: las entidades hijas que forman parte inseparable de una reserva (`Lineas`, `HistorialEstados`, `Pagos`) y las entidades independientes a las que la reserva simplemente apunta (`Cliente`, `Trabajador`, `User`). Aunque en PostgreSQL el esquema relacional y las *foreign keys* son idénticos independientemente de si existe `ICollection` o no, la forma de modelar la navegación en EF Core afecta directamente al rendimiento, al mantenimiento y al trabajo en paralelo del equipo.
+- *Decisión tomada:* combinar ambos enfoques según la naturaleza de cada relación:
+  - **Bidireccional (`ICollection<T>` en `Reserva` + `.WithMany(r => r.Coleccion)`):** en `Reserva` → `LineaReserva` (`Lineas`), `Reserva` → `CambioEstadoReserva` (`HistorialEstados`) y `Reserva` → `Pago` (`Pagos`).
+  - **Unidireccional (sin `ICollection` + `.WithMany()` vacío):** en `Reserva` → `Cliente`, `Reserva` → `Trabajador` y `CambioEstadoReserva` → `User` (siguiendo el mismo criterio ya usado en `Oficina` → `Responsable`).
+- *Ventajas de esta combinación:*
+  1. **Consultas sin N+1 (`RNF-02`):** al consultar una reserva (que siempre exige devolver su desglose económico según `RF-25` y `RF-28`), EF Core permite cargar cabecera, líneas, historial y pagos en un único punto mediante `.Include(...).AsSplitQuery()`, evitando consultas en bucle y explosión cartesiana.
+  2. **Escritura atómica del agregado:** al dar de alta una reserva se añaden sus `LineaReserva` congeladas y su primer `CambioEstadoReserva` directamente sobre el objeto `Reserva`, persistiendo todo en la misma transacción con un único `SaveChangesAsync()`.
+  3. **Desacoplamiento y desarrollo en paralelo:** `Cliente`, `Trabajador` y `User` no necesitan conocer `Reserva`, por lo que no hay que modificar sus clases ni sus pruebas, evitando conflictos de *merge* entre módulos de distintos miembros del equipo.
+  4. **Seguridad frente a cargas masivas y ciclos:** consultar el perfil de un cliente o un trabajador nunca arrastra por accidente su histórico completo de reservas ni introduce referencias circulares innecesarias.
+  5. **Políticas de borrado coherentes con el negocio:** `DeleteBehavior.Cascade` únicamente en datos dependientes del agregado (`Lineas` e `HistorialEstados`) y `DeleteBehavior.Restrict` en `Pagos`, `Cliente`, `Trabajador` y `User` para proteger el histórico contable y la baja lógica (`RF-12`, `RF-13`, `CU-19`).
+- *Alternativas consideradas y descartadas:*
+
+| Opción | En qué consiste | Motivo de descarte |
+| :--- | :--- | :--- |
+| **Opción A — Todo bidireccional** | Añadir `ICollection<Reserva>` en `Cliente`, `Trabajador` y `User` además de en `Reserva`. | Acopla el módulo de usuarios/clientes al de reservas, obliga a tocar clases ya cerradas de otros compañeros y aumenta el riesgo de cargas pesadas accidentales o ciclos de navegación. Consultar el historial de un cliente es igual de directo y explícito mediante `db.Reservas.Where(r => r.ClienteId == id)`. |
+| **Opción B — Todo unidireccional** | Usar `.WithMany()` vacío en todas las relaciones, sin colecciones `Lineas`, `HistorialEstados` ni `Pagos` en `Reserva`. | Rompe la cohesión del agregado `Reserva`: obligaría a lanzar consultas separadas por cada tabla hija (mayor riesgo de N+1 y código más verboso) y a gestionar manualmente la inserción coordinada de cabecera, líneas e historial en vez de persistirlos juntos. |
+| **Opción elegida — Híbrida (composición bidireccional + referencias unidireccionales)** | `ICollection` solo en los hijos propios del agregado `Reserva`; `.WithMany()` vacío hacia `Cliente`, `Trabajador` y `User`. | Reúne las ventajas de ambos enfoques sin sus inconvenientes y refleja fielmente el diagrama de clases UML (composición `*--` vs asociación `-->`). |
+
+
