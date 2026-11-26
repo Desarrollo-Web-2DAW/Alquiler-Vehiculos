@@ -221,9 +221,9 @@ sequenceDiagram
 
 ---
 
-## Tarea: Diseño de Persistencia del Módulo de Reservas y Pagos (RF-21 · RF-22 · RF-25 · RF-28 · RF-31 · RI-02 · RI-05 · RNF-02)
+## Tarea: Diseño de Persistencia y Concurrencia del Módulo de Reservas y Pagos (RF-21 · RF-22 · RF-25 · RF-28 · RF-30 · RF-31 · RI-02 · RI-04 · RI-05 · RNF-01 · RNF-02 · RNF-05 · CU-20)
 
-> **Fecha de registro:** 26/11/2026 · **Rama:** `feature/Reserva-core` · **Estado:** diseño de entidades y relaciones en `AppDbContextUsuarios` definido.
+> **Fecha de registro:** 26/11/2026 · **Rama:** `feature/Reserva-core` · **Estado:** modelos (`Reserva`, `LineaReserva`, `CambioEstadoReserva`, `Pago`) y `AppDbContextUsuarios` definidos; concurrencia mixta y migración en curso.
 
 ### Decisiones de diseño
 
@@ -246,5 +246,41 @@ sequenceDiagram
 | **Opción A — Todo bidireccional** | Añadir `ICollection<Reserva>` en `Cliente`, `Trabajador` y `User` además de en `Reserva`. | Acopla el módulo de usuarios/clientes al de reservas, obliga a tocar clases ya cerradas de otros compañeros y aumenta el riesgo de cargas pesadas accidentales o ciclos de navegación. Consultar el historial de un cliente es igual de directo y explícito mediante `db.Reservas.Where(r => r.ClienteId == id)`. |
 | **Opción B — Todo unidireccional** | Usar `.WithMany()` vacío en todas las relaciones, sin colecciones `Lineas`, `HistorialEstados` ni `Pagos` en `Reserva`. | Rompe la cohesión del agregado `Reserva`: obligaría a lanzar consultas separadas por cada tabla hija (mayor riesgo de N+1 y código más verboso) y a gestionar manualmente la inserción coordinada de cabecera, líneas e historial en vez de persistirlos juntos. |
 | **Opción elegida — Híbrida (composición bidireccional + referencias unidireccionales)** | `ICollection` solo en los hijos propios del agregado `Reserva`; `.WithMany()` vacío hacia `Cliente`, `Trabajador` y `User`. | Reúne las ventajas de ambos enfoques sin sus inconvenientes y refleja fielmente el diagrama de clases UML (composición `*--` vs asociación `-->`). |
+
+**D16 — Estrategia de concurrencia mixta en tres capas (`RF-30`, `RNF-01`, `CU-10`, `CU-14`, `CU-20`, apuntes `15-transacciones-identificadores.md` §§ `15.3.1` y `15.3.3`).**
+
+- *Contexto:* en el sistema existen tres carreras críticas: dos clientes intentando reservar simultáneamente el último vehículo disponible en un rango de fechas (`RF-30`), dos peticiones intentando cobrar la misma reserva en milisegundos (`CU-20`), y dos operaciones en paralelo modificando o caducando la misma reserva (`CU-10`, `CU-14`).
+- *Decisión tomada:* aplicar el **enfoque mixto** de los apuntes adaptado a intervalos de fechas en PostgreSQL:
+  1. **Fase 1 — Validación optimista sin bloqueo (`AsNoTracking()`):** antes de escribir se comprueba la disponibilidad en `ReservaRepository` para fallar rápido con un mensaje claro de negocio y sin retener candados en el camino más transitado (`RNF-02`).
+  2. **Fase 2 — Control optimista y reintentos:**
+     - En reservas por categoría (`RF-27`), si el vehículo candidato seleccionado colisiona al insertar, el servicio reintenta automáticamente con el siguiente vehículo libre de la misma categoría antes de devolver `409`.
+     - En modificaciones de una reserva existente (`UPDATE` de estado o fechas), se utiliza la columna de sistema `xmin` de PostgreSQL mediante `entity.Property(r => r.Version).IsRowVersion()` sobre `uint Version` (equivalente en Npgsql 8–10 al `UseXminAsConcurrencyToken()` de los apuntes `15.3.1`), capturando `DbUpdateConcurrencyException`.
+  3. **Fase 3 — Garantía declarativa final en PostgreSQL (`RNF-01`):**
+     - Extensión `btree_gist` y restricción `EX_reservas_vehiculo_solape` (`EXCLUDE USING gist ("VehiculoId" WITH =, tstzrange("FechaRecogida", "FechaDevolucion", '[)') WITH &&) WHERE ("Estado" IN ('Pendiente', 'Confirmada', 'EnCurso') AND NOT "IsDeleted")`): garantiza a nivel de motor que nunca existan dos reservas vivas solapadas para un mismo vehículo, devolviendo el error PostgreSQL `23P01` (`PostgresErrorCodes.ExclusionViolation`) que se traduce a `409 Conflict` con vehículos alternativos. El rango semiabierto `[)` permite reservas encadenadas en el mismo instante exacto de fin/inicio sin falsos conflictos.
+     - Índice único parcial `UX_pagos_reserva_aprobado` en `pagos("ReservaId") WHERE "Estado" = 'Aprobado'` (`CU-20`): impide el doble cobro devolviendo `23505` (`PostgresErrorCodes.UniqueViolation`) → `409 Conflict` (`RESERVA_YA_PAGADA`).
+- *Alternativas consideradas y descartadas:*
+
+| Enfoque | Cómo funcionaría | Motivo de descarte |
+| :--- | :--- | :--- |
+| **Solo optimista (sin restricción en BD)** | Comprobar disponibilidad en C# y usar solo token de versión `xmin`/`RowVersion`. | Un token de versión protege `UPDATE` sobre una fila existente, pero **no impide dos `INSERT` paralelos** con fechas solapadas; además incumpliría la exigencia declarativa de `RNF-01`. |
+| **Solo pesimista (`SELECT ... FOR UPDATE` / `Serializable`)** | Bloquear filas o elevar el aislamiento a `Serializable` durante todo el alta de reserva. | Introduce bloqueos, esperas y riesgo de *deadlocks* en la operación más concurrida (`RNF-02`); además `FOR UPDATE` sobre filas inexistentes no bloquea inserciones nuevas de rangos solapados sin recurrir a `Serializable`. |
+| **Atributo `[Timestamp]` (`byte[] RowVersion`)** | Decorar una propiedad `byte[]` con `[Timestamp]`. | Tal como advierten los apuntes (`15.3.1`), solo funciona en SQL Server; en PostgreSQL la columna no se actualiza automáticamente y los conflictos pasarían inadvertidos. |
+| **Enfoque elegido — Mixto + garantía declarativa PostgreSQL** | Lectura `AsNoTracking()` + reintento por categoría + `xmin` (`IsRowVersion`) + `EXCLUDE USING gist` (`23P01`) + índice único parcial (`23505`). | Sin bloqueos de larga duración, mensajes claros de negocio, reintento transparente en categoría y garantía matemática inquebrantable en PostgreSQL (`RNF-01`). |
+
+**D17 — `DateTime` (UTC) y constante explícita `DivisaPorDefecto = "EUR"` frente a `DateTimeOffset` y `CultureInfo.CurrentCulture` (`RI-04`, `RF-22`).**
+
+- *Justificación:* PostgreSQL almacena las marcas temporales en `timestamptz` normalizando siempre a UTC (y Npgsql rechaza cualquier `DateTimeOffset` cuyo offset sea distinto de `0`). Además, todo el dominio existente (`FechasReservaValidator`, `ReservaPrecioCalculator`, `Oficina.EstaAbierta`, `Cliente`, `User`) trabaja en `DateTime` UTC, evitando conversiones redundantes. Para la divisa, depender de `CultureInfo.CurrentCulture` / `RegionInfo.CurrentRegion` introduce fallos entre Windows en español (`EUR`) y contenedores Linux/Docker/CI (donde `InvariantCulture` lanza `ArgumentException` o `en-US` devolvería `USD`); por ello `Divisa` usa siempre la constante `ReservasConstantes.DivisaPorDefecto` (`"EUR"`) y `CultureInfo.GetCultureInfo("es-ES")` se reserva únicamente para formatear textos en correos o facturas PDF.
+- *Alternativa descartada:* usar `DateTimeOffset` en entidades (sin offset real en PostgreSQL e inconsistente con los validadores existentes) o deducir la divisa de la cultura activa del sistema operativo.
+
+**D18 — Líneas congeladas (*snapshot* económico) en `Reserva` y `LineaReserva` (`RF-25`, `RI-02`, `CU-13`, `CU-14`, `CU-24`).**
+
+- *Justificación:* cada `LineaReserva` persiste `Concepto`, `Cantidad`, `PrecioUnitario` y `Subtotal` fijados al crear la reserva, y la cabecera `Reserva` congela `PrecioBaseDiaCongelado`, `NombrePolizaCongelada` e `IncrementoPolizaDiaCongelado`. De este modo, futuras subidas o bajas en el catálogo nunca alteran reservas existentes, y tanto una ampliación de fechas (`CU-14`) como los días de retraso en devolución tardía (`CU-24`) se recalculan con la tarifa pactada originalmente (mismo patrón `Pedido`–`LineaPedido` de `joseluisgs/TiendaDawApi-NetCore`).
+- *Alternativa descartada:* recalcular el importe dinámicamente desde el catálogo vivo en cada lectura (rompería la integridad económica histórica y los pagos ya realizados).
+
+**D19 — Evolución del esquema mediante migraciones EF Core (`MigrateAsync()`) con SQL declarativo en `Up()`/`Down()` (`RNF-01`, `RNF-05`).**
+
+- *Justificación:* `DatabaseInitializationExtensions` aplica el esquema al arrancar con `db.Database.MigrateAsync()` tanto en desarrollo y Docker Compose como en las pruebas de integración con Testcontainers. Versionar el esquema mediante migraciones (`InitialCreate` → `AddOficina` → `AddReservasYPagos`) permite incorporar las tablas de reservas y pagos sin borrar datos previos y es el mecanismo estándar para incluir SQL específico de PostgreSQL sin Fluent API en EF Core (`CREATE EXTENSION IF NOT EXISTS btree_gist` y `EX_reservas_vehiculo_solape`), garantizando que la restricción se cree automáticamente en todos los entornos.
+- *Alternativa descartada:* usar `EnsureCreated()` (no evoluciona bases de datos ya creadas y no ejecuta el SQL personalizado de `EXCLUDE USING gist`).
+
 
 
