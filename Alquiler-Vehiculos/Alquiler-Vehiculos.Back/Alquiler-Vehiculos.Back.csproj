@@ -44,7 +44,6 @@
         <Folder Include="Exceptions\Vehiculo\"/>
         <Folder Include="Mappers\"/>
         <Folder Include="Middleware\"/>
-        <Folder Include="Models\Pago\"/>
         <Folder Include="Models\Vehiculo\"/>
         <Folder Include="Repositories\Cliente\"/>
         <Folder Include="Repositories\Reserva\"/>
