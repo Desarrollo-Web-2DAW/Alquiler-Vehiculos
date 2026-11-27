@@ -1,6 +1,6 @@
 using Alquiler_Vehiculos.Models.Oficina;
-using Alquiler_Vehiculos.Models.Pago;
-using Alquiler_Vehiculos.Models.Reserva;
+using Alquiler_Vehiculos.Models.Pagos;
+using Alquiler_Vehiculos.Models.Reservas;
 using Alquiler_Vehiculos.Models.Usuarios;
 using Alquiler_Vehiculos.Models.Usuarios.Clientes;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;

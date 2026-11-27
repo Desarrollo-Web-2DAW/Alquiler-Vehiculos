@@ -1,10 +1,10 @@
 using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Enums;
-using Alquiler_Vehiculos.Models.Pago;
+using Alquiler_Vehiculos.Models.Pagos;
 using Alquiler_Vehiculos.Models.Usuarios.Clientes;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
 
-namespace Alquiler_Vehiculos.Models.Reserva;
+namespace Alquiler_Vehiculos.Models.Reservas;
 
 public class Reserva {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -42,5 +42,5 @@ public class Reserva {
     
     public ICollection<LineaReserva> Lineas { get; set; } = new List<LineaReserva>();
     public ICollection<CambioEstadoReserva> HistorialEstados { get; set; } = new List<CambioEstadoReserva>();
-    public ICollection<Pago.Pago> Pagos { get; set; } = new List<Pago.Pago>();
+    public ICollection<Pago> Pagos { get; set; } = new List<Pago>();
 }

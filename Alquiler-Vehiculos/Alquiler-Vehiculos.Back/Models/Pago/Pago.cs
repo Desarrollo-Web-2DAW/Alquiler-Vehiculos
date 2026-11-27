@@ -1,13 +1,14 @@
-﻿using Alquiler_Vehiculos.Config;
+using Alquiler_Vehiculos.Config;
 using Alquiler_Vehiculos.Enums;
-using ReservaEntity = Alquiler_Vehiculos.Models.Reserva.Reserva;
-namespace Alquiler_Vehiculos.Models.Pago;
+using Alquiler_Vehiculos.Models.Reservas;
+
+namespace Alquiler_Vehiculos.Models.Pagos;
 
 public class Pago {
     public Guid Id { get; set; } = Guid.NewGuid();
     
     public Guid ReservaId { get; set; }
-    public ReservaEntity Reserva { get; set; } = null!;
+    public Reserva Reserva { get; set; } = null!;
     
     public decimal Importe { get; set; }
     public decimal? ImporteReembolsado { get; set; }

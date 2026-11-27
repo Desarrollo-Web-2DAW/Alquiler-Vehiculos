@@ -1,4 +1,5 @@
-﻿using Alquiler_Vehiculos.Entities;
+using Alquiler_Vehiculos.Entities;
+using Alquiler_Vehiculos.Enums;
 using Alquiler_Vehiculos.Models.Usuarios.Trabajadores;
 using Microsoft.EntityFrameworkCore;
 
@@ -124,6 +125,9 @@ public class TrabajadorRepository(AppDbContextUsuarios db, ILogger<TrabajadorRep
     }
 
     public async Task<bool> TieneReservasVivasAsync(Guid trabajadorId) {
-        return await Task.FromResult(false);
+        EstadoReserva[] estadosVivos = [EstadoReserva.Pendiente, EstadoReserva.Confirmada, EstadoReserva.EnCurso];
+        return await db.Reservas
+            .AsNoTracking()
+            .AnyAsync(r => !r.IsDeleted && r.TrabajadorId == trabajadorId && estadosVivos.Contains(r.Estado));
     }
 }

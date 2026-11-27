@@ -1,7 +1,7 @@
-﻿using Alquiler_Vehiculos.Enums;
+using Alquiler_Vehiculos.Enums;
 using Alquiler_Vehiculos.Models.Usuarios;
 
-namespace Alquiler_Vehiculos.Models.Reserva;
+namespace Alquiler_Vehiculos.Models.Reservas;
 
 /// <summary>
 /// Registro de auditoría de cada transición de la máquina de estados de una reserva (RF-31, RI-05).

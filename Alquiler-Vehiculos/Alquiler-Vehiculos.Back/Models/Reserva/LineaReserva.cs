@@ -1,6 +1,6 @@
-﻿using Alquiler_Vehiculos.Enums;
+using Alquiler_Vehiculos.Enums;
 
-namespace Alquiler_Vehiculos.Models.Reserva;
+namespace Alquiler_Vehiculos.Models.Reservas;
 
 public class LineaReserva {
     public Guid Id { get; set; } = Guid.NewGuid();
