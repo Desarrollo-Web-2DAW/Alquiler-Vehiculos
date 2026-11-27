@@ -1,14 +1,10 @@
 using System.Data;
+using Alquiler_Vehiculos.Enums;
 using Alquiler_Vehiculos.Models.Reservas;
 using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Alquiler_Vehiculos.Repositories.Reservas;
 
-public enum ResultadoGuardadoReserva {
-    Ok,
-    ConflictoSolape,   // PostgreSQL 23P01: solape de fechas sobre el mismo vehículo (RF-30)
-    ConflictoVersion   // EF Core xmin: la reserva fue modificada en paralelo (CU-10 / CU-14)
-}
 
 /// <summary>
 ///     Contrato del repositorio de reservas.
