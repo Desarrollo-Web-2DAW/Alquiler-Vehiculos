@@ -11,7 +11,7 @@ public class CambioEstadoReserva {
     public Guid Id { get; set; } = Guid.NewGuid();
     
     public Guid ReservaId { get; set; }
-    public Reserva Reserva { get; set; }
+    public Reserva Reserva { get; set; } = null!;
     
     public EstadoReserva? EstadoAnterior { get; set; }
     public EstadoReserva EstadoNuevo { get; set; }

@@ -46,7 +46,6 @@
         <Folder Include="Middleware\"/>
         <Folder Include="Models\Vehiculo\"/>
         <Folder Include="Repositories\Cliente\"/>
-        <Folder Include="Repositories\Reserva\"/>
         <Folder Include="Repositories\Vehiculo\"/>
         <Folder Include="Services\Vehiculo\"/>
     </ItemGroup>

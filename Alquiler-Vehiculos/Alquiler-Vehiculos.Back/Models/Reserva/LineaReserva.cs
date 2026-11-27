@@ -5,7 +5,7 @@ namespace Alquiler_Vehiculos.Models.Reserva;
 public class LineaReserva {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid ReservaId { get; set; }
-    public Reserva Reserva { get; set; } 
+    public Reserva Reserva { get; set; } = null!;
     
     public TipoLineaReserva Tipo { get; set; }
     public string Concepto { get; set; } = string.Empty;

@@ -88,6 +88,8 @@ public class AppDbContextUsuarios(DbContextOptions<AppDbContextUsuarios> options
             entity.Property(r => r.IncrementoPolizaDiaCongelado).HasPrecision(10, 2);
             entity.Property(r => r.PrecioTotal).HasPrecision(10, 2);
 
+            entity.Property(r => r.Version).IsRowVersion();
+
             // Unidireccional (.WithMany() vacío): sin tocar Cliente ni Trabajador
             entity.HasOne(r => r.Cliente)
                 .WithMany()

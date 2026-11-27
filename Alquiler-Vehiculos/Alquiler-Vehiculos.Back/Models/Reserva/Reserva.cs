@@ -13,7 +13,7 @@ public class Reserva {
     public Guid ClienteId { get; set; }
     public Cliente Cliente { get; set; } = null!;
 
-    public string? VehiculoId { get; set; } = string.Empty;
+    public string VehiculoId { get; set; } = string.Empty;
     public Guid? TrabajadorId { get; set; }
     public Trabajador? Trabajador { get; set; }
 
@@ -31,10 +31,12 @@ public class Reserva {
     public string Divisa { get; set; } = ReservasConstantes.DivisaPorDefecto;
     
     public string? Observaciones { get; set; }
-    public string? MotivoCancelación { get; set; }
+    public string? MotivoCancelacion { get; set; }
     
-    public DateTime CreatedAt { get; set; }
-    public DateTime UpdatedAt { get; set; }
+    public uint Version { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public bool IsDeleted { get; set; }
     public DateTime? DeletedAt { get; set; }
     
